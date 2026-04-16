@@ -1,0 +1,392 @@
+-- =====================================================
+-- GESTION SCOLAIRE - BASE DE DONNÉES COMPLÈTE
+-- =====================================================
+
+IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'MONAPPECOLE2')
+BEGIN
+    CREATE DATABASE MONAPPECOLE2;
+END
+GO
+
+USE MONAPPECOLE2;
+GO
+
+-- =====================================================
+-- TABLE ÉLÈVES
+-- =====================================================
+CREATE TABLE ELEVES (
+    ID INT IDENTITY(1,1) PRIMARY KEY,
+    MATRICULE NVARCHAR(20) UNIQUE NOT NULL,
+    NOM NVARCHAR(100) NOT NULL,
+    CLASSE NVARCHAR(50) NOT NULL,
+    STATUT NVARCHAR(20) DEFAULT 'actif' 
+        CHECK (STATUT IN ('actif','inactif','suspendu')),
+    EMAIL NVARCHAR(100),
+    TELEPHONE NVARCHAR(20),
+    DATE_NAISSANCE DATE,
+    GENRE NCHAR(1) DEFAULT 'M' CHECK (GENRE IN ('M','F')),
+    ADRESSE NVARCHAR(MAX),
+    PARENT NVARCHAR(100),
+    DATE_INSCRIPTION DATE DEFAULT GETDATE(),
+    CREATED_AT DATETIME DEFAULT GETDATE(),
+    UPDATED_AT DATETIME DEFAULT GETDATE()
+);
+
+-- =====================================================
+-- TABLE CLASSES
+-- =====================================================
+CREATE TABLE CLASSES (
+    ID INT IDENTITY(1,1) PRIMARY KEY,
+    NOM NVARCHAR(50) UNIQUE NOT NULL,
+    NIVEAU NVARCHAR(20) NOT NULL,
+    EFFECTIF INT DEFAULT 0,
+    TITULAIRE NVARCHAR(100),
+    SALLE NVARCHAR(50),
+    STATUT NVARCHAR(20) DEFAULT 'Active'
+        CHECK (STATUT IN ('Active','Inactive')),
+    CREATED_AT DATETIME DEFAULT GETDATE()
+);
+
+-- =====================================================
+-- TABLE MATIÈRES
+-- =====================================================
+CREATE TABLE MATIERES (
+    ID INT IDENTITY(1,1) PRIMARY KEY,
+    NOM NVARCHAR(100) UNIQUE NOT NULL,
+    ENSEIGNANT NVARCHAR(100) NOT NULL,
+    COEFFICIENT DECIMAL(3,1) DEFAULT 1.0,
+    HEURES_SEMAINE INT DEFAULT 3,
+    NIVEAU NVARCHAR(50) DEFAULT 'Tous niveaux',
+    CREATED_AT DATETIME DEFAULT GETDATE()
+);
+
+-- =====================================================
+-- TABLE USERROLE
+-- =====================================================
+CREATE TABLE USERROLE (
+    ROLEID INT PRIMARY KEY,
+    ROLENAME VARCHAR(50) NOT NULL UNIQUE
+);
+
+-- =====================================================
+-- TABLE USERS
+-- =====================================================
+CREATE TABLE USERS (
+    IDUSER INT IDENTITY(1,1) PRIMARY KEY,
+    USERNAME NVARCHAR(100) NOT NULL UNIQUE,
+    NOM NVARCHAR(100) NOT NULL,
+    EMAIL NVARCHAR(100) UNIQUE NOT NULL,
+    PWD NVARCHAR(255) NOT NULL,
+    ROLEID INT NOT NULL,
+    TELEPHONE NVARCHAR(20),
+    ACTIVE BIT NOT NULL DEFAULT 1,
+    DERNIERE_CONNEXION DATETIME,
+    CREATED_AT DATETIME DEFAULT GETDATE(),
+    UPDATED_AT DATETIME DEFAULT GETDATE(),
+    SESSION_TOKEN NVARCHAR(100),
+    LAST_LOGIN DATETIME DEFAULT GETDATE(),
+    LAST_PC NVARCHAR(100),
+
+    CONSTRAINT FK_USER_ROLE FOREIGN KEY (ROLEID) REFERENCES USERROLE(ROLEID)
+);
+
+-- =====================================================
+-- TABLE BULLETINS
+-- =====================================================
+CREATE TABLE BULLETINS (
+    ID INT IDENTITY(1,1) PRIMARY KEY,
+    ELEVE_MATRICULE NVARCHAR(20) NOT NULL,
+    MATIERE_NOM NVARCHAR(100) NOT NULL,
+    ENSEIGNANT NVARCHAR(100) NOT NULL,
+    NOTE DECIMAL(4,1) CHECK (NOTE BETWEEN 0 AND 20),
+    COEFFICIENT DECIMAL(3,1) DEFAULT 1.0,
+    PERIODE NVARCHAR(10)
+        CHECK (PERIODE IN ('T1','T2','T3','Sem1','Sem2')),
+    COMMENTAIRE NVARCHAR(MAX),
+    CREATED_AT DATETIME DEFAULT GETDATE(),
+    UPDATED_AT DATETIME DEFAULT GETDATE(),
+
+    FOREIGN KEY (ELEVE_MATRICULE) REFERENCES ELEVES(MATRICULE) ON DELETE CASCADE,
+    FOREIGN KEY (MATIERE_NOM) REFERENCES MATIERES(NOM) ON DELETE CASCADE,
+    CONSTRAINT UQ_BULLETIN UNIQUE (ELEVE_MATRICULE, MATIERE_NOM, PERIODE)
+);
+
+-- =====================================================
+-- TABLE FRAIS SCOLAIRES
+-- =====================================================
+CREATE TABLE FRAIS_SCOLAIRES (
+    ID INT IDENTITY(1,1) PRIMARY KEY,
+    ELEVE_MATRICULE NVARCHAR(20) NOT NULL,
+    MONTANT_TOTAL DECIMAL(10,0) NOT NULL,
+    PAYE DECIMAL(10,0) DEFAULT 0,
+    RESTE AS (MONTANT_TOTAL - PAYE) PERSISTED,
+    DERNIER_PAIEMENT DATE,
+    STATUT NVARCHAR(20) DEFAULT 'Impayé'
+        CHECK (STATUT IN ('Payé','Partiel','En retard','Impayé')),
+    CREATED_AT DATETIME DEFAULT GETDATE(),
+    UPDATED_AT DATETIME DEFAULT GETDATE(),
+
+    FOREIGN KEY (ELEVE_MATRICULE) REFERENCES ELEVES(MATRICULE) ON DELETE CASCADE
+);
+
+-- =====================================================
+-- TABLE PAIEMENTS
+-- =====================================================
+CREATE TABLE PAIEMENTS (
+    ID INT IDENTITY(1,1) PRIMARY KEY,
+    ELEVE_MATRICULE NVARCHAR(20) NOT NULL,
+    MONTANT DECIMAL(10,0) NOT NULL,
+    DATE_PAIEMENT DATE NOT NULL,
+    MODE_PAIEMENT NVARCHAR(50) DEFAULT 'Espèces'
+        CHECK (MODE_PAIEMENT IN ('Espèces', 'Chèque', 'Virement bancaire', 'Mobile Money')),
+    REFERENCE NVARCHAR(50),
+    COMMENTAIRE NVARCHAR(MAX),
+    CREATED_AT DATETIME DEFAULT GETDATE(),
+
+    FOREIGN KEY (ELEVE_MATRICULE) REFERENCES ELEVES(MATRICULE) ON DELETE CASCADE
+);
+
+-- =====================================================
+-- TABLE ABSENCES ET RETARDS
+-- =====================================================
+CREATE TABLE ABSENCES_RETARDS (
+    ID INT IDENTITY(1,1) PRIMARY KEY,
+    ELEVE_MATRICULE NVARCHAR(20) NOT NULL,
+    TYPE_ENUM NVARCHAR(10)
+        CHECK (TYPE_ENUM IN ('absence', 'retard')) NOT NULL,
+    DATE_ABSENCE DATE NOT NULL,
+    HEURE TIME,
+    DUREE DECIMAL(4,1) DEFAULT 1.0,
+    MOTIF NVARCHAR(MAX),
+    JUSTIFIE NVARCHAR(5) DEFAULT 'non'
+        CHECK (JUSTIFIE IN ('oui','non')),
+    JUSTIFICATIF NVARCHAR(MAX),
+    PIECE_JOINTE NVARCHAR(255),
+    CREATED_AT DATETIME DEFAULT GETDATE(),
+
+    FOREIGN KEY (ELEVE_MATRICULE) REFERENCES ELEVES(MATRICULE) ON DELETE CASCADE
+);
+
+-- =====================================================
+-- TABLE STATISTIQUES ÉLÈVES
+-- =====================================================
+CREATE TABLE STATISTIQUES_ELEVES (
+    ID INT IDENTITY(1,1) PRIMARY KEY,
+    ELEVE_MATRICULE NVARCHAR(20) NOT NULL,
+    TOTAL_ABSENCES INT DEFAULT 0,
+    TOTAL_RETARDS INT DEFAULT 0,
+    MOYENNE_NOTES DECIMAL(4,2) DEFAULT 0,
+    MOIS DATE,
+    CREATED_AT DATETIME DEFAULT GETDATE(),
+
+    FOREIGN KEY (ELEVE_MATRICULE) REFERENCES ELEVES(MATRICULE) ON DELETE CASCADE,
+    CONSTRAINT UQ_STAT UNIQUE (ELEVE_MATRICULE, MOIS)
+);
+
+-- =====================================================
+-- TABLE ÉVÈNEMENTS
+-- =====================================================
+CREATE TABLE EVENEMENTS (
+    ID INT IDENTITY(1,1) PRIMARY KEY,
+    TITRE NVARCHAR(200) NOT NULL,
+    DESCRIPTION NVARCHAR(MAX),
+    DATE_EVENT DATE NOT NULL,
+    TYPE_EVENT NVARCHAR(50),
+    CREATED_AT DATETIME DEFAULT GETDATE()
+);
+
+-- =====================================================
+-- TABLE NOTIFICATIONS
+-- =====================================================
+CREATE TABLE NOTIFICATIONS (
+    ID INT IDENTITY(1,1) PRIMARY KEY,
+    UTILISATEUR_EMAIL NVARCHAR(100),
+    TYPE_NOTIF NVARCHAR(50),
+    MESSAGE NVARCHAR(MAX),
+    IS_READ BIT DEFAULT 0,
+    CREATED_AT DATETIME DEFAULT GETDATE(),
+
+    FOREIGN KEY (UTILISATEUR_EMAIL) REFERENCES USERS(EMAIL) ON DELETE CASCADE
+);
+
+-- =====================================================
+-- INSERTION DES DONNÉES INITIALES
+-- =====================================================
+
+-- Insertion des classes
+INSERT INTO CLASSES (NOM, NIVEAU, EFFECTIF, TITULAIRE, SALLE) VALUES
+('6ème A', '6ème', 32, 'Mme RABE', 'Salle 101'),
+('6ème B', '6ème', 30, 'M. RAKOTO', 'Salle 102'),
+('5ème A', '5ème', 28, 'Mme RAVELO', 'Salle 201'),
+('5ème B', '5ème', 29, 'M. ANDRIA', 'Salle 202'),
+('4ème A', '4ème', 27, 'Mme RALISON', 'Salle 203'),
+('3ème A', '3ème', 25, 'M. RANDRIAN', 'Salle 301'),
+('2nde A', '2nde', 35, 'Mme RABE', 'Salle 401'),
+('1ère A', '1ère', 30, 'M. RAKOTO', 'Salle 402'),
+('Tle C', 'Terminale', 28, 'Mme RAVELO', 'Salle 403'),
+('Tle D', 'Terminale', 26, 'M. ANDRIA', 'Salle 404');
+
+-- Insertion des matières
+INSERT INTO MATIERES (NOM, ENSEIGNANT, COEFFICIENT, HEURES_SEMAINE, NIVEAU) VALUES
+('Mathématiques', 'M. RAKOTO', 5, 5, 'Tous niveaux'),
+('Français', 'Mme RABE', 4, 4, 'Tous niveaux'),
+('Anglais', 'M. ANDRIA', 3, 3, 'Tous niveaux'),
+('Physique-Chimie', 'Mme RAVELO', 4, 4, 'Lycée'),
+('SVT', 'M. RANDRIAN', 4, 3, 'Tous niveaux'),
+('Histoire-Géo', 'Mme RALISON', 3, 3, 'Tous niveaux');
+
+INSERT INTO USERROLE (ROLEID, ROLENAME)VALUES
+(0, 'SuperAdmin'),
+(1, 'Admin'),
+(2, 'User'),
+(3, 'Professeur'),
+(4, 'Secrétaire'),
+(5, 'Comptable');
+
+-- Insertion des utilisateurs
+INSERT INTO USERS (USERNAME, NOM, EMAIL, PWD, ROLEID, TELEPHONE, ACTIVE)
+VALUES
+(N'SuperAdmin', N'SuperAdmin', N'admin@ecole.com', N'0', 0, N'0321234500', N'1'),
+(N'RAKOTO', N'RAKOTO', N'prof.rakoto@ecole.com', N'1', 3, N'0321234501', N'1');
+
+-- Insertion des élèves
+INSERT INTO ELEVES (MATRICULE, NOM, CLASSE, STATUT, EMAIL, TELEPHONE, DATE_NAISSANCE, GENRE, ADRESSE, PARENT, DATE_INSCRIPTION) VALUES
+('2024001', 'Jean RAKOTO', '3ème A', 'actif', 'jean.rakoto@ecole.com', '0321234567', '2010-05-12', 'M', 'Antananarivo', 'M. RAKOTO', '2024-01-15'),
+('2024002', 'Marie RABE', '5ème B', 'actif', 'marie.rabe@ecole.com', '0321234568', '2009-08-23', 'F', 'Antananarivo', 'Mme RABE', '2024-01-15'),
+('2024003', 'Paul ANDRIA', '2nde A', 'actif', 'paul.andria@ecole.com', '0321234569', '2008-11-05', 'M', 'Antsirabe', 'M. ANDRIA', '2024-01-16'),
+('2024004', 'Sophie RAVO', '4ème C', 'inactif', 'sophie.ravo@ecole.com', '0321234570', '2009-02-18', 'F', 'Fianarantsoa', 'Mme RAVO', '2024-01-14'),
+('2024005', 'Luc RADO', '6ème B', 'actif', 'luc.rado@ecole.com', '0321234571', '2011-07-30', 'M', 'Toamasina', 'M. RADO', '2024-01-17');
+
+-- Insertion des frais scolaires
+INSERT INTO FRAIS_SCOLAIRES (ELEVE_MATRICULE, MONTANT_TOTAL, PAYE, DERNIER_PAIEMENT, STATUT) VALUES
+('2024001', 250000, 150000, '2024-03-15', 'Partiel'),
+('2024002', 250000, 250000, '2024-03-20', 'Payé'),
+('2024003', 250000, 80000, '2024-02-10', 'En retard'),
+('2024004', 250000, 200000, '2024-03-10', 'Partiel'),
+('2024005', 250000, 250000, '2024-03-18', 'Payé');
+
+-- Insertion des bulletins
+INSERT INTO BULLETINS (ELEVE_MATRICULE, MATIERE_NOM, ENSEIGNANT, NOTE, COEFFICIENT, PERIODE) VALUES
+('2024001', 'Mathématiques', 'M. RAKOTO', 15, 5, 'T1'),
+('2024001', 'Français', 'Mme RABE', 14, 4, 'T1'),
+('2024002', 'Mathématiques', 'M. RAKOTO', 17, 5, 'T1'),
+('2024002', 'Français', 'Mme RABE', 16, 4, 'T1');
+
+-- Insertion des absences
+INSERT INTO ABSENCES_RETARDS (ELEVE_MATRICULE, TYPE_ENUM, DATE_ABSENCE, DUREE, MOTIF, JUSTIFIE) VALUES
+('2024001', 'absence', '2024-03-10', 1, 'Maladie', 'non'),
+('2024001', 'retard', '2024-03-12', 0.5, 'Transport', 'non'),
+('2024002', 'absence', '2024-03-05', 1, 'Rendez-vous médical', 'oui');
+
+-- Table pour stocker les logs d'erreurs
+CREATE TABLE ErrorLogs (
+    Id INT IDENTITY(1,1) PRIMARY KEY,
+    LogDate DATETIME NOT NULL,
+    Level VARCHAR(10) NOT NULL, -- ERROR, INFO, WARNING
+    Source NVARCHAR(200) NULL,
+    Message NVARCHAR(MAX) NULL,
+    Exception NVARCHAR(MAX) NULL,
+    UserIP VARCHAR(50) NULL,
+    UserName NVARCHAR(100) NULL,
+    Url NVARCHAR(500) NULL,
+    CreatedAt DATETIME DEFAULT GETDATE()
+);
+
+-- Index pour améliorer les performances
+CREATE INDEX IX_ErrorLogs_LogDate ON ErrorLogs(LogDate DESC);
+CREATE INDEX IX_ErrorLogs_Level ON ErrorLogs(Level);
+
+-- =====================================================
+-- VUES
+-- =====================================================
+
+-- Vue pour le dashboard KPI
+CREATE OR ALTER VIEW VUE_DASHBOARD_KPI AS
+SELECT 
+    (SELECT COUNT(*) FROM ELEVES WHERE STATUT = 'actif') AS TOTAL_ELEVES,
+
+    (SELECT COUNT(*) 
+     FROM ELEVES 
+     WHERE DATE_INSCRIPTION >= DATEADD(DAY, -30, GETDATE())) AS NOUVEAUX_ELEVES,
+
+    (SELECT COUNT(*) FROM CLASSES WHERE STATUT = 'Active') AS TOTAL_CLASSES,
+
+    (SELECT ISNULL(AVG(EFFECTIF), 0) 
+     FROM CLASSES 
+     WHERE STATUT = 'Active') AS MOYENNE_ELEVES_CLASSE,
+
+    (SELECT ISNULL(SUM(RESTE), 0) 
+     FROM FRAIS_SCOLAIRES) AS TOTAL_IMPAYES,
+
+    (SELECT 
+        ISNULL(SUM(PAYE) * 100.0 / NULLIF(SUM(MONTANT_TOTAL), 0), 0)
+     FROM FRAIS_SCOLAIRES) AS TAUX_RECOUVREMENT;
+
+-- Vue des bulletins avec moyenne par élève
+CREATE OR ALTER VIEW VUE_BULLETINS_ELEVES AS
+SELECT 
+    E.MATRICULE,
+    E.NOM,
+    E.CLASSE,
+    B.MATIERE_NOM,
+    B.NOTE,
+    B.COEFFICIENT,
+    B.PERIODE,
+    (
+        SELECT AVG(NOTE)
+        FROM BULLETINS
+        WHERE ELEVE_MATRICULE = E.MATRICULE 
+        AND PERIODE = B.PERIODE
+    ) AS MOYENNE_GENERALE
+FROM ELEVES E
+LEFT JOIN BULLETINS B 
+ON E.MATRICULE = B.ELEVE_MATRICULE;
+
+-- Vue des statistiques d'absences
+CREATE OR ALTER VIEW VUE_STATISTIQUES_ABSENCES AS
+SELECT 
+    E.MATRICULE,
+    E.NOM,
+    E.CLASSE,
+    COUNT(CASE WHEN A.TYPE_ENUM = 'absence' THEN 1 END) AS TOTAL_ABSENCES,
+    COUNT(CASE WHEN A.TYPE_ENUM = 'retard' THEN 1 END) AS TOTAL_RETARDS,
+    COUNT(CASE WHEN A.TYPE_ENUM = 'absence' AND A.JUSTIFIE = 'non' THEN 1 END) AS ABSENCES_NON_JUSTIFIEES,
+    COUNT(CASE 
+        WHEN A.TYPE_ENUM = 'absence' 
+        AND A.DATE_ABSENCE >= DATEADD(DAY, -30, GETDATE()) 
+        THEN 1 END) AS ABSENCES_MOIS
+FROM ELEVES E
+LEFT JOIN ABSENCES_RETARDS A 
+ON E.MATRICULE = A.ELEVE_MATRICULE
+GROUP BY E.MATRICULE, E.NOM, E.CLASSE;
+
+-- =====================================================
+-- INDEX POUR OPTIMISATION
+-- =====================================================
+
+-- Index pour les recherches fréquentes
+CREATE INDEX IDX_ELEVES_MATRICULE ON ELEVES(MATRICULE);
+CREATE INDEX IDX_ELEVES_NOM ON ELEVES(NOM);
+CREATE INDEX IDX_ELEVES_CLASSE ON ELEVES(CLASSE);
+CREATE INDEX IDX_ELEVES_STATUT ON ELEVES(STATUT);
+
+CREATE INDEX IDX_CLASSES_NOM ON CLASSES(NOM);
+CREATE INDEX IDX_CLASSES_STATUT ON CLASSES(STATUT);
+
+CREATE INDEX IDX_MATIERES_NOM ON MATIERES(NOM);
+CREATE INDEX IDX_MATIERES_ENSEIGNANT ON MATIERES(ENSEIGNANT);
+
+CREATE INDEX IDX_BULLETINS_ELEVE ON BULLETINS(ELEVE_MATRICULE);
+CREATE INDEX IDX_BULLETINS_PERIODE ON BULLETINS(PERIODE);
+
+CREATE INDEX IDX_FRAIS_ELEVE ON FRAIS_SCOLAIRES(ELEVE_MATRICULE);
+CREATE INDEX IDX_FRAIS_STATUT ON FRAIS_SCOLAIRES(STATUT);
+
+CREATE INDEX IDX_PAIEMENTS_ELEVE ON PAIEMENTS(ELEVE_MATRICULE);
+CREATE INDEX IDX_PAIEMENTS_DATE ON PAIEMENTS(DATE_PAIEMENT);
+
+CREATE INDEX IDX_ABSENCES_ELEVE ON ABSENCES_RETARDS(ELEVE_MATRICULE);
+CREATE INDEX IDX_ABSENCES_DATE ON ABSENCES_RETARDS(DATE_ABSENCE);
+
+CREATE INDEX IDX_NOTIFICATIONS_USER ON NOTIFICATIONS(UTILISATEUR_EMAIL);
+CREATE INDEX IDX_NOTIFICATIONS_READ ON NOTIFICATIONS(IS_READ);

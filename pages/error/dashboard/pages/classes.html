@@ -1,0 +1,78 @@
+<!-- ═══════════════════════════════════════════════════════════
+     pages/classes.html  —  Section Gestion des classes
+     ═══════════════════════════════════════════════════════════ -->
+<section class="content" id="section-classes">
+
+    <div class="dash-card">
+        <div class="dash-card-head">
+            <span class="dash-card-title"><i class="fas fa-folder"></i> Gestion des classes</span>
+            <div class="action-buttons">
+                <button class="btn btn-success btn-sm" onclick="openAddClasseModal()">
+                    <i class="fas fa-plus"></i> Ajouter une classe
+                </button>
+                <button class="btn btn-primary btn-sm" onclick="exportClasses()">
+                    <i class="fas fa-download"></i> Exporter
+                </button>
+            </div>
+        </div>
+
+        <div class="dash-card-body">
+
+            <!-- Stats -->
+            <div class="absence-stats" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:20px;" id="classesStatsContainer"></div>
+
+            <!-- Tableau -->
+            <div style="overflow-x:auto;">
+                <table class="dash-table">
+                    <thead>
+                        <tr>
+                            <th>Classe</th>
+                            <th>Niveau</th>
+                            <th>Effectif</th>
+                            <th>Titulaire</th>
+                            <th>Salle</th>
+                            <th>Statut</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="classesTableBody"></tbody>
+                </table>
+            </div>
+
+        </div>
+    </div>
+
+</section>
+
+<script>
+(function initClassesPage() {
+    /* Stats */
+    const statsContainer = document.getElementById('classesStatsContainer');
+    const niveaux = [...new Set(classesData.map(c => c.niveau))].length;
+    statsContainer.innerHTML = `
+        <div class="absence-card"><div class="stat-icon"><i class="fas fa-folder" style="color:var(--primary);"></i></div><div class="stat-value">${classesData.length}</div><div class="stat-label">Total classes</div></div>
+        <div class="absence-card"><div class="stat-icon"><i class="fas fa-users" style="color:var(--success);"></i></div><div class="stat-value">${classesData.reduce((s,c)=>s+c.effectif,0)}</div><div class="stat-label">Total élèves</div></div>
+        <div class="absence-card"><div class="stat-icon"><i class="fas fa-layer-group" style="color:var(--warning);"></i></div><div class="stat-value">${niveaux}</div><div class="stat-label">Niveaux</div></div>`;
+
+    /* Tableau */
+    const tbody = document.getElementById('classesTableBody');
+    if (!classesData.length) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center p-3">Aucune classe enregistrée.</td></tr>';
+        return;
+    }
+    tbody.innerHTML = classesData.map(c => `
+        <tr>
+            <td><strong><i class="fas fa-chalkboard" style="color:var(--primary);margin-right:6px;"></i>${c.nom}</strong></td>
+            <td>${c.niveau}</td>
+            <td><span class="badge badge-success">${c.effectif} élèves</span></td>
+            <td>${c.titulaire}</td>
+            <td>${c.salle}</td>
+            <td><span class="badge ${c.statut === 'Active' ? 'badge-success' : 'badge-warning'}">${c.statut}</span></td>
+            <td class="action-buttons">
+                <button class="btn-small btn-info"    onclick="viewClasseDetail('${c.nom}')"><i class="fas fa-eye"></i></button>
+                <button class="btn-small btn-primary" onclick="editClasse('${c.nom}')"><i class="fas fa-edit"></i></button>
+                <button class="btn-small btn-danger"  onclick="deleteClasse('${c.nom}')"><i class="fas fa-trash"></i></button>
+            </td>
+        </tr>`).join('');
+})();
+</script>

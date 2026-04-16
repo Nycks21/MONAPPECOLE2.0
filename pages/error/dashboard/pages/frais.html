@@ -1,0 +1,105 @@
+<!-- ═══════════════════════════════════════════════════════════
+     pages/frais.html  —  Section Frais scolaires
+     ═══════════════════════════════════════════════════════════ -->
+<section class="content" id="section-frais">
+
+    <div class="dash-card">
+        <div class="dash-card-head">
+            <span class="dash-card-title"><i class="fas fa-money-bill-wave"></i> Frais scolaires</span>
+            <div class="action-buttons">
+                <button class="btn btn-success btn-sm" onclick="openAddPaymentModal()">
+                    <i class="fas fa-plus"></i> Enregistrer un paiement
+                </button>
+                <button class="btn btn-primary btn-sm" onclick="exportFraisToExcel()">
+                    <i class="fas fa-download"></i> Exporter
+                </button>
+                <button class="btn btn-secondary btn-sm" onclick="printFraisReport()">
+                    <i class="fas fa-print"></i> Imprimer
+                </button>
+            </div>
+        </div>
+
+        <div class="dash-card-body">
+
+            <!-- Stats frais -->
+            <div class="frais-stats" id="fraisStatsContainer">
+                <div class="stat-card">
+                    <div class="stat-icon">💰</div>
+                    <div class="stat-value" id="statTotalFrais">—</div>
+                    <div class="stat-label">Total attendu</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="color:var(--success)">✅</div>
+                    <div class="stat-value" id="statTotalPaye" style="color:var(--success)">—</div>
+                    <div class="stat-label">Total payé</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon" style="color:var(--danger)">⚠️</div>
+                    <div class="stat-value" id="statTotalReste" style="color:var(--danger)">—</div>
+                    <div class="stat-label">Total impayé</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon">📊</div>
+                    <div class="stat-value" id="statTauxRecouvrement">—</div>
+                    <div class="stat-label">Taux recouvrement</div>
+                </div>
+            </div>
+
+            <!-- Filtres -->
+            <div class="frais-filters">
+                <select class="form-control" id="fraisFilterStatut" onchange="filterFraisTable()" style="max-width:160px;">
+                    <option value="">Tous les statuts</option>
+                    <option value="Payé">Payé</option>
+                    <option value="Partiel">Partiel</option>
+                    <option value="En retard">En retard</option>
+                    <option value="Impayé">Impayé</option>
+                </select>
+                <select class="form-control" id="fraisFilterClasse" onchange="filterFraisTable()" style="max-width:160px;">
+                    <option value="">Toutes les classes</option>
+                </select>
+                <div class="search-box">
+                    <i class="fas fa-search"></i>
+                    <input type="text" class="form-control" id="fraisSearch"
+                           placeholder="Rechercher élève, matricule..."
+                           oninput="filterFraisTable()">
+                </div>
+            </div>
+
+            <!-- Tableau -->
+            <div style="overflow-x:auto;">
+                <table class="dash-table">
+                    <thead>
+                        <tr>
+                            <th>Matricule</th>
+                            <th>Nom</th>
+                            <th>Classe</th>
+                            <th>Total</th>
+                            <th>Payé</th>
+                            <th>Reste</th>
+                            <th>Progression</th>
+                            <th>Statut</th>
+                            <th>Dernier paiement</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="fraisTableBody"></tbody>
+                </table>
+            </div>
+
+            <!-- Pagination -->
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:15px;flex-wrap:wrap;gap:10px;">
+                <span id="fraisPaginationInfo" style="color:#6c757d;font-size:13px;"></span>
+                <div class="action-buttons">
+                    <button class="btn btn-sm btn-secondary" id="prevPageBtn" onclick="previousFraisPage()" disabled>
+                        <i class="fas fa-chevron-left"></i> Précédent
+                    </button>
+                    <button class="btn btn-sm btn-secondary" id="nextPageBtn" onclick="nextFraisPage()">
+                        Suivant <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+</section>

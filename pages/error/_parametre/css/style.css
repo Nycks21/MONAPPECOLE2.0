@@ -1,0 +1,102 @@
+body {
+    font-family: Arial;
+    padding: 0px;
+}
+input {
+    margin-right: 10px;
+}
+#ListTable {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#ListTable th, #ListTable td {
+    border: 1px solid #ccc;
+    padding: 8px;
+    text-align: left;
+}
+
+#ListTable th:nth-child(1),
+#ListTable td:nth-child(1) {
+    width: 150px; /* largeur fixe pour Nom */
+}
+
+#ListTable th:nth-child(2),
+#ListTable td:nth-child(2) {
+    width: 150px; /* largeur fixe pour Prénom */
+}
+
+#ListTable th:nth-child(3),
+#ListTable td:nth-child(3) {
+    width: 200px; /* largeur fixe pour Téléphone */
+    text-align: center; /* centrer le numéro */
+}
+
+.dataTables_filter {
+    float: right !important;
+    text-align: right !important;
+    width: 500px;
+    padding: 0px 0px 8px 0px;
+}
+
+.info-pagination {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .dataTables_length label {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+#ListTable thead th {
+    background-color: #eaeef1; /* même couleur que ton titre */
+    color: black; /* couleur du texte pour qu'il reste lisible */
+    font-weight: 600;
+}
+
+table.dataTable thead th {
+    background-color: #007bff; /* bleu Bootstrap */
+    color: white;
+  }
+
+  button:disabled {
+    background-color: #b0b0b0 !important;
+    color: #f8f9fa !important;
+    cursor: not-allowed;
+    border-color: #999 !important;
+    opacity: 0.8;
+  }
+
+  /* Style du toast flottant */
+.toast-message {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    min-width: 300px;
+    text-align: center;
+    padding: 15px 20px;
+    background-color: #28a745; /* vert succès par défaut */
+    color: white;
+    border-radius: 5px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    z-index: 9999;
+    opacity: 0;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+    transform: translateY(-20px);
+  }
+  
+  .toast-message.show {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  
+  
+  
+
+
+
+
+  

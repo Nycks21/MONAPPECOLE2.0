@@ -1,0 +1,90 @@
+<!-- ═══════════════════════════════════════════════════════════
+     pages/absences.html  —  Section Retards & Absences
+     ═══════════════════════════════════════════════════════════ -->
+<section class="content" id="section-absences">
+
+    <div class="dash-card">
+        <div class="dash-card-head">
+            <span class="dash-card-title"><i class="fas fa-calendar-times"></i> Retards &amp; Absences</span>
+            <button class="btn btn-success btn-sm" onclick="openSignalModal()">
+                <i class="fas fa-plus"></i> Signaler absence / retard
+            </button>
+        </div>
+
+        <div class="dash-card-body">
+
+            <!-- Stats absences -->
+            <div class="absence-stats" id="absenceStatsContainer">
+                <div class="absence-card">
+                    <div class="stat-icon"><i class="fas fa-calendar-times" style="color:var(--danger);"></i></div>
+                    <div class="stat-value" id="totalAbsencesVal">—</div>
+                    <div class="stat-label">Total absences</div>
+                </div>
+                <div class="absence-card">
+                    <div class="stat-icon"><i class="fas fa-clock" style="color:var(--warning);"></i></div>
+                    <div class="stat-value" id="totalRetardsVal">—</div>
+                    <div class="stat-label">Total retards</div>
+                </div>
+                <div class="absence-card">
+                    <div class="stat-icon"><i class="fas fa-exclamation-triangle" style="color:var(--danger);"></i></div>
+                    <div class="stat-value" id="totalCritiquesVal">—</div>
+                    <div class="stat-label">Élèves critiques</div>
+                </div>
+            </div>
+
+            <!-- Tableau -->
+            <div style="overflow-x:auto;">
+                <table class="dash-table">
+                    <thead>
+                        <tr>
+                            <th>Matricule</th>
+                            <th>Élève</th>
+                            <th>Classe</th>
+                            <th>Absences</th>
+                            <th>Retards</th>
+                            <th>Statut</th>
+                            <th>Justifiée</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="absencesTableBody"></tbody>
+                </table>
+            </div>
+
+        </div>
+    </div>
+
+</section>
+
+<script>
+/* Hook d'initialisation : appelé par spa-nav après injection */
+(function initAbsencesPage() {
+    const totalAbsences = absencesData.reduce((s, a) => s + a.absences, 0);
+    const totalRetards  = absencesData.reduce((s, a) => s + a.retards, 0);
+    const critiques     = absencesData.filter(a => a.statut === 'Critique').length;
+
+    document.getElementById('totalAbsencesVal').textContent = totalAbsences;
+    document.getElementById('totalRetardsVal').textContent  = totalRetards;
+    document.getElementById('totalCritiquesVal').textContent = critiques;
+
+    const tbody = document.getElementById('absencesTableBody');
+    tbody.innerHTML = absencesData.map(a => `
+        <tr>
+            <td><strong>${a.matricule}</strong></td>
+            <td>${a.nom}</td>
+            <td>${a.classe}</td>
+            <td>${a.absences}</td>
+            <td>${a.retards}</td>
+            <td><span class="badge ${a.statut === 'Critique' ? 'badge-danger' : a.statut === 'Attention' ? 'badge-warning' : 'badge-success'}">${a.statut}</span></td>
+            <td>${a.justifie
+                ? '<span class="badge badge-success">Justifiée</span>'
+                : '<span class="badge badge-danger">Non justifiée</span>'}</td>
+            <td class="action-buttons">
+                <button class="btn-small btn-info" onclick="viewAbsenceDetails('${a.matricule}')"><i class="fas fa-eye"></i></button>
+                ${!a.justifie
+                    ? `<button class="btn-small btn-success" onclick="openJustifyModal('${a.matricule}','${a.nom}')"><i class="fas fa-check"></i> Justifier</button>`
+                    : ''}
+            </td>
+        </tr>`).join('');
+})();
+</script>
