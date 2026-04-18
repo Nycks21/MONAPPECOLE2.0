@@ -171,12 +171,12 @@
                         <div class="container-fluid">
                             <div class="row">
                                 <div class="col-lg-6">
-                                    <h1 id="dynPageTitle">Tableau de bord</h1>
+                                    <h1 id="dynPageTitle">Liste classes</h1>
                                 </div>
                                 <div class="col-lg-6">
                                     <ol class="breadcrumb" style="float: right;">
                                         <li class="breadcrumb-item">Application</li>
-                                        <li class="breadcrumb-item active" id="dynBreadcrumb">Tableau de bord</li>
+                                        <li class="breadcrumb-item active" id="dynBreadcrumb">Classes</li>
                                     </ol>
                                 </div>
                             </div>
@@ -186,16 +186,17 @@
                     <!-- ═══════════════════════════════════════════════════════════
                     pages/classes.html  —  Section Gestion des classes
                     ═══════════════════════════════════════════════════════════ -->
-                    <section class="content" id="section-classes">
+                    <section class="content" id="section-Classes">
 
                         <div class="dash-card">
                             <div class="dash-card-head">
                                 <span class="dash-card-title"><i class="fas fa-folder"></i> Gestion des classes</span>
                                 <div class="action-buttons">
-                                    <button class="btn btn-success btn-sm" onclick="openAddClasseModal()">
+                                    <button type="button" class="btn btn-success btn-sm" onclick="openAddClasseModal()">
                                         <i class="fas fa-plus"></i> Ajouter une classe
                                     </button>
-                                    <button class="btn btn-primary btn-sm" onclick="exportClasses()">
+
+                                    <button type="button" class="btn btn-primary btn-sm" onclick="exportClasses()">
                                         <i class="fas fa-download"></i> Exporter
                                     </button>
                                 </div>
@@ -206,7 +207,7 @@
                                 <!-- Stats -->
                                 <div class="absence-stats"
                                     style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:20px;"
-                                    id="classesStatsContainer"></div>
+                                    id="ClassesStatsContainer"></div>
 
                                 <!-- Tableau -->
                                 <div style="overflow-x:auto;">
@@ -222,7 +223,7 @@
                                                 <th>Actions</th>
                                             </tr>
                                         </thead>
-                                        <tbody id="classesTableBody"></tbody>
+                                        <tbody id="ClassesTableBody"></tbody>
                                     </table>
                                 </div>
 
@@ -242,76 +243,71 @@
             </div>
 
             <!-- MODAL CLASSE -->
-            <div id="addClasseModal" class="modal">
-                <div class="modal-content" style="max-width:550px;">
-                    <div class="modal-header">
-                        <h3 id="classeModalTitle"><i class="fas fa-folder-plus"></i> Ajouter une classe</h3>
-                        <button onclick="closeAddClasseModal()"
-                            style="background:none;border:none;font-size:24px;cursor:pointer;">&times;</button>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Nom de la classe *</label>
+                            <input type="text" id="ClasseNom" class="form-control" placeholder="Ex: 6ème A">
+                        </div>
                     </div>
-                    <div class="modal-body">
-                        <input type="hidden" id="classeEditNom">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Nom de la classe *</label>
-                                    <input type="text" id="classeNom" class="form-control" placeholder="Ex: 6ème A">
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Niveau *</label>
-                                    <select id="classeNiveau" class="form-control">
-                                        <option value="">Sélectionner</option>
-                                        <option value="6ème">6ème</option>
-                                        <option value="5ème">5ème</option>
-                                        <option value="4ème">4ème</option>
-                                        <option value="3ème">3ème</option>
-                                        <option value="2nde">2nde</option>
-                                        <option value="1ère">1ère</option>
-                                        <option value="Terminale">Terminale</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Effectif</label>
-                                    <input type="number" id="classeEffectif" class="form-control" placeholder="Ex: 30"
-                                        min="0">
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Salle</label>
-                                    <input type="text" id="classeSalle" class="form-control"
-                                        placeholder="Ex: Salle 101">
-                                </div>
-                            </div>
-                        </div>
+                    <div class="col-md-6">
                         <div class="form-group">
-                            <label>Professeur titulaire</label>
-                            <input type="text" id="classeTitulaire" class="form-control"
-                                placeholder="Nom du professeur titulaire">
-                        </div>
-                        <div class="form-group">
-                            <label>Statut</label>
-                            <select id="classeStatut" class="form-control">
-                                <option value="Active">Active</option>
-                                <option value="Inactive">Inactive</option>
+                            <label>Niveau *</label>
+                            <select id="ClasseNiveau" class="form-control">
+                                <option value="">Sélectionner</option>
+                                <option value="6ème">6ème</option>
+                                <option value="5ème">5ème</option>
+                                <option value="4ème">4ème</option>
+                                <option value="3ème">3ème</option>
+                                <option value="2nde">2nde</option>
+                                <option value="1ère">1ère</option>
+                                <option value="Terminale">Terminale</option>
                             </select>
                         </div>
                     </div>
-                    <div class="modal-footer">
-                        <button class="btn btn-primary" onclick="saveClasse()"><i class="fas fa-save"></i>
-                            Enregistrer</button>
-                        <button class="btn btn-danger" onclick="closeAddClasseModal()">Annuler</button>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Titulaire (Enseignant) *</label>
+                            <input type="text" id="ClasseTitulaire" class="form-control" placeholder="Nom du titulaire">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Salle</label>
+                            <input type="text" id="ClasseSalle" class="form-control" placeholder="Ex: Salle 101">
+                        </div>
+                    </div>
+                </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Effectif</label>
+                            <input type="number" id="ClasseEffectif" class="form-control" value="0">
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="form-group">
+                            <label>Statut</label>
+                            <select id="ClasseStatut" class="form-control">
+                                <option value="Actif">Actif</option>
+                                <option value="Inactif">Inactif</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
             </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="saveClasse()">
+                    <i class="fas fa-save"></i> Enregistrer
+                </button>
+                <button type="button" class="btn btn-danger" onclick="closeAddClasseModal()">Annuler</button>
+            </div>
 
             <!-- ═══ SCRIPTS ═══ -->
+            <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
             <script src="js/classe.js"></script>
         </form>
     </body>

@@ -172,12 +172,12 @@
                         <div class="container-fluid">
                             <div class="row">
                                 <div class="col-lg-6">
-                                    <h1 id="dynPageTitle">Tableau de bord</h1>
+                                    <h1 id="dynPageTitle">Liste des utilisateurs</h1>
                                 </div>
                                 <div class="col-lg-6">
                                     <ol class="breadcrumb" style="float: right;">
                                         <li class="breadcrumb-item">Application</li>
-                                        <li class="breadcrumb-item active" id="dynBreadcrumb">Tableau de bord</li>
+                                        <li class="breadcrumb-item active" id="dynBreadcrumb">Utilisateur</li>
                                     </ol>
                                 </div>
                             </div>

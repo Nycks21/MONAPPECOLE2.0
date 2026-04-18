@@ -1,8 +1,4 @@
-<%@ WebHandler Language="C#" Class="AjouterMatiere" %>
-// AjouterMatiere.ashx
-// INSERT d'une nouvelle matière
-// POST /handlers/AjouterMatiere.ashx
-// Body JSON : { NOM, ENSEIGNANT, COEFFICIENT, HEURES_SEMAINE, NIVEAU }
+<%@ WebHandler Language="C#" Class="AjouterClasse" %>
 
 using System;
 using System.Configuration;
@@ -12,7 +8,7 @@ using System.Web;
 using System.Web.Script.Serialization;
 using System.Web.SessionState;
 
-public class AjouterMatiere : IHttpHandler, IRequiresSessionState
+public class AjouterClasse : IHttpHandler, IRequiresSessionState
 {
     public void ProcessRequest(HttpContext ctx)
     {
@@ -20,7 +16,6 @@ public class AjouterMatiere : IHttpHandler, IRequiresSessionState
         ctx.Response.Charset     = "utf-8";
         ctx.Response.Cache.SetNoStore();
 
-        // ── Vérification session ──────────────────────────────────────────
         if (ctx.Session["authenticated"] == null || !(bool)ctx.Session["authenticated"])
         {
             ctx.Response.StatusCode = 401;
@@ -37,15 +32,13 @@ public class AjouterMatiere : IHttpHandler, IRequiresSessionState
 
         try
         {
-            // ── Lecture du corps JSON ─────────────────────────────────────
             string body;
             using (var reader = new StreamReader(ctx.Request.InputStream))
                 body = reader.ReadToEnd();
 
             var ser     = new JavaScriptSerializer();
-            var payload = ser.Deserialize<MatierePayload>(body);
+            var payload = ser.Deserialize<ClassePayload>(body);
 
-            // ── Validation minimale ───────────────────────────────────────
             if (string.IsNullOrWhiteSpace(payload.NOM))
                 throw new ArgumentException("Le nom est obligatoire.");
             if (string.IsNullOrWhiteSpace(payload.ENSEIGNANT))
@@ -55,12 +48,11 @@ public class AjouterMatiere : IHttpHandler, IRequiresSessionState
             if (payload.HEURES_SEMAINE < 1 || payload.HEURES_SEMAINE > 40)
                 throw new ArgumentException("Heures invalides.");
 
-            string connStr = ConfigurationManager
-                .ConnectionStrings["MaConnexion"].ConnectionString;
+            string connStr = ConfigurationManager.ConnectionStrings["MaConnexion"].ConnectionString;
 
             using (var conn = new SqlConnection(connStr))
             using (var cmd  = new SqlCommand(
-                @"INSERT INTO [dbo].[MATIERES]
+                @"INSERT INTO [dbo].[Classes]
                     (NOM, ENSEIGNANT, COEFFICIENT, HEURES_SEMAINE, NIVEAU, CREATED_AT)
                   VALUES
                     (@nom, @ens, @coeff, @heures, @niveau, GETDATE())", conn))
@@ -91,12 +83,9 @@ public class AjouterMatiere : IHttpHandler, IRequiresSessionState
         }
     }
 
-    public bool IsReusable
-    {
-        get { return false; }
-    }
+    public bool IsReusable { get { return false; } }
 
-    private class MatierePayload
+    private class ClassePayload
     {
         public string  NOM            { get; set; }
         public string  ENSEIGNANT     { get; set; }

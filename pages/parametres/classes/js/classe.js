@@ -159,47 +159,28 @@ function renderClasseStats() {
     }).join('');
 }
 
-// ─────────────────────────────────────────────
-// TABLEAU
-// ─────────────────────────────────────────────
+// ============================================================================
+// RENDU DU TABLEAU
+// ============================================================================
 function renderClassesTable() {
     var tbody = document.getElementById('ClassesTableBody');
     if (!tbody) return;
 
-    if (ClassesData.length === 0) {
-        tbody.innerHTML =
-            '<tr><td colspan="7" style="text-align:center;color:#888;padding:24px;">' +
-            '<i class="fas fa-inbox" style="font-size:24px;display:block;margin-bottom:8px;"></i>' +
-            'Aucune Classe enregistrée.</td></tr>';
-        return;
-    }
-
     tbody.innerHTML = ClassesData.map(function (m) {
-        var date = m.CREATED_AT
-            ? new Date(m.CREATED_AT).toLocaleDateString('fr-FR')
-            : '—';
-
         return '<tr>' +
                '<td><strong>' + escHtml(m.NOM) + '</strong></td>' +
-               '<td>' + escHtml(m.ENSEIGNANT) + '</td>' +
-               '<td><span class="badge-coeff">' + (parseFloat(m.COEFFICIENT).toFixed(1)) + '</span></td>' +
-               '<td>' + escHtml(String(m.HEURES_SEMAINE)) + 'h</td>' +
-               '<td><span class="badge-niveau">' + escHtml(m.NIVEAU) + '</span></td>' +
-               '<td style="color:#888;font-size:12px;">' + date + '</td>' +
-               '<td class="action-cell">' +
-               '  <button type="button" class="btn btn-warning btn-xs"' +
-               '    onclick="editClasse(' + m.ID + ')" title="Modifier">' +
-               '    <i class="fas fa-edit"></i>' +
-               '  </button>' +
-               '  <button type="button" class="btn btn-danger btn-xs"' +
-               '    onclick="deleteClasse(' + m.ID + ',\'' + escHtml(m.NOM) + '\')" title="Supprimer">' +
-               '    <i class="fas fa-trash"></i>' +
-               '  </button>' +
+               '<td>' + escHtml(m.NIVEAU) + '</td>' +
+               '<td>' + escHtml(m.EFFECTIF) + '</td>' +
+               '<td>' + escHtml(m.TITULAIRE) + '</td>' +
+               '<td>' + escHtml(m.SALLE) + '</td>' +
+               '<td><span class="badge ' + (m.STATUT === 'Actif' ? 'bg-success' : 'bg-danger') + '">' + escHtml(m.STATUT) + '</span></td>' +
+               '<td>' +
+               '  <button type="button" class="btn btn-sm btn-warning" onclick="editClasse(' + m.ID + ')"><i class="fas fa-edit"></i></button> ' +
+               '  <button type="button" class="btn btn-sm btn-danger" onclick="deleteClasse(' + m.ID + ',\'' + escHtml(m.NOM) + '\')"><i class="fas fa-trash"></i></button>' +
                '</td>' +
                '</tr>';
     }).join('');
 }
-
 // ─────────────────────────────────────────────
 // MODAL — OUVRIR / FERMER
 // ─────────────────────────────────────────────
@@ -233,7 +214,7 @@ function hideModal(id) {
 function resetClasseForm() {
     document.getElementById('ClasseNom').value        = '';
     document.getElementById('ClasseEnseignant').value = '';
-    document.getElementById('ClasseCoeff').value      = '1';
+    document.getElementById('ClasseSalle').value      = '';
     document.getElementById('ClasseHeures').value     = '3';
     document.getElementById('ClasseNiveau').value     = 'Tous niveaux';
     clearFormErrors();
@@ -243,79 +224,33 @@ function resetClasseForm() {
 // SAUVEGARDER (ajout ou modification)
 // ─────────────────────────────────────────────
 function saveClasse() {
-    // 1. Validation du formulaire avant envoi
     if (!validateClasseForm()) return;
 
-    // --- CRUCIAL : On mémorise si c'est une édition AVANT l'appel AJAX ---
-    var estUneModification = (editId !== null);
-
-    // 2. Préparation des données (Payload)
     var payload = {
-        NOM           : document.getElementById('ClasseNom').value.trim(),
-        ENSEIGNANT    : document.getElementById('ClasseEnseignant').value.trim(),
-        COEFFICIENT   : parseFloat(document.getElementById('ClasseCoeff').value),
-        HEURES_SEMAINE: parseInt(document.getElementById('ClasseHeures').value, 10),
-        NIVEAU        : document.getElementById('ClasseNiveau').value
+        NOM      : document.getElementById('ClasseNom').value.trim(),
+        NIVEAU   : document.getElementById('ClasseNiveau').value,
+        TITULAIRE: document.getElementById('ClasseTitulaire').value.trim(),
+        SALLE    : document.getElementById('ClasseSalle').value.trim(),
+        EFFECTIF : parseInt(document.getElementById('ClasseEffectif').value, 10) || 0,
+        STATUT   : document.getElementById('ClasseStatut').value
     };
 
-    var url = API.ajouter;
+    if (editId !== null) payload.ID = editId;
 
-    if (estUneModification) {
-        payload.ID = editId;
-        url = API.modifier;
-    }
-
-    // 3. UI : Désactiver le bouton
-    var btnSave = document.querySelector('#addClasseModal .btn-primary');
-    if (btnSave) { 
-        btnSave.disabled = true; 
-        btnSave.textContent = 'Enregistrement...'; 
-    }
+    var url = editId ? API.modifier : API.ajouter;
 
     showSpinner();
-
-    // 4. Appel AJAX
     ajax(url, payload)
         .then(function (data) {
-            if (!data.success) throw new Error(data.message || 'Erreur serveur');
-
-            // --- SUCCÈS ---
+            if (!data.success) throw new Error(data.message);
             closeAddClasseModal();
-
-            // Utilisation de la variable mémorisée pour le titre
-            var titreSucces = estUneModification ? 'Classe modifiée !' : 'Classe ajoutée !';
-            var texteSucces = estUneModification ? 
-                'Les modifications ont été enregistrées avec succès.' : 
-                'La nouvelle Classe a été créée avec succès.';
-
-            Swal.fire({
-                icon: 'success',
-                title: titreSucces,
-                text: texteSucces,
-                timer: 2500,
-                showConfirmButton: false,
-                target: document.body // Assure que l'alerte est au premier plan
-            });
-
+            Swal.fire('Succès', 'Opération réussie', 'success');
             chargerClasses(); 
         })
         .catch(function (err) {
-            // --- ERREUR ---
-            Swal.fire({
-                icon: 'error',
-                title: 'Erreur d\'enregistrement',
-                text: err.message,
-                confirmButtonColor: '#3085d6'
-            });
-            hideSpinner();
+            Swal.fire('Erreur', err.message, 'error');
         })
-        .finally(function () {
-            // 5. UI : Réactiver le bouton
-            if (btnSave) {
-                btnSave.disabled = false;
-                btnSave.innerHTML = '<i class="fas fa-save"></i> Enregistrer';
-            }
-        });
+        .finally(hideSpinner);
 }
 
 // ─────────────────────────────────────────────
@@ -323,34 +258,19 @@ function saveClasse() {
 // @param {number} id — ID SQL Server
 // ─────────────────────────────────────────────
 function editClasse(id) {
-    // Trouver la ligne dans le cache local
-    var m = null;
-    for (var i = 0; i < ClassesData.length; i++) {
-        if (ClassesData[i].ID === id) { m = ClassesData[i]; break; }
-    }
+    var m = ClassesData.find(x => x.ID === id);
     if (!m) return;
 
     editId = id;
+    document.getElementById('ClasseNom').value = m.NOM;
+    document.getElementById('ClasseNiveau').value = m.NIVEAU;
+    document.getElementById('ClasseTitulaire').value = m.TITULAIRE;
+    document.getElementById('ClasseSalle').value = m.SALLE;
+    document.getElementById('ClasseEffectif').value = m.EFFECTIF;
+    document.getElementById('ClasseStatut').value = m.STATUT;
 
-    document.getElementById('ClasseNom').value        = m.NOM;
-    document.getElementById('ClasseEnseignant').value = m.ENSEIGNANT;
-    document.getElementById('ClasseCoeff').value      = m.COEFFICIENT;
-    document.getElementById('ClasseHeures').value     = m.HEURES_SEMAINE;
-    document.getElementById('ClasseNiveau').value     = m.NIVEAU;
-
-    document.getElementById('ClasseModalTitle').innerHTML =
-        '<i class="fas fa-edit"></i> Modifier : ' + escHtml(m.NOM);
-
+    document.getElementById('ClasseModalTitle').innerHTML = '<i class="fas fa-edit"></i> Modifier la classe';
     showModal('addClasseModal');
-    if (result.success || result.status === "success") {
-            Swal.fire({ icon: 'success', title: "Utilisateur modifié !", timer: 1500, showConfirmButton: false });
-            setTimeout(() => {
-                closeAddUserModal();
-                loadUsers();
-            }, 1500);
-        } else {
-            Swal.fire({ icon: 'error', title: 'Erreur', text: result.message || "Erreur lors de la modification" });
-        }
 }
 
 // ─────────────────────────────────────────────
@@ -469,9 +389,9 @@ function validateClasseForm() {
         ok = false;
     }
 
-    var coeff = parseFloat(document.getElementById('ClasseCoeff').value);
-    if (isNaN(coeff) || coeff < 0.5 || coeff > 10) {
-        showFieldError('ClasseCoeff', 'Coefficient entre 0.5 et 10.');
+    var coeff = parseFloat(document.getElementById('ClasseSalle').value);
+    if (!salle) {
+        showFieldError('ClasseSalle', 'La salle est obligatoire.');
         ok = false;
     }
 

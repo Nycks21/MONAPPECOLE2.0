@@ -1,4 +1,4 @@
-<%@ WebHandler Language="C#" Class="SupprimerMatiere" %>
+<%@ WebHandler Language="C#" Class="SupprimerClasse" %>
 
 using System;
 using System.Configuration;
@@ -8,15 +8,14 @@ using System.Web;
 using System.Web.Script.Serialization;
 using System.Web.SessionState;
 
-public class SupprimerMatiere : IHttpHandler, IRequiresSessionState
+public class SupprimerClasse : IHttpHandler, IRequiresSessionState
 {
     public void ProcessRequest(HttpContext ctx)
     {
         ctx.Response.ContentType = "application/json";
-        ctx.Response.Charset = "utf-8";
+        ctx.Response.Charset     = "utf-8";
         ctx.Response.Cache.SetNoStore();
 
-        // Déclaration ici pour accès dans le Try et le Catch
         JavaScriptSerializer ser = new JavaScriptSerializer();
 
         if (ctx.Session["authenticated"] == null || !(bool)ctx.Session["authenticated"])
@@ -42,19 +41,17 @@ public class SupprimerMatiere : IHttpHandler, IRequiresSessionState
             var payload = ser.Deserialize<IdPayload>(body);
 
             if (payload == null || payload.ID <= 0)
-                throw new ArgumentException("ID de matière invalide.");
+                throw new ArgumentException("ID de classe invalide.");
 
             string connStr = ConfigurationManager.ConnectionStrings["MaConnexion"].ConnectionString;
 
             using (var conn = new SqlConnection(connStr))
-            using (var cmd = new SqlCommand("DELETE FROM [dbo].[MATIERES] WHERE ID = @id", conn))
+            using (var cmd  = new SqlCommand("DELETE FROM [dbo].[Classes] WHERE ID = @id", conn))
             {
                 cmd.Parameters.AddWithValue("@id", payload.ID);
                 conn.Open();
                 int rows = cmd.ExecuteNonQuery();
-
-                if (rows == 0)
-                    throw new Exception("Matière introuvable (ID=" + payload.ID + ").");
+                if (rows == 0) throw new Exception("Classe introuvable (ID=" + payload.ID + ").");
             }
 
             ctx.Response.Write("{\"success\":true}");
@@ -71,13 +68,7 @@ public class SupprimerMatiere : IHttpHandler, IRequiresSessionState
         }
     }
 
-    public bool IsReusable
-    {
-        get { return false; }
-    }
+    public bool IsReusable { get { return false; } }
 
-    private class IdPayload 
-    { 
-        public int ID { get; set; } 
-    }
+    private class IdPayload { public int ID { get; set; } }
 }
