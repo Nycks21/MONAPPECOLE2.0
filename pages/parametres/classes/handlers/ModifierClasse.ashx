@@ -40,29 +40,35 @@ public class ModifierClasse : IHttpHandler, IRequiresSessionState
 
             var payload = ser.Deserialize<ClassePayload>(body);
 
-            if (payload == null)         throw new ArgumentException("Données invalides.");
-            if (payload.ID <= 0)         throw new ArgumentException("ID invalide.");
-            if (string.IsNullOrEmpty(payload.NOM))       throw new ArgumentException("Le nom est obligatoire.");
-            if (string.IsNullOrEmpty(payload.ENSEIGNANT)) throw new ArgumentException("L'enseignant est obligatoire.");
+            if (payload == null)
+                throw new ArgumentException("Données invalides.");
+            if (payload.ID <= 0)
+                throw new ArgumentException("ID invalide.");
+            if (string.IsNullOrWhiteSpace(payload.NOM))
+                throw new ArgumentException("Le nom de la classe est obligatoire.");
+            if (string.IsNullOrWhiteSpace(payload.TITULAIRE))
+                throw new ArgumentException("Le titulaire est obligatoire.");
 
             string connStr = ConfigurationManager.ConnectionStrings["MaConnexion"].ConnectionString;
 
             using (var conn = new SqlConnection(connStr))
             using (var cmd  = new SqlCommand(
                 @"UPDATE [dbo].[Classes]
-                  SET    NOM            = @nom,
-                         ENSEIGNANT     = @ens,
-                         COEFFICIENT    = @coeff,
-                         HEURES_SEMAINE = @heures,
-                         NIVEAU         = @niveau
+                  SET    NOM       = @nom,
+                         NIVEAU    = @niveau,
+                         TITULAIRE = @titulaire,
+                         SALLE     = @salle,
+                         EFFECTIF  = @effectif,
+                         STATUT    = @statut
                   WHERE  ID = @id", conn))
             {
-                cmd.Parameters.AddWithValue("@id",     payload.ID);
-                cmd.Parameters.AddWithValue("@nom",    payload.NOM.Trim());
-                cmd.Parameters.AddWithValue("@ens",    payload.ENSEIGNANT.Trim());
-                cmd.Parameters.AddWithValue("@coeff",  payload.COEFFICIENT);
-                cmd.Parameters.AddWithValue("@heures", payload.HEURES_SEMAINE);
-                cmd.Parameters.AddWithValue("@niveau", payload.NIVEAU ?? "Tous niveaux");
+                cmd.Parameters.AddWithValue("@id",        payload.ID);
+                cmd.Parameters.AddWithValue("@nom",       payload.NOM.Trim());
+                cmd.Parameters.AddWithValue("@niveau",    payload.NIVEAU    ?? "");
+                cmd.Parameters.AddWithValue("@titulaire", payload.TITULAIRE.Trim());
+                cmd.Parameters.AddWithValue("@salle",     payload.SALLE     ?? "");
+                cmd.Parameters.AddWithValue("@effectif",  payload.EFFECTIF);
+                cmd.Parameters.AddWithValue("@statut",    payload.STATUT    ?? "Actif");
 
                 conn.Open();
                 int rows = cmd.ExecuteNonQuery();
@@ -87,11 +93,12 @@ public class ModifierClasse : IHttpHandler, IRequiresSessionState
 
     private class ClassePayload
     {
-        public int     ID            { get; set; }
-        public string  NOM           { get; set; }
-        public string  ENSEIGNANT    { get; set; }
-        public decimal COEFFICIENT   { get; set; }
-        public int     HEURES_SEMAINE{ get; set; }
-        public string  NIVEAU        { get; set; }
+        public int    ID        { get; set; }
+        public string NOM       { get; set; }
+        public string NIVEAU    { get; set; }
+        public string TITULAIRE { get; set; }
+        public string SALLE     { get; set; }
+        public int    EFFECTIF  { get; set; }
+        public string STATUT    { get; set; }
     }
 }

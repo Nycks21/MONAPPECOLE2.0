@@ -42,8 +42,7 @@ CREATE TABLE CLASSES (
     EFFECTIF INT DEFAULT 0,
     TITULAIRE NVARCHAR(100),
     SALLE NVARCHAR(50),
-    STATUT NVARCHAR(20) DEFAULT 'Active'
-        CHECK (STATUT IN ('Active','Inactive')),
+    STATUT BIT NOT NULL DEFAULT 1,
     CREATED_AT DATETIME DEFAULT GETDATE()
 );
 
@@ -214,17 +213,17 @@ CREATE TABLE NOTIFICATIONS (
 -- =====================================================
 
 -- Insertion des classes
-INSERT INTO CLASSES (NOM, NIVEAU, EFFECTIF, TITULAIRE, SALLE) VALUES
-('6ème A', '6ème', 32, 'Mme RABE', 'Salle 101'),
-('6ème B', '6ème', 30, 'M. RAKOTO', 'Salle 102'),
-('5ème A', '5ème', 28, 'Mme RAVELO', 'Salle 201'),
-('5ème B', '5ème', 29, 'M. ANDRIA', 'Salle 202'),
-('4ème A', '4ème', 27, 'Mme RALISON', 'Salle 203'),
-('3ème A', '3ème', 25, 'M. RANDRIAN', 'Salle 301'),
-('2nde A', '2nde', 35, 'Mme RABE', 'Salle 401'),
-('1ère A', '1ère', 30, 'M. RAKOTO', 'Salle 402'),
-('Tle C', 'Terminale', 28, 'Mme RAVELO', 'Salle 403'),
-('Tle D', 'Terminale', 26, 'M. ANDRIA', 'Salle 404');
+INSERT INTO CLASSES (NOM, NIVEAU, EFFECTIF, TITULAIRE, SALLE, STATUT) VALUES
+('6ème A', '6ème', 32, 'Mme RABE', 'Salle 101', N'1'),
+('6ème B', '6ème', 30, 'M. RAKOTO', 'Salle 102', N'1'),
+('5ème A', '5ème', 28, 'Mme RAVELO', 'Salle 201', N'1'),
+('5ème B', '5ème', 29, 'M. ANDRIA', 'Salle 202', N'1'),
+('4ème A', '4ème', 27, 'Mme RALISON', 'Salle 203', N'1'),
+('3ème A', '3ème', 25, 'M. RANDRIAN', 'Salle 301', N'1'),
+('2nde A', '2nde', 35, 'Mme RABE', 'Salle 401', N'1'),
+('1ère A', '1ère', 30, 'M. RAKOTO', 'Salle 402', N'1'),
+('Tle C', 'Terminale', 28, 'Mme RAVELO', 'Salle 403', N'1'),
+('Tle D', 'Terminale', 26, 'M. ANDRIA', 'Salle 404', N'1');
 
 -- Insertion des matières
 INSERT INTO MATIERES (NOM, ENSEIGNANT, COEFFICIENT, HEURES_SEMAINE, NIVEAU) VALUES

@@ -39,29 +39,29 @@ public class AjouterClasse : IHttpHandler, IRequiresSessionState
             var ser     = new JavaScriptSerializer();
             var payload = ser.Deserialize<ClassePayload>(body);
 
+            // Validation selon les champs réels de la table Classes
             if (string.IsNullOrWhiteSpace(payload.NOM))
-                throw new ArgumentException("Le nom est obligatoire.");
-            if (string.IsNullOrWhiteSpace(payload.ENSEIGNANT))
-                throw new ArgumentException("L'enseignant est obligatoire.");
-            if (payload.COEFFICIENT < 0.5m || payload.COEFFICIENT > 10m)
-                throw new ArgumentException("Coefficient invalide.");
-            if (payload.HEURES_SEMAINE < 1 || payload.HEURES_SEMAINE > 40)
-                throw new ArgumentException("Heures invalides.");
+                throw new ArgumentException("Le nom de la classe est obligatoire.");
+            if (string.IsNullOrWhiteSpace(payload.TITULAIRE))
+                throw new ArgumentException("Le titulaire est obligatoire.");
+            if (payload.EFFECTIF < 0)
+                throw new ArgumentException("L'effectif ne peut pas être négatif.");
 
             string connStr = ConfigurationManager.ConnectionStrings["MaConnexion"].ConnectionString;
 
             using (var conn = new SqlConnection(connStr))
             using (var cmd  = new SqlCommand(
                 @"INSERT INTO [dbo].[Classes]
-                    (NOM, ENSEIGNANT, COEFFICIENT, HEURES_SEMAINE, NIVEAU, CREATED_AT)
+                    (NOM, NIVEAU, TITULAIRE, SALLE, EFFECTIF, STATUT)
                   VALUES
-                    (@nom, @ens, @coeff, @heures, @niveau, GETDATE())", conn))
+                    (@nom, @niveau, @titulaire, @salle, @effectif, @statut)", conn))
             {
-                cmd.Parameters.AddWithValue("@nom",    payload.NOM.Trim());
-                cmd.Parameters.AddWithValue("@ens",    payload.ENSEIGNANT.Trim());
-                cmd.Parameters.AddWithValue("@coeff",  payload.COEFFICIENT);
-                cmd.Parameters.AddWithValue("@heures", payload.HEURES_SEMAINE);
-                cmd.Parameters.AddWithValue("@niveau", payload.NIVEAU ?? "Tous niveaux");
+                cmd.Parameters.AddWithValue("@nom",       payload.NOM.Trim());
+                cmd.Parameters.AddWithValue("@niveau",    payload.NIVEAU    ?? "");
+                cmd.Parameters.AddWithValue("@titulaire", payload.TITULAIRE.Trim());
+                cmd.Parameters.AddWithValue("@salle",     payload.SALLE     ?? "");
+                cmd.Parameters.AddWithValue("@effectif",  payload.EFFECTIF);
+                cmd.Parameters.AddWithValue("@statut",    payload.STATUT    ?? "Actif");
 
                 conn.Open();
                 cmd.ExecuteNonQuery();
@@ -87,10 +87,11 @@ public class AjouterClasse : IHttpHandler, IRequiresSessionState
 
     private class ClassePayload
     {
-        public string  NOM            { get; set; }
-        public string  ENSEIGNANT     { get; set; }
-        public decimal COEFFICIENT    { get; set; }
-        public int     HEURES_SEMAINE { get; set; }
-        public string  NIVEAU         { get; set; }
+        public string NOM       { get; set; }
+        public string NIVEAU    { get; set; }
+        public string TITULAIRE { get; set; }
+        public string SALLE     { get; set; }
+        public int    EFFECTIF  { get; set; }
+        public string STATUT    { get; set; }
     }
 }

@@ -243,71 +243,81 @@
             </div>
 
             <!-- MODAL CLASSE -->
-            <div class="modal-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label>Nom de la classe *</label>
-                            <input type="text" id="ClasseNom" class="form-control" placeholder="Ex: 6ème A">
+            <div id="addClasseModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="classeModalTitle">
+                <div class="modal-content" style="max-width:550px;">
+                    <div class="modal-header">
+                        <h3 id="classeModalTitle"><i class="fas fa-book-medical"></i> Ajouter une classe</h3>
+                    <button type="button" class="btn-close-modal" onclick="closeAddClasseModal()" aria-label="Fermer">&times;</button>
+                    </div>
+
+                    <div class="modal-body">
+                        <input type="hidden" id="matiereEditNom">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Nom de la classe *</label>
+                                    <input type="text" id="ClasseNom" class="form-control" placeholder="Ex: 6ème A">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Niveau *</label>
+                                    <select id="ClasseNiveau" class="form-control">
+                                        <option value="">Sélectionner</option>
+                                        <option value="6ème">6ème</option>
+                                        <option value="5ème">5ème</option>
+                                        <option value="4ème">4ème</option>
+                                        <option value="3ème">3ème</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Titulaire (Enseignant) *</label>
+                                    <input type="text" id="ClasseTitulaire" class="form-control"
+                                        placeholder="Nom du titulaire">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Salle</label>
+                                    <input type="text" id="ClasseSalle" class="form-control"
+                                        placeholder="Ex: Salle 101">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Effectif</label>
+                                    <input type="number" id="ClasseEffectif" class="form-control" value="0">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label>Statut</label>
+                                    <select id="ClasseStatut" class="form-control">
+                                        <option value="Actif">Actif</option>
+                                        <option value="Inactif">Inactif</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label>Niveau *</label>
-                            <select id="ClasseNiveau" class="form-control">
-                                <option value="">Sélectionner</option>
-                                <option value="6ème">6ème</option>
-                                <option value="5ème">5ème</option>
-                                <option value="4ème">4ème</option>
-                                <option value="3ème">3ème</option>
-                                <option value="2nde">2nde</option>
-                                <option value="1ère">1ère</option>
-                                <option value="Terminale">Terminale</option>
-                            </select>
-                        </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-primary" onclick="saveClasse()">
+                            <i class="fas fa-save"></i> Enregistrer
+                        </button>
+                        <button type="button" class="btn btn-danger" onclick="closeAddClasseModal()">Annuler</button>
                     </div>
                 </div>
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label>Titulaire (Enseignant) *</label>
-                            <input type="text" id="ClasseTitulaire" class="form-control" placeholder="Nom du titulaire">
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label>Salle</label>
-                            <input type="text" id="ClasseSalle" class="form-control" placeholder="Ex: Salle 101">
-                        </div>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label>Effectif</label>
-                            <input type="number" id="ClasseEffectif" class="form-control" value="0">
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label>Statut</label>
-                            <select id="ClasseStatut" class="form-control">
-                                <option value="Actif">Actif</option>
-                                <option value="Inactif">Inactif</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-primary" onclick="saveClasse()">
-                    <i class="fas fa-save"></i> Enregistrer
-                </button>
-                <button type="button" class="btn btn-danger" onclick="closeAddClasseModal()">Annuler</button>
             </div>
 
             <!-- ═══ SCRIPTS ═══ -->
-            <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+            <script src="../../../plugins/sweetalert2/sweetalert2.all.min.js"></script>
             <script src="js/classe.js"></script>
         </form>
     </body>

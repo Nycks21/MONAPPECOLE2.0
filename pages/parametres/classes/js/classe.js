@@ -15,9 +15,9 @@
 // URLS DES HANDLERS (relatifs à la page courante)
 // ─────────────────────────────────────────────
 var API = {
-    liste    : 'handlers/GetClasse.ashx',
-    ajouter  : 'handlers/AjouterClasse.ashx',
-    modifier : 'handlers/ModifierClasse.ashx',
+    liste: 'handlers/GetClasse.ashx',
+    ajouter: 'handlers/AjouterClasse.ashx',
+    modifier: 'handlers/ModifierClasse.ashx',
     supprimer: 'handlers/SupprimerClasse.ashx'
 };
 
@@ -25,7 +25,10 @@ var API = {
 // ÉTAT LOCAL (sert uniquement à l'affichage)
 // ─────────────────────────────────────────────
 var ClassesData = [];   // tableau d'objets rempli depuis le serveur
-var editId       = null; // ID SQL Server de la ligne en cours d'édition
+var editId = null; // ID SQL Server de la ligne en cours d'édition
+var currentPage = 1;
+var rowsPerPage = 10;
+var filteredClasses = [];
 
 // ─────────────────────────────────────────────
 // INIT
@@ -58,18 +61,18 @@ function hidePreloader() {
 function forceHideSpinner() {
     var s = document.getElementById('spinnerOverlay');
     if (!s) return;
-    s.style.display    = 'none';
+    s.style.display = 'none';
     s.style.visibility = 'hidden';
-    s.style.opacity    = '0';
+    s.style.opacity = '0';
     s.setAttribute('aria-hidden', 'true');
 }
 
 function showSpinner() {
     var s = document.getElementById('spinnerOverlay');
     if (!s) return;
-    s.style.opacity    = '1';
+    s.style.opacity = '1';
     s.style.visibility = 'visible';
-    s.style.display    = 'flex';
+    s.style.display = 'flex';
     s.removeAttribute('aria-hidden');
 }
 
@@ -86,14 +89,14 @@ function hideSpinner() { forceHideSpinner(); }
  */
 function ajax(url, payload) {
     return fetch(url, {
-        method : 'POST',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json; charset=utf-8' },
-        body   : JSON.stringify(payload)
+        body: JSON.stringify(payload)
     })
-    .then(function (r) {
-        if (!r.ok) throw new Error('Erreur HTTP ' + r.status);
-        return r.json();
-    });
+        .then(function (r) {
+            if (!r.ok) throw new Error('Erreur HTTP ' + r.status);
+            return r.json();
+        });
 }
 
 // ─────────────────────────────────────────────
@@ -101,16 +104,19 @@ function ajax(url, payload) {
 // ─────────────────────────────────────────────
 function chargerClasses() {
     showSpinner();
-
     fetch(API.liste)
         .then(function (r) {
             if (!r.ok) throw new Error('Erreur HTTP ' + r.status);
             return r.json();
         })
         .then(function (data) {
-            // data = { success: true, Classes: [ {ID, NOM, ENSEIGNANT, ...}, ... ] }
             if (!data.success) throw new Error(data.message || 'Erreur serveur');
             ClassesData = data.Classes || [];
+
+            // Initialisation pour la pagination
+            filteredClasses = [...ClassesData];
+            currentPage = 1;
+
             renderClasseStats();
             renderClassesTable();
         })
@@ -129,33 +135,48 @@ function renderClasseStats() {
     var container = document.getElementById('ClassesStatsContainer');
     if (!container) return;
 
-    var total      = ClassesData.length;
-    var totalCoeff = 0;
-    var totalH     = 0;
+    var total = ClassesData.length;
+    var totalEffectif = 0;
     var niveauxVus = {};
+    var actives = 0;
 
     for (var i = 0; i < ClassesData.length; i++) {
-        totalCoeff += parseFloat(ClassesData[i].COEFFICIENT) || 0;
-        totalH     += parseInt(ClassesData[i].HEURES_SEMAINE, 10) || 0;
-        niveauxVus[ClassesData[i].NIVEAU] = true;
+        var classe = ClassesData[i];
+
+        // Calcul effectif
+        totalEffectif += parseInt(classe.EFFECTIF, 10) || 0;
+
+        // Calcul niveaux uniques
+        if (classe.NIVEAU) {
+            niveauxVus[classe.NIVEAU] = true;
+        }
+
+        // --- CORRECTION DU COMPTEUR ACTIVES ---
+        // On normalise la valeur en minuscules pour comparer "True", "true" ou "Actif"
+        var statutBrut = String(classe.STATUT || '').toLowerCase().trim();
+
+        if (statutBrut === 'true' || statutBrut === '1' || statutBrut === 'actif') {
+            actives++;
+        }
     }
+
     var niveaux = Object.keys(niveauxVus).length;
 
     var stats = [
-        { label: 'Classes',         value: total,                    icon: 'fas fa-book',          color: '#007bff' },
-        { label: 'Coeff. total',     value: totalCoeff.toFixed(1),    icon: 'fas fa-balance-scale',  color: '#28a745' },
-        { label: 'Heures / sem.',    value: totalH + 'h',             icon: 'fas fa-clock',          color: '#ffc107' },
-        { label: 'Niveaux couverts', value: niveaux,                  icon: 'fas fa-layer-group',    color: '#17a2b8' }
+        { label: 'Classes', value: total, icon: 'fas fa-folder', color: '#007bff' },
+        { label: 'Effectif total', value: totalEffectif, icon: 'fas fa-users', color: '#28a745' },
+        { label: 'Niveaux couverts', value: niveaux, icon: 'fas fa-layer-group', color: '#ffc107' },
+        { label: 'Classes actives', value: actives, icon: 'fas fa-check-circle', color: '#17a2b8' }
     ];
 
     container.innerHTML = stats.map(function (s) {
         return '<div class="absence-stat-card" style="border-left:4px solid ' + s.color + ';">' +
-               '  <div class="stat-icon" style="color:' + s.color + ';"><i class="' + s.icon + '"></i></div>' +
-               '  <div class="stat-info">' +
-               '    <span class="stat-value">' + s.value + '</span>' +
-               '    <span class="stat-label">' + escHtml(s.label) + '</span>' +
-               '  </div>' +
-               '</div>';
+            '  <div class="stat-icon" style="color:' + s.color + ';"><i class="' + s.icon + '"></i></div>' +
+            '  <div class="stat-info">' +
+            '    <span class="stat-value">' + s.value + '</span>' +
+            '    <span class="stat-label">' + escHtml(s.label) + '</span>' +
+            '  </div>' +
+            '</div>';
     }).join('');
 }
 
@@ -163,23 +184,61 @@ function renderClasseStats() {
 // RENDU DU TABLEAU
 // ============================================================================
 function renderClassesTable() {
-    var tbody = document.getElementById('ClassesTableBody');
+    const tbody = document.getElementById('ClassesTableBody');
     if (!tbody) return;
 
-    tbody.innerHTML = ClassesData.map(function (m) {
-        return '<tr>' +
-               '<td><strong>' + escHtml(m.NOM) + '</strong></td>' +
-               '<td>' + escHtml(m.NIVEAU) + '</td>' +
-               '<td>' + escHtml(m.EFFECTIF) + '</td>' +
-               '<td>' + escHtml(m.TITULAIRE) + '</td>' +
-               '<td>' + escHtml(m.SALLE) + '</td>' +
-               '<td><span class="badge ' + (m.STATUT === 'Actif' ? 'bg-success' : 'bg-danger') + '">' + escHtml(m.STATUT) + '</span></td>' +
-               '<td>' +
-               '  <button type="button" class="btn btn-sm btn-warning" onclick="editClasse(' + m.ID + ')"><i class="fas fa-edit"></i></button> ' +
-               '  <button type="button" class="btn btn-sm btn-danger" onclick="deleteClasse(' + m.ID + ',\'' + escHtml(m.NOM) + '\')"><i class="fas fa-trash"></i></button>' +
-               '</td>' +
-               '</tr>';
-    }).join('');
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    const endIndex = startIndex + rowsPerPage;
+    const pageClasses = filteredClasses.slice(startIndex, endIndex);
+    const totalPages = Math.ceil(filteredClasses.length / rowsPerPage);
+
+    tbody.innerHTML = '';
+
+    if (!pageClasses.length) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 60px;"><i class="fas fa-search" style="font-size: 48px; color: #ccc; margin-bottom: 15px; display: block;"></i>Aucune classe trouvée</td></tr>';
+        // Note: Assurez-vous que ces fonctions existent ou supprimez-les
+        if (typeof updateCounter === "function") updateCounter();
+        return;
+    }
+
+    pageClasses.forEach(classe => {
+        const row = tbody.insertRow();
+        const cellNom = row.insertCell(0);
+            cellNom.innerHTML = escHtml(classe.NOM) || '-';
+            cellNom.style.fontWeight = 'bold'; // Applique le gras
+            cellNom.style.color = '#333333';      // Optionnel : rend le texte un peu plus foncé
+        row.insertCell(1).innerHTML = escHtml(classe.NIVEAU) || '-';
+        row.insertCell(2).innerHTML = classe.EFFECTIF || '0';
+        row.insertCell(3).innerHTML = escHtml(classe.TITULAIRE) || '-';
+        row.insertCell(4).innerHTML = escHtml(classe.SALLE) || '-';
+
+        // --- CORRECTION DU STATUT ---
+        // On vérifie si c'est vrai (booléen), 1 (nombre), "true" (string) ou "Actif" (string)
+        const isActif = (
+            classe.STATUT === true ||
+            classe.STATUT === 1 ||
+            classe.STATUT === '1' ||
+            classe.STATUT === 'True' ||
+            classe.STATUT === 'Actif'
+        );
+
+        row.insertCell(5).innerHTML = isActif
+            ? '<span class="badge bg-success" style="background: #28a745; padding: 4px 10px; border-radius: 20px; color: white; font-size: 12px;">✓ Actif</span>'
+            : '<span class="badge bg-danger" style="background: #dc3545; padding: 4px 10px; border-radius: 20px; color: white; font-size: 12px;">✗ Inactif</span>';
+
+        // Actions
+        row.insertCell(6).innerHTML = `
+        <button type="button" class="btn btn-sm btn-primary" onclick="editClasse(${classe.ID})">
+            <i class="fas fa-edit"></i>
+        </button>
+        <button type="button" class="btn btn-sm btn-danger" onclick="deleteClasse(${classe.ID}, '${escHtml(classe.NOM).replace(/'/g, "\\'")}')">
+            <i class="fas fa-trash"></i>
+        </button>
+    `;
+    });
+
+    // Optionnel: Appel de la pagination si vous avez une fonction dédiée
+    if (typeof createPaginationControls === "function") createPaginationControls(totalPages);
 }
 // ─────────────────────────────────────────────
 // MODAL — OUVRIR / FERMER
@@ -187,7 +246,7 @@ function renderClassesTable() {
 function openAddClasseModal() {
     editId = null;
     resetClasseForm();
-    document.getElementById('ClasseModalTitle').innerHTML =
+    document.getElementById('classeModalTitle').innerHTML =
         '<i class="fas fa-book-medical"></i> Ajouter une Classe';
     showModal('addClasseModal');
 }
@@ -212,11 +271,12 @@ function hideModal(id) {
 // FORMULAIRE — RESET
 // ─────────────────────────────────────────────
 function resetClasseForm() {
-    document.getElementById('ClasseNom').value        = '';
-    document.getElementById('ClasseEnseignant').value = '';
-    document.getElementById('ClasseSalle').value      = '';
-    document.getElementById('ClasseHeures').value     = '3';
-    document.getElementById('ClasseNiveau').value     = 'Tous niveaux';
+    document.getElementById('ClasseNom').value = '';
+    document.getElementById('ClasseTitulaire').value = ''; // Corrigé (était ClasseEnseignant)
+    document.getElementById('ClasseSalle').value = '';
+    document.getElementById('ClasseEffectif').value = '0';  // Corrigé (était ClasseHeures)
+    document.getElementById('ClasseNiveau').value = '';
+    document.getElementById('ClasseStatut').value = 'Actif';
     clearFormErrors();
 }
 
@@ -224,33 +284,80 @@ function resetClasseForm() {
 // SAUVEGARDER (ajout ou modification)
 // ─────────────────────────────────────────────
 function saveClasse() {
+    // 1. Validation du formulaire avant envoi
     if (!validateClasseForm()) return;
 
+    // --- CRUCIAL : On mémorise si c'est une édition AVANT l'appel AJAX ---
+    var estUneModification = (editId !== null);
+
+    // 2. Préparation des données (Payload)
     var payload = {
-        NOM      : document.getElementById('ClasseNom').value.trim(),
-        NIVEAU   : document.getElementById('ClasseNiveau').value,
+        NOM: document.getElementById('ClasseNom').value.trim(),
+        NIVEAU: document.getElementById('ClasseNiveau').value,
         TITULAIRE: document.getElementById('ClasseTitulaire').value.trim(),
-        SALLE    : document.getElementById('ClasseSalle').value.trim(),
-        EFFECTIF : parseInt(document.getElementById('ClasseEffectif').value, 10) || 0,
-        STATUT   : document.getElementById('ClasseStatut').value
+        SALLE: document.getElementById('ClasseSalle').value.trim(),
+        EFFECTIF: parseInt(document.getElementById('ClasseEffectif').value, 10) || 0,
+        STATUT: document.getElementById('ClasseStatut').value === 'Actif' ? 1 : 0
     };
 
-    if (editId !== null) payload.ID = editId;
+    var url = API.ajouter;
 
-    var url = editId ? API.modifier : API.ajouter;
+    if (estUneModification) {
+        payload.ID = editId;
+        url = API.modifier;
+    }
+
+    // 3. UI : Désactiver le bouton
+    var btnSave = document.querySelector('#addClasseModal .btn-primary');
+    if (btnSave) {
+        btnSave.disabled = true;
+        btnSave.textContent = 'Enregistrement...';
+    }
 
     showSpinner();
+
+    // 4. Appel AJAX
     ajax(url, payload)
         .then(function (data) {
             if (!data.success) throw new Error(data.message);
+
+            // --- SUCCES ---
             closeAddClasseModal();
-            Swal.fire('Succès', 'Opération réussie', 'success');
-            chargerClasses(); 
+
+            // Définition dynamique des messages
+            var titreSucces = estUneModification ? 'Modification réussie !' : 'Ajout réussi !';
+            var texteSucces = estUneModification ?
+                'Les modifications de la classe ont été enregistrées.' :
+                'La nouvelle classe a été créée avec succès.';
+
+            // Utilisation des variables dans SweetAlert
+            Swal.fire({
+                title: titreSucces, // Utilise la variable définie plus haut
+                text: texteSucces,   // Utilise la variable définie plus haut
+                icon: 'success',
+                timer: 3000,
+                showConfirmButton: false,
+                target: document.body
+            });
+
+            chargerClasses();
         })
         .catch(function (err) {
-            Swal.fire('Erreur', err.message, 'error');
+            Swal.fire({
+                icon: 'error',
+                title: 'Erreur d\'enregistrement',
+                text: err.message,
+                confirmButtonColor: '#d63030'
+            });
+            hideSpinner();
         })
-        .finally(hideSpinner);
+        .finally(function () {
+            // 5. UI : Réactiver le bouton
+            if (btnSave) {
+                btnSave.disabled = false;
+                btnSave.innerHTML = '<i class="fas fa-save"></i> Enregistrer';
+            }
+        });
 }
 
 // ─────────────────────────────────────────────
@@ -267,9 +374,22 @@ function editClasse(id) {
     document.getElementById('ClasseTitulaire').value = m.TITULAIRE;
     document.getElementById('ClasseSalle').value = m.SALLE;
     document.getElementById('ClasseEffectif').value = m.EFFECTIF;
-    document.getElementById('ClasseStatut').value = m.STATUT;
 
-    document.getElementById('ClasseModalTitle').innerHTML = '<i class="fas fa-edit"></i> Modifier la classe';
+    // --- CORRECTION DU STATUT POUR LE MODAL ---
+    // On normalise la valeur SQL (True/1/Actif) pour qu'elle corresponde aux options du Select
+    var statutBrut = String(m.STATUT || '').toLowerCase().trim();
+    var valeurSelect = (statutBrut === 'true' || statutBrut === '1' || statutBrut === 'actif') 
+                       ? 'Actif' 
+                       : 'Inactif';
+    
+    document.getElementById('ClasseStatut').value = valeurSelect;
+
+    // Mise à jour du titre du modal
+    var titleElement = document.getElementById('classeModalTitle');
+    if (titleElement) {
+        titleElement.innerHTML = '<i class="fas fa-edit"></i> Modifier la classe';
+    }
+
     showModal('addClasseModal');
 }
 
@@ -290,7 +410,7 @@ function deleteClasse(id, nom) {
         confirmButtonText: 'Oui, supprimer',
         cancelButtonText: 'Annuler',
         // Empêche l'affichage derrière la modal en ciblant le body ou la modal elle-même
-        target: document.body 
+        target: document.body
     }).then((result) => {
         if (result.isConfirmed) {
             showSpinner();
@@ -298,13 +418,13 @@ function deleteClasse(id, nom) {
             ajax(API.supprimer, { ID: id })
                 .then(function (data) {
                     if (!data.success) throw new Error(data.message || 'Erreur serveur');
-                    
+
                     // Alerte de succès
                     Swal.fire({
                         title: 'Supprimé !',
                         text: 'La Classe a été supprimée avec succès.',
                         icon: 'success',
-                        timer: 2000,
+                        timer: 3000,
                         showConfirmButton: false
                     });
 
@@ -336,21 +456,18 @@ function exportClasses() {
 
     setTimeout(function () {
         try {
-            var header = ['ID', 'Classe', 'Enseignant', 'Coefficient', 'Heures/sem.', 'Niveau', 'Créé le'];
+            var header = ['ID', 'Classe', 'Niveau', 'Effectif', 'Titulaire', 'Salle', 'Statut'];
             var rows = ClassesData.map(function (m) {
-                var date = m.CREATED_AT
-                    ? new Date(m.CREATED_AT).toLocaleDateString('fr-FR')
-                    : '';
-                return [m.ID, m.NOM, m.ENSEIGNANT, m.COEFFICIENT, m.HEURES_SEMAINE, m.NIVEAU, date]
+                return [m.ID, m.NOM, m.NIVEAU, m.EFFECTIF, m.TITULAIRE, m.SALLE, m.STATUT]
                     .map(function (v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; })
                     .join(',');
             });
 
-            var csv  = [header.join(',')].concat(rows).join('\r\n');
+            var csv = [header.join(',')].concat(rows).join('\r\n');
             var blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-            var url  = URL.createObjectURL(blob);
-            var a    = document.createElement('a');
-            a.href     = url;
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
             a.download = 'Classes_export_' + dateDuJour() + '.csv';
             document.body.appendChild(a);
             a.click();
@@ -375,29 +492,24 @@ function validateClasseForm() {
     if (!nom) {
         showFieldError('ClasseNom', 'Le nom est obligatoire.');
         ok = false;
-    } else if (nom.length > 100) {
-        showFieldError('ClasseNom', 'Maximum 100 caractères.');
+    }
+
+    var titulaire = document.getElementById('ClasseTitulaire').value.trim();
+    if (!titulaire) {
+        showFieldError('ClasseTitulaire', "Le titulaire est obligatoire.");
         ok = false;
     }
 
-    var enseignant = document.getElementById('ClasseEnseignant').value.trim();
-    if (!enseignant) {
-        showFieldError('ClasseEnseignant', "L'enseignant est obligatoire.");
-        ok = false;
-    } else if (enseignant.length > 100) {
-        showFieldError('ClasseEnseignant', 'Maximum 100 caractères.');
-        ok = false;
-    }
-
-    var coeff = parseFloat(document.getElementById('ClasseSalle').value);
-    if (!salle) {
+    // CORRIGÉ : La variable 'salle' doit lire la valeur de l'élément ClasseSalle
+    var salleElement = document.getElementById('ClasseSalle');
+    if (salleElement && !salleElement.value.trim()) {
         showFieldError('ClasseSalle', 'La salle est obligatoire.');
         ok = false;
     }
 
-    var heures = parseInt(document.getElementById('ClasseHeures').value, 10);
-    if (isNaN(heures) || heures < 1 || heures > 40) {
-        showFieldError('ClasseHeures', 'Heures entre 1 et 40.');
+    var effectif = parseInt(document.getElementById('ClasseEffectif').value, 10);
+    if (isNaN(effectif) || effectif < 0) {
+        showFieldError('ClasseEffectif', 'Effectif invalide.');
         ok = false;
     }
 
@@ -408,7 +520,7 @@ function showFieldError(fieldId, msg) {
     var field = document.getElementById(fieldId);
     if (!field) return;
     field.classList.add('is-invalid');
-    var err       = document.createElement('div');
+    var err = document.createElement('div');
     err.className = 'field-error';
     err.textContent = msg;
     field.parentNode.appendChild(err);
@@ -429,11 +541,11 @@ function afficherErreurGlobale(msg) {
     if (existing) existing.parentNode.removeChild(existing);
 
     var div = document.createElement('div');
-    div.id        = 'alertErreurGlobal';
+    div.id = 'alertErreurGlobal';
     div.className = 'alert-erreur';
     div.innerHTML = '<i class="fas fa-exclamation-triangle"></i> ' + escHtml(msg) +
-                    '<button onclick="this.parentNode.remove()" style="float:right;background:none;border:none;' +
-                    'cursor:pointer;font-size:16px;color:inherit;">&times;</button>';
+        '<button onclick="this.parentNode.remove()" style="float:right;background:none;border:none;' +
+        'cursor:pointer;font-size:16px;color:inherit;">&times;</button>';
 
     var section = document.getElementById('section-Classes');
     if (section) section.insertBefore(div, section.firstChild);
@@ -445,8 +557,8 @@ function afficherErreurGlobale(msg) {
 function initUIControls() {
     // Sidebar toggle
     var menuToggle = document.getElementById('menuToggle');
-    var sidebar    = document.getElementById('sidebar');
-    var wrapper    = document.getElementById('contentWrapper');
+    var sidebar = document.getElementById('sidebar');
+    var wrapper = document.getElementById('contentWrapper');
     if (menuToggle && sidebar) {
         menuToggle.addEventListener('click', function () {
             sidebar.classList.toggle('sidebar-collapsed');
@@ -455,7 +567,7 @@ function initUIControls() {
     }
 
     // Notifications
-    var notifToggle   = document.getElementById('notifToggle');
+    var notifToggle = document.getElementById('notifToggle');
     var notifDropdown = document.getElementById('notifDropdown');
     if (notifToggle && notifDropdown) {
         notifToggle.addEventListener('click', function (e) {
@@ -478,9 +590,9 @@ function initUIControls() {
         fsToggle.addEventListener('click', function () {
             if (!document.fullscreenElement) {
                 document.documentElement.requestFullscreen &&
-                    document.documentElement.requestFullscreen().catch(function () {});
+                    document.documentElement.requestFullscreen().catch(function () { });
             } else {
-                document.exitFullscreen && document.exitFullscreen().catch(function () {});
+                document.exitFullscreen && document.exitFullscreen().catch(function () { });
             }
         });
     }
@@ -504,16 +616,16 @@ function initUIControls() {
 // ─────────────────────────────────────────────
 function escHtml(str) {
     return String(str == null ? '' : str)
-        .replace(/&/g,  '&amp;')
-        .replace(/</g,  '&lt;')
-        .replace(/>/g,  '&gt;')
-        .replace(/"/g,  '&quot;')
-        .replace(/'/g,  '&#039;');
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
 }
 
 function dateDuJour() {
     var d = new Date();
     return d.getFullYear() + '-' +
-           String(d.getMonth() + 1).padStart(2, '0') + '-' +
-           String(d.getDate()).padStart(2, '0');
+        String(d.getMonth() + 1).padStart(2, '0') + '-' +
+        String(d.getDate()).padStart(2, '0');
 }
