@@ -97,7 +97,7 @@
                                 <!-- Modules -->
                                 <li class="nav-item">
                                     <div class="nav-section">Modules</div>
-                                    <a href="../../modules/eleves/eleves.aspx" class="nav-link active">
+                                    <a href="../../modules/eleves/eleves.aspx" class="nav-link">
                                         <div style="width:30px; text-align:center; margin-right:10px;">
                                             <i class="fas fa-users"></i>
                                         </div>
@@ -132,7 +132,7 @@
                                 <!-- Paramètres -->
                                 <li class="nav-item">
                                     <div class="nav-section">Paramètres</div>
-                                    <a href="classes.aspx" class="nav-link">
+                                    <a href="classes.aspx" class="nav-link active">
                                         <div style="width:30px; text-align:center; margin-right:10px;">
                                             <i class="fas fa-folder"></i>
                                         </div>
@@ -312,8 +312,7 @@
             </div>
 
             <!-- ═══ SCRIPTS ═══ -->
-            <script src="js/eleves.js"></script>
-            <script src="js/script.js"></script>
+            <script src="js/classe.js"></script>
         </form>
     </body>
 
