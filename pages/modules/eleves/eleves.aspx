@@ -11,6 +11,7 @@
         <link rel="stylesheet" href="css/all.min.css">
         <link rel="stylesheet" href="css/fontawesome.css">
         <link rel="stylesheet" href="css/fontawesome.min.css">
+        <link rel="stylesheet" href="../../global.css">
         <link rel="stylesheet" href="css/style.css">
 
     </head>
@@ -170,12 +171,12 @@
                         <div class="container-fluid">
                             <div class="row">
                                 <div class="col-lg-6">
-                                    <h1 id="dynPageTitle">Tableau de bord</h1>
+                                    <h1 id="dynPageTitle">Eleves</h1>
                                 </div>
                                 <div class="col-lg-6">
                                     <ol class="breadcrumb" style="float: right;">
                                         <li class="breadcrumb-item">Application</li>
-                                        <li class="breadcrumb-item active" id="dynBreadcrumb">Tableau de bord</li>
+                                        <li class="breadcrumb-item active" id="dynBreadcrumb">Eleves</li>
                                     </ol>
                                 </div>
                             </div>

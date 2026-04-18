@@ -57,7 +57,7 @@ ul { list-style: none; }
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 900;
+    z-index: 9999;
     transition: opacity var(--transition);
 }
 .preloader img { animation: pulse 1s infinite alternate; }
@@ -549,7 +549,7 @@ select.form-control { appearance: auto; }
     position: fixed;
     inset: 0;
     background: rgba(0,0,0,.45);
-    z-index: 5000;
+    z-index: 1000;
     align-items: center;
     justify-content: center;
     padding: 16px;

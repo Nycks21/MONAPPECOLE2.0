@@ -12,6 +12,7 @@
         <link rel="stylesheet" href="css/fontawesome.css">
         <link rel="stylesheet" href="css/fontawesome.min.css">
         <link rel="stylesheet" href="css/style.css">
+        <link rel="stylesheet" href="../../global.css">
 
     </head>
 
@@ -19,11 +20,11 @@
         <form id="form1" runat="server">
             <div class="wrapper">
 
-                <!-- ═══ PRELOADER ═══ -->
+                <!-- ═══ PRELOADER ═══ 
                 <div class="preloader" id="preloader">
                     <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'%3E%3Crect width='60' height='60' rx='10' fill='%23007bff'/%3E%3Ctext x='30' y='40' font-size='32' font-weight='bold' text-anchor='middle' fill='white'%3EGS%3C/text%3E%3C/svg%3E"
                         alt="Logo">
-                </div>
+                </div> -->
 
                 <!-- ═══ TOPBAR ═══ -->
                 <nav class="main-header">
