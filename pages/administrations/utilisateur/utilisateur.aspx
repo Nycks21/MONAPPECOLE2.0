@@ -315,6 +315,12 @@
                 </div>
             </div>
 
+
+            <!-- ═══ SPINNER ═══ -->
+            <div id="spinnerOverlay" aria-hidden="true" style="display:none;visibility:hidden;">
+                <div class="spinner"></div>
+            </div>
+
             <!-- ═══ SCRIPTS ═══ -->
             <script src="../../_assets/js/jquery-3.6.0.min.js"></script>
             <script src="../../_assets/js/sweetalert2@11.js"></script>
@@ -323,9 +329,6 @@
             <script src="../../../plugins/pdfmake/vfs_fonts.js"></script>
             <script src="js/users.js"></script>
             <div id="toastContainer"></div>
-            <div id="spinnerOverlay">
-                <div class="spinner"></div>
-            </div>
         </form>
     </body>
 

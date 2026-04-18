@@ -1,7 +1,7 @@
 /**
  * Classes.js — Gestion Scolaire
  * Adapté à la table SQL Server : [MONAPPECOLE2].[dbo].[ClasseS]
- * Colonnes : ID, NOM, ENSEIGNANT, COEFFICIENT, HEURES_SEMAINE, NIVEAU, CREATED_AT
+ * Colonnes : ID, NOM, NIVEAU, EFFECTIF, TITULAIRE, SALLE, STATUT
  *
  * Architecture :
  *   Toutes les opérations CRUD passent par des appels AJAX (fetch)

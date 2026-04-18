@@ -16,6 +16,7 @@ let rowsPerPage = 10;
 $(document).ready(() => {
     console.log("🔵 Page chargée - Initialisation");
 
+    forceHideSpinner();
     preventFormAutoSubmit();
     ensureButtonsHaveTypeButton();
     loadUsers();
@@ -48,6 +49,29 @@ function showPreloader() {
 window.addEventListener('load', () => {
     setTimeout(hidePreloader, 500);
 });
+
+// ─────────────────────────────────────────────
+// SPINNER
+// ─────────────────────────────────────────────
+function forceHideSpinner() {
+    var s = document.getElementById('spinnerOverlay');
+    if (!s) return;
+    s.style.display    = 'none';
+    s.style.visibility = 'hidden';
+    s.style.opacity    = '0';
+    s.setAttribute('aria-hidden', 'true');
+}
+
+function showSpinner() {
+    var s = document.getElementById('spinnerOverlay');
+    if (!s) return;
+    s.style.opacity    = '1';
+    s.style.visibility = 'visible';
+    s.style.display    = 'flex';
+    s.removeAttribute('aria-hidden');
+}
+
+function hideSpinner() { forceHideSpinner(); }
 
 // ============================================================================
 // EMPÊCHER LA SOUMISSION AUTOMATIQUE DU FORMULAIRE ASP.NET
@@ -419,7 +443,9 @@ function goToPage(page) {
 // ============================================================================
 // CHARGER LES UTILISATEURS
 // ============================================================================
-function loadUsers() {
+function loadUsers() 
+{
+    showSpinner();
     console.log("📋 Chargement des utilisateurs...");
     showPreloader();
 
@@ -447,6 +473,9 @@ function loadUsers() {
                 text: err.message
             });
             hidePreloader();
+        })
+        .finally(function () {
+            hideSpinner();
         });
 }
 
