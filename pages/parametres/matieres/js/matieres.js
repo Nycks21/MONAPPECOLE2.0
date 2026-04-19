@@ -175,29 +175,35 @@ function renderMatieresTable() {
     }
 
     tbody.innerHTML = matieresData.map(function (m) {
-        var date = m.CREATED_AT
-            ? new Date(m.CREATED_AT).toLocaleDateString('fr-FR')
-            : '—';
+    var date = m.CREATED_AT
+        ? new Date(m.CREATED_AT).toLocaleDateString('fr-FR')
+        : '—';
 
-        return '<tr>' +
-               '<td><strong>' + escHtml(m.NOM) + '</strong></td>' +
-               '<td>' + escHtml(m.ENSEIGNANT) + '</td>' +
-               '<td><span class="badge-coeff">' + (parseFloat(m.COEFFICIENT).toFixed(1)) + '</span></td>' +
-               '<td>' + escHtml(String(m.HEURES_SEMAINE)) + 'h</td>' +
-               '<td><span class="badge-niveau">' + escHtml(m.NIVEAU) + '</span></td>' +
-               '<td style="color:#888;font-size:12px;">' + date + '</td>' +
-               '<td class="action-cell">' +
-               '  <button type="button" class="btn btn-warning btn-xs"' +
-               '    onclick="editMatiere(' + m.ID + ')" title="Modifier">' +
-               '    <i class="fas fa-edit"></i>' +
-               '  </button>' +
-               '  <button type="button" class="btn btn-danger btn-xs"' +
-               '    onclick="deleteMatiere(' + m.ID + ',\'' + escHtml(m.NOM) + '\')" title="Supprimer">' +
-               '    <i class="fas fa-trash"></i>' +
-               '  </button>' +
-               '</td>' +
-               '</tr>';
-    }).join('');
+    return '<tr>' +
+           '<td><strong>' + escHtml(m.NOM) + '</strong></td>' +
+           '<td>' + escHtml(m.ENSEIGNANT) + '</td>' +
+           '<td><span class="badge-coeff">' + (parseFloat(m.COEFFICIENT).toFixed(1)) + '</span></td>' +
+           '<td>' + escHtml(String(m.HEURES_SEMAINE)) + 'h</td>' +
+           // --- MODIFICATION ICI : Ajout du style du badge pour le NIVEAU ---
+           '<td>' +
+               '<span style="background-color: #e1f5fe; color: #01579b; padding: 3px 12px; border-radius: 15px; font-size: 11px; font-weight: 600; display: inline-block; border: 1px solid #b3e5fc;">' + 
+                   escHtml(m.NIVEAU) + 
+               '</span>' +
+           '</td>' +
+           // ---------------------------------------------------------------
+           '<td style="color:#888;font-size:12px;">' + date + '</td>' +
+           '<td class="action-cell">' +
+           '  <button type="button" class="btn btn-sm btn-primary"' +
+           '    onclick="editMatiere(' + m.ID + ')" title="Modifier">' +
+           '    <i class="fas fa-edit"></i>' +
+           '  </button>' +
+           '  <button type="button" class="btn btn-sm btn-danger"' +
+           '    onclick="deleteMatiere(' + m.ID + ',\'' + escHtml(m.NOM).replace(/'/g, "\\'") + '\')" title="Supprimer">' +
+           '    <i class="fas fa-trash"></i>' +
+           '  </button>' +
+           '</td>' +
+           '</tr>';
+}).join('');
 }
 
 // ─────────────────────────────────────────────

@@ -176,7 +176,7 @@
                                 <div class="col-lg-6">
                                     <ol class="breadcrumb" style="float: right;">
                                         <li class="breadcrumb-item">Application</li>
-                                        <li class="breadcrumb-item active" id="dynBreadcrumb">Classes</li>
+                                        <li class="breadcrumb-item active">Classes</li>
                                     </ol>
                                 </div>
                             </div>

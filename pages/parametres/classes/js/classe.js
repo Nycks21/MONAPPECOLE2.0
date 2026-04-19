@@ -204,10 +204,23 @@ function renderClassesTable() {
     pageClasses.forEach(classe => {
         const row = tbody.insertRow();
         const cellNom = row.insertCell(0);
-            cellNom.innerHTML = escHtml(classe.NOM) || '-';
-            cellNom.style.fontWeight = 'bold'; // Applique le gras
-            cellNom.style.color = '#333333';      // Optionnel : rend le texte un peu plus foncé
-        row.insertCell(1).innerHTML = escHtml(classe.NIVEAU) || '-';
+        cellNom.innerHTML = escHtml(classe.NOM) || '-';
+        cellNom.style.fontWeight = 'bold'; // Applique le gras
+        cellNom.style.color = '#333333';      // Optionnel : rend le texte un peu plus foncé
+        // On crée un petit badge bleu clair avec du texte bleu foncé
+        row.insertCell(1).innerHTML = `
+            <span style="
+                background-color: #e1f5fe; 
+                color: #01579b; 
+                padding: 3px 12px; 
+                border-radius: 15px; 
+                font-size: 11px; 
+                font-weight: 600;
+                display: inline-block;
+                border: 1px solid #b3e5fc;
+            ">
+                ${escHtml(classe.NIVEAU) || '-'}
+            </span>`;
         row.insertCell(2).innerHTML = classe.EFFECTIF || '0';
         row.insertCell(3).innerHTML = escHtml(classe.TITULAIRE) || '-';
         row.insertCell(4).innerHTML = escHtml(classe.SALLE) || '-';
@@ -378,10 +391,10 @@ function editClasse(id) {
     // --- CORRECTION DU STATUT POUR LE MODAL ---
     // On normalise la valeur SQL (True/1/Actif) pour qu'elle corresponde aux options du Select
     var statutBrut = String(m.STATUT || '').toLowerCase().trim();
-    var valeurSelect = (statutBrut === 'true' || statutBrut === '1' || statutBrut === 'actif') 
-                       ? 'Actif' 
-                       : 'Inactif';
-    
+    var valeurSelect = (statutBrut === 'true' || statutBrut === '1' || statutBrut === 'actif')
+        ? 'Actif'
+        : 'Inactif';
+
     document.getElementById('ClasseStatut').value = valeurSelect;
 
     // Mise à jour du titre du modal
