@@ -132,6 +132,22 @@
                                 <!-- Paramètres -->
                                 <li class="nav-item">
                                     <div class="nav-section">Paramètres</div>
+                                    <a href="../../parametres/niveaux/niveaux.aspx" class="nav-link">
+                                        <div style="width:30px; text-align:center; margin-right:10px;">
+                                            <i class="fas fa-layer-group"></i>
+                                        </div>
+                                        <span>Niveau</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="../../parametres/salles/salles.aspx" class="nav-link">
+                                        <div style="width:30px; text-align:center; margin-right:10px;">
+                                            <i class="fas fa-door-open"></i>
+                                        </div>
+                                        <span>Salle</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
                                     <a href="../../parametres/classes/classes.aspx" class="nav-link">
                                         <div style="width:30px; text-align:center; margin-right:10px;">
                                             <i class="fas fa-folder"></i>

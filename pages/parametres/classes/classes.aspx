@@ -132,7 +132,23 @@
                                 <!-- Paramètres -->
                                 <li class="nav-item">
                                     <div class="nav-section">Paramètres</div>
-                                    <a href="classes.aspx" class="nav-link active">
+                                    <a href="../../parametres/niveaux/niveaux.aspx" class="nav-link">
+                                        <div style="width:30px; text-align:center; margin-right:10px;">
+                                            <i class="fas fa-layer-group"></i>
+                                        </div>
+                                        <span>Niveau</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="../../parametres/salles/salles.aspx" class="nav-link">
+                                        <div style="width:30px; text-align:center; margin-right:10px;">
+                                            <i class="fas fa-door-open"></i>
+                                        </div>
+                                        <span>Salle</span>
+                                    </a>
+                                </li>
+                                <li class="nav-item">
+                                    <a href="../../parametres/classes/classes.aspx" class="nav-link active">
                                         <div style="width:30px; text-align:center; margin-right:10px;">
                                             <i class="fas fa-folder"></i>
                                         </div>
@@ -140,7 +156,7 @@
                                     </a>
                                 </li>
                                 <li class="nav-item">
-                                    <a href="../matieres/matieres.aspx" class="nav-link">
+                                    <a href="../../parametres/matieres/matieres.aspx" class="nav-link">
                                         <div style="width:30px; text-align:center; margin-right:10px;">
                                             <i class="fas fa-book"></i>
                                         </div>
@@ -175,7 +191,7 @@
                                 </div>
                                 <div class="col-lg-6">
                                     <ol class="breadcrumb" style="float: right;">
-                                        <li class="breadcrumb-item">Application</li>
+                                        <li class="breadcrumb-item">Paramètres</li>
                                         <li class="breadcrumb-item active">Classes</li>
                                     </ol>
                                 </div>
@@ -247,7 +263,8 @@
                 <div class="modal-content" style="max-width:550px;">
                     <div class="modal-header">
                         <h3 id="classeModalTitle"><i class="fas fa-book-medical"></i> Ajouter une classe</h3>
-                    <button type="button" class="btn-close-modal" onclick="closeAddClasseModal()" aria-label="Fermer">&times;</button>
+                        <button type="button" class="btn-close-modal" onclick="closeAddClasseModal()"
+                            aria-label="Fermer">&times;</button>
                     </div>
 
                     <div class="modal-body">
@@ -261,13 +278,9 @@
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label>Niveau *</label>
+                                    <label>Niveau</label>
                                     <select id="ClasseNiveau" class="form-control">
-                                        <option value="">Sélectionner</option>
-                                        <option value="6ème">6ème</option>
-                                        <option value="5ème">5ème</option>
-                                        <option value="4ème">4ème</option>
-                                        <option value="3ème">3ème</option>
+                                        <option value="">-- Sélectionner un niveau --</option>
                                     </select>
                                 </div>
                             </div>
@@ -283,8 +296,9 @@
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label>Salle</label>
-                                    <input type="text" id="ClasseSalle" class="form-control"
-                                        placeholder="Ex: Salle 101">
+                                    <select id="ClasseSalle" class="form-control">
+                                        <option value="">-- Sélectionner une salle --</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>

@@ -323,8 +323,41 @@ ul { list-style: none; }
     margin: 0;
     padding: 0;
 }
-.breadcrumb-item + .breadcrumb-item::before { content: '/'; margin-right: 6px; }
-.breadcrumb-item.active { color: var(--text); font-weight: 600; }
+.breadcrumb {
+    display: flex;
+    flex-wrap: wrap;
+    list-style: none;
+    padding: 0;
+    margin: 0 0 20px 0;
+    font-size: 0.9rem;
+}
+
+.breadcrumb-item + .breadcrumb-item {
+    padding-left: 8px; /* Espacement à gauche du séparateur */
+}
+
+.breadcrumb-item + .breadcrumb-item::before {
+    float: left;
+    padding-right: 8px;
+    color: #6c757d;
+    content: "/"; /* Tu peux aussi mettre ">" selon tes préférences */
+}
+
+.breadcrumb-item a {
+    color: var(--primary-color, #007bff);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.breadcrumb-item a:hover {
+    text-decoration: underline;
+}
+
+.breadcrumb-item.active {
+    color: var(--text-muted, #6c757d);
+    font-weight: 600;
+    pointer-events: none; /* Empêche le clic sur la page actuelle */
+}
 
 /* ═══════════════════════════════════════════════
    DASH CARD

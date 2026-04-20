@@ -30,7 +30,7 @@ public class GetClasse : IHttpHandler, IRequiresSessionState
 
             using (var conn = new SqlConnection(connStr))
             using (var cmd  = new SqlCommand(
-                @"SELECT ID, NOM, NIVEAU, EFFECTIF, TITULAIRE, SALLE, STATUT
+                @"SELECT ID, NOM, NIVEAU_ID, EFFECTIF, TITULAIRE, SALLE_ID, STATUT
                   FROM   [dbo].[Classes]
                   ORDER  BY NOM ASC", conn))
             {
@@ -41,13 +41,20 @@ public class GetClasse : IHttpHandler, IRequiresSessionState
                     {
                         list.Add(new
                         {
-                            ID        = reader["ID"]        != DBNull.Value ? Convert.ToInt32(reader["ID"])        : 0,
-                            NOM       = reader["NOM"]       != DBNull.Value ? reader["NOM"].ToString()             : "",
-                            NIVEAU    = reader["NIVEAU"]    != DBNull.Value ? reader["NIVEAU"].ToString()          : "",
-                            EFFECTIF  = reader["EFFECTIF"]  != DBNull.Value ? Convert.ToInt32(reader["EFFECTIF"])  : 0,
-                            TITULAIRE = reader["TITULAIRE"] != DBNull.Value ? reader["TITULAIRE"].ToString()       : "",
-                            SALLE     = reader["SALLE"]     != DBNull.Value ? reader["SALLE"].ToString()           : "",
-                            STATUT    = reader["STATUT"]    != DBNull.Value ? reader["STATUT"].ToString()          : ""
+                            ID         = reader.IsDBNull(0) ? "" : reader.GetGuid(0).ToString(),
+                            NOM        = reader.IsDBNull(1) ? "" : reader.GetString(1),
+                            
+                            // Ici, on récupère le NOM du niveau (String) issu de la jointure
+                            NIVEAU_ID     = reader.IsDBNull(2) ? "" : reader.GetString(2),
+                            
+                            EFFECTIF   = reader.IsDBNull(3) ? 0 : reader.GetInt32(3),
+                            TITULAIRE  = reader.IsDBNull(4) ? "" : reader.GetString(4),
+                            
+                            // Ici, on récupère le NUMÉRO de la salle (String) issu de la jointure
+                            SALLE_ID      = reader.IsDBNull(5) ? "" : reader.GetString(5),
+                            
+                            STATUT     = !reader.IsDBNull(6) && reader.GetBoolean(6),
+                            CREATED_AT = reader.IsDBNull(7) ? null : reader.GetDateTime(7).ToString("yyyy-MM-dd HH:mm:ss")
                         });
                     }
                 }

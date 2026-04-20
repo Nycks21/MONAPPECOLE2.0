@@ -15,10 +15,12 @@
 // URLS DES HANDLERS (relatifs à la page courante)
 // ─────────────────────────────────────────────
 var API = {
-    liste: 'handlers/GetClasse.ashx',
-    ajouter: 'handlers/AjouterClasse.ashx',
-    modifier: 'handlers/ModifierClasse.ashx',
-    supprimer: 'handlers/SupprimerClasse.ashx'
+    liste: '/pages/parametres/classes/handlers/GetClasse.ashx',
+    ajouter: '/pages/parametres/classes/handlers/AjouterClasse.ashx',
+    modifier: '/pages/parametres/classes/handlers/ModifierClasse.ashx',
+    supprimer: '/pages/parametres/classes/handlers/SupprimerClasse.ashx',
+    niveaux: '/pages/parametres/niveaux/handlers/GetNiveaux.ashx',
+    salles: '/pages/parametres/salles/handlers/GetSalles.ashx'
 };
 
 // ─────────────────────────────────────────────
@@ -37,9 +39,69 @@ document.addEventListener('DOMContentLoaded', function () {
     forceHideSpinner();
     hidePreloader();
     initUIControls();
+
+    chargerSalles();
+    chargerNiveaux();
     chargerClasses(); // premier chargement depuis SQL Server
 });
 
+// ─────────────────────────────────────────────
+// CHARGER LES NIVEAUX
+// ─────────────────────────────────────────────
+async function chargerNiveaux() {
+    try {
+        const response = await fetch(API.niveaux);
+        const data = await response.json();
+        
+        if (data.success) {
+            const select = document.getElementById('ClasseNiveau');
+            // On garde la première option par défaut
+            select.innerHTML = '<option value="">-- Sélectionner un niveau --</option>';
+            
+            data.niveaux.forEach(niv => {
+                const opt = document.createElement('option');
+                opt.value = niv.NOM; // On stocke le NOM (ou l'ID selon votre table Classes)
+                opt.textContent = niv.NOM;
+                select.appendChild(opt);
+            });
+        }
+    } catch (err) {
+        console.error("Erreur lors du chargement des niveaux:", err);
+    }
+}
+
+// ─────────────────────────────────────────────
+// CHARGER LES SALLES
+// ─────────────────────────────────────────────
+async function chargerSalles() {
+    try {
+        // ✅ Correction : On appelle l'API des salles, pas celle des niveaux
+        const response = await fetch(API.salles); 
+        const data = await response.json();
+        
+        if (data.success) {
+            const select = document.getElementById('ClasseSalle');
+            if (!select) return;
+
+            // On garde la première option par défaut
+            select.innerHTML = '<option value="">-- Sélectionner une salle --</option>';
+            
+            // ✅ On boucle sur data.salles (ou le nom de la liste retournée par votre ASHH)
+            const listeSalles = data.salles || data.Salles || [];
+
+            listeSalles.forEach(s => {
+                const opt = document.createElement('option');
+                // ✅ CRUCIAL : On stocke l'ID (GUID) dans la value pour la clé étrangère
+                opt.value = s.ID; 
+                // On affiche le NUMERO pour l'utilisateur
+                opt.textContent = s.NUMERO; 
+                select.appendChild(opt);
+            });
+        }
+    } catch (err) {
+        console.error("Erreur lors du chargement des salles:", err);
+    }
+}
 // ─────────────────────────────────────────────
 // PRELOADER
 // ─────────────────────────────────────────────
@@ -196,37 +258,29 @@ function renderClassesTable() {
 
     if (!pageClasses.length) {
         tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 60px;"><i class="fas fa-search" style="font-size: 48px; color: #ccc; margin-bottom: 15px; display: block;"></i>Aucune classe trouvée</td></tr>';
-        // Note: Assurez-vous que ces fonctions existent ou supprimez-les
         if (typeof updateCounter === "function") updateCounter();
         return;
     }
 
     pageClasses.forEach(classe => {
         const row = tbody.insertRow();
+        
+        // Nom de la classe
         const cellNom = row.insertCell(0);
-        cellNom.innerHTML = escHtml(classe.NOM) || '-';
-        cellNom.style.fontWeight = 'bold'; // Applique le gras
-        cellNom.style.color = '#333333';      // Optionnel : rend le texte un peu plus foncé
-        // On crée un petit badge bleu clair avec du texte bleu foncé
+        cellNom.innerHTML = `<strong>${escHtml(classe.NOM) || '-'}</strong>`;
+        cellNom.style.color = '#333333';
+
+        // Niveau (Badge bleu)
         row.insertCell(1).innerHTML = `
-            <span style="
-                background-color: #e1f5fe; 
-                color: #01579b; 
-                padding: 3px 12px; 
-                border-radius: 15px; 
-                font-size: 11px; 
-                font-weight: 600;
-                display: inline-block;
-                border: 1px solid #b3e5fc;
-            ">
+            <span style="background-color: #e1f5fe; color: #01579b; padding: 3px 12px; border-radius: 15px; font-size: 11px; font-weight: 600; display: inline-block; border: 1px solid #b3e5fc;">
                 ${escHtml(classe.NIVEAU) || '-'}
             </span>`;
+
         row.insertCell(2).innerHTML = classe.EFFECTIF || '0';
         row.insertCell(3).innerHTML = escHtml(classe.TITULAIRE) || '-';
         row.insertCell(4).innerHTML = escHtml(classe.SALLE) || '-';
 
-        // --- CORRECTION DU STATUT ---
-        // On vérifie si c'est vrai (booléen), 1 (nombre), "true" (string) ou "Actif" (string)
+        // Statut
         const isActif = (
             classe.STATUT === true ||
             classe.STATUT === 1 ||
@@ -239,20 +293,21 @@ function renderClassesTable() {
             ? '<span class="badge bg-success" style="background: #28a745; padding: 4px 10px; border-radius: 20px; color: white; font-size: 12px;">✓ Actif</span>'
             : '<span class="badge bg-danger" style="background: #dc3545; padding: 4px 10px; border-radius: 20px; color: white; font-size: 12px;">✗ Inactif</span>';
 
-        // Actions
+        // --- CORRECTION DES ACTIONS (GUID) ---
+        // On ajoute des quotes simples \' autour de classe.ID
         row.insertCell(6).innerHTML = `
-        <button type="button" class="btn btn-sm btn-primary" onclick="editClasse(${classe.ID})">
-            <i class="fas fa-edit"></i>
-        </button>
-        <button type="button" class="btn btn-sm btn-danger" onclick="deleteClasse(${classe.ID}, '${escHtml(classe.NOM).replace(/'/g, "\\'")}')">
-            <i class="fas fa-trash"></i>
-        </button>
-    `;
+            <button type="button" class="btn btn-sm btn-primary" onclick="editClasse('${classe.ID}')" title="Modifier">
+                <i class="fas fa-edit"></i>
+            </button>
+            <button type="button" class="btn btn-sm btn-danger" onclick="deleteClasse('${classe.ID}', '${escHtml(classe.NOM).replace(/'/g, "\\'")}')" title="Supprimer">
+                <i class="fas fa-trash"></i>
+            </button>
+        `;
     });
 
-    // Optionnel: Appel de la pagination si vous avez une fonction dédiée
     if (typeof createPaginationControls === "function") createPaginationControls(totalPages);
 }
+
 // ─────────────────────────────────────────────
 // MODAL — OUVRIR / FERMER
 // ─────────────────────────────────────────────
@@ -297,20 +352,33 @@ function resetClasseForm() {
 // SAUVEGARDER (ajout ou modification)
 // ─────────────────────────────────────────────
 function saveClasse() {
-    // 1. Validation du formulaire avant envoi
-    if (!validateClasseForm()) return;
+    // 1. Validation visuelle du formulaire (champs vides, etc.)
+    if (typeof validateClasseForm === "function" && !validateClasseForm()) return;
 
-    // --- CRUCIAL : On mémorise si c'est une édition AVANT l'appel AJAX ---
-    var estUneModification = (editId !== null);
+    const estUneModification = (typeof editId !== "undefined" && editId !== null);
 
-    // 2. Préparation des données (Payload)
+    // Récupération des éléments pour vérification
+    const elNom = document.getElementById('ClasseNom');
+    const elNiveau = document.getElementById('ClasseNiveau'); // Le <select>
+    const elTitulaire = document.getElementById('ClasseTitulaire');
+    const elSalle = document.getElementById('ClasseSalle');   // Le <select>
+    const elEffectif = document.getElementById('ClasseEffectif');
+    const elStatut = document.getElementById('ClasseStatut');
+
+    // 2. Préparation du Payload avec validation des GUIDs
+    // On vérifie si la valeur ressemble à un GUID ou n'est pas vide
+    if (!elNiveau.value || elNiveau.value.length < 10) {
+        Swal.fire('Attention', 'Veuillez sélectionner un niveau valide dans la liste.', 'warning');
+        return;
+    }
+
     var payload = {
-        NOM: document.getElementById('ClasseNom').value.trim(),
-        NIVEAU: document.getElementById('ClasseNiveau').value,
-        TITULAIRE: document.getElementById('ClasseTitulaire').value.trim(),
-        SALLE: document.getElementById('ClasseSalle').value.trim(),
-        EFFECTIF: parseInt(document.getElementById('ClasseEffectif').value, 10) || 0,
-        STATUT: document.getElementById('ClasseStatut').value === 'Actif' ? 1 : 0
+        NOM: elNom.value.trim(),
+        NIVEAU_ID: elNiveau.value, // Doit être le GUID (ex: 550e8400-e29b...)
+        TITULAIRE: elTitulaire.value.trim(),
+        SALLE_ID: elSalle.value,   // Doit être le GUID
+        EFFECTIF: parseInt(elEffectif.value, 10) || 0,
+        STATUT: elStatut.value === 'Actif' ? '1' : '0'
     };
 
     var url = API.ajouter;
@@ -320,51 +388,49 @@ function saveClasse() {
         url = API.modifier;
     }
 
-    // 3. UI : Désactiver le bouton
+    // 3. UI : Désactiver le bouton pour éviter les doubles clics
     var btnSave = document.querySelector('#addClasseModal .btn-primary');
     if (btnSave) {
         btnSave.disabled = true;
-        btnSave.textContent = 'Enregistrement...';
+        btnSave.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enregistrement...';
     }
 
-    showSpinner();
+    if (typeof showSpinner === "function") showSpinner();
 
     // 4. Appel AJAX
     ajax(url, payload)
         .then(function (data) {
             if (!data.success) throw new Error(data.message);
 
-            // --- SUCCES ---
-            closeAddClasseModal();
+            // --- SUCCÈS ---
+            if (typeof closeAddClasseModal === "function") closeAddClasseModal();
 
-            // Définition dynamique des messages
             var titreSucces = estUneModification ? 'Modification réussie !' : 'Ajout réussi !';
             var texteSucces = estUneModification ?
                 'Les modifications de la classe ont été enregistrées.' :
                 'La nouvelle classe a été créée avec succès.';
 
-            // Utilisation des variables dans SweetAlert
             Swal.fire({
-                title: titreSucces, // Utilise la variable définie plus haut
-                text: texteSucces,   // Utilise la variable définie plus haut
+                title: titreSucces,
+                text: texteSucces,
                 icon: 'success',
-                timer: 3000,
-                showConfirmButton: false,
-                target: document.body
+                timer: 2500,
+                showConfirmButton: false
             });
 
-            chargerClasses();
+            if (typeof chargerClasses === "function") chargerClasses();
         })
         .catch(function (err) {
+            // Ici, l'erreur "Le niveau sélectionné est invalide" sera affichée proprement
             Swal.fire({
                 icon: 'error',
                 title: 'Erreur d\'enregistrement',
                 text: err.message,
                 confirmButtonColor: '#d63030'
             });
-            hideSpinner();
         })
         .finally(function () {
+            if (typeof hideSpinner === "function") hideSpinner();
             // 5. UI : Réactiver le bouton
             if (btnSave) {
                 btnSave.disabled = false;

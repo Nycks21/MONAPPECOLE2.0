@@ -1,8 +1,4 @@
 <%@ WebHandler Language="C#" Class="AjouterMatiere" %>
-// AjouterMatiere.ashx
-// INSERT d'une nouvelle matière
-// POST /handlers/AjouterMatiere.ashx
-// Body JSON : { NOM, ENSEIGNANT, COEFFICIENT, HEURES_SEMAINE, NIVEAU }
 
 using System;
 using System.Configuration;
@@ -20,7 +16,8 @@ public class AjouterMatiere : IHttpHandler, IRequiresSessionState
         ctx.Response.Charset     = "utf-8";
         ctx.Response.Cache.SetNoStore();
 
-        // ── Vérification session ──────────────────────────────────────────
+        JavaScriptSerializer ser = new JavaScriptSerializer();
+
         if (ctx.Session["authenticated"] == null || !(bool)ctx.Session["authenticated"])
         {
             ctx.Response.StatusCode = 401;
@@ -37,39 +34,30 @@ public class AjouterMatiere : IHttpHandler, IRequiresSessionState
 
         try
         {
-            // ── Lecture du corps JSON ─────────────────────────────────────
             string body;
             using (var reader = new StreamReader(ctx.Request.InputStream))
                 body = reader.ReadToEnd();
 
-            var ser     = new JavaScriptSerializer();
             var payload = ser.Deserialize<MatierePayload>(body);
 
-            // ── Validation minimale ───────────────────────────────────────
-            if (string.IsNullOrWhiteSpace(payload.NOM))
-                throw new ArgumentException("Le nom est obligatoire.");
-            if (string.IsNullOrWhiteSpace(payload.ENSEIGNANT))
-                throw new ArgumentException("L'enseignant est obligatoire.");
-            if (payload.COEFFICIENT < 0.5m || payload.COEFFICIENT > 10m)
-                throw new ArgumentException("Coefficient invalide.");
-            if (payload.HEURES_SEMAINE < 1 || payload.HEURES_SEMAINE > 40)
-                throw new ArgumentException("Heures invalides.");
+            if (payload == null)
+                throw new ArgumentException("Données invalides.");
 
-            string connStr = ConfigurationManager
-                .ConnectionStrings["MaConnexion"].ConnectionString;
+            string connStr = ConfigurationManager.ConnectionStrings["MaConnexion"].ConnectionString;
 
             using (var conn = new SqlConnection(connStr))
-            using (var cmd  = new SqlCommand(
-                @"INSERT INTO [dbo].[MATIERES]
-                    (NOM, ENSEIGNANT, COEFFICIENT, HEURES_SEMAINE, NIVEAU, CREATED_AT)
-                  VALUES
-                    (@nom, @ens, @coeff, @heures, @niveau, GETDATE())", conn))
+            using (var cmd = new SqlCommand(
+                @"INSERT INTO [dbo].[MATIERES] 
+                  (NOM, ENSEIGNANT, COEFFICIENT, HEURES_SEMAINE, NIVEAU, SALLE, CREATED_AT) 
+                  VALUES 
+                  (@nom, @ens, @coeff, @heures, @niveau, @salle, GETDATE())", conn))
             {
                 cmd.Parameters.AddWithValue("@nom",    payload.NOM.Trim());
                 cmd.Parameters.AddWithValue("@ens",    payload.ENSEIGNANT.Trim());
                 cmd.Parameters.AddWithValue("@coeff",  payload.COEFFICIENT);
                 cmd.Parameters.AddWithValue("@heures", payload.HEURES_SEMAINE);
-                cmd.Parameters.AddWithValue("@niveau", payload.NIVEAU ?? "Tous niveaux");
+                cmd.Parameters.AddWithValue("@niveau", payload.NIVEAU ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@salle",  payload.SALLE ?? (object)DBNull.Value);
 
                 conn.Open();
                 cmd.ExecuteNonQuery();
@@ -77,24 +65,14 @@ public class AjouterMatiere : IHttpHandler, IRequiresSessionState
 
             ctx.Response.Write("{\"success\":true}");
         }
-        catch (ArgumentException ex)
-        {
-            ctx.Response.StatusCode = 400;
-            ctx.Response.Write("{\"success\":false,\"message\":"
-                + new JavaScriptSerializer().Serialize(ex.Message) + "}");
-        }
         catch (Exception ex)
         {
             ctx.Response.StatusCode = 500;
-            ctx.Response.Write("{\"success\":false,\"message\":"
-                + new JavaScriptSerializer().Serialize(ex.Message) + "}");
+            ctx.Response.Write("{\"success\":false,\"message\":" + ser.Serialize(ex.Message) + "}");
         }
     }
 
-    public bool IsReusable
-    {
-        get { return false; }
-    }
+    public bool IsReusable => false;
 
     private class MatierePayload
     {
@@ -103,5 +81,6 @@ public class AjouterMatiere : IHttpHandler, IRequiresSessionState
         public decimal COEFFICIENT    { get; set; }
         public int     HEURES_SEMAINE { get; set; }
         public string  NIVEAU         { get; set; }
+        public string  SALLE          { get; set; }
     }
 }
