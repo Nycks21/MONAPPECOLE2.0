@@ -1,4 +1,4 @@
-<%@ WebHandler Language="C#" Class="ModifierSalle" %>
+<%@ WebHandler Language="C#" Class="ModifierNiveau" %>
 
 using System;
 using System.Configuration;
@@ -8,7 +8,7 @@ using System.Web;
 using System.Web.Script.Serialization;
 using System.Web.SessionState;
 
-public class ModifierSalle : IHttpHandler, IRequiresSessionState
+public class ModifierNiveau : IHttpHandler, IRequiresSessionState
 {
     public void ProcessRequest(HttpContext ctx)
     {
@@ -40,7 +40,7 @@ public class ModifierSalle : IHttpHandler, IRequiresSessionState
             using (var reader = new StreamReader(ctx.Request.InputStream))
                 body = reader.ReadToEnd();
 
-            var payload = ser.Deserialize<SallePayload>(body);
+            var payload = ser.Deserialize<NiveauPayload>(body);
 
             if (payload == null)
                 throw new ArgumentException("Données invalides.");
@@ -48,32 +48,32 @@ public class ModifierSalle : IHttpHandler, IRequiresSessionState
             // ✅ VALIDATION DU GUID
             Guid idGuid;
             if (string.IsNullOrWhiteSpace(payload.ID) || !Guid.TryParse(payload.ID, out idGuid))
-                throw new ArgumentException("Identifiant de salle (GUID) invalide.");
+                throw new ArgumentException("Identifiant de Niveau (GUID) invalide.");
 
-            if (string.IsNullOrWhiteSpace(payload.NUMERO))
-                throw new ArgumentException("Le numéro de salle est obligatoire.");
+            if (string.IsNullOrWhiteSpace(payload.NOM))
+                throw new ArgumentException("Le numéro de Niveau est obligatoire.");
 
             string connStr = ConfigurationManager.ConnectionStrings["MaConnexion"].ConnectionString;
 
             using (var conn = new SqlConnection(connStr))
             using (var cmd = new SqlCommand(
-                @"UPDATE [dbo].[SALLES]
-                  SET    NUMERO   = @numero,
-                         CAPACITE = @capacite,
+                @"UPDATE [dbo].[NIVEAUX]
+                  SET    NOM   = @nom,
+                         ORDRE = @ordre,
                          STATUT   = @statut
                   WHERE  ID       = @id", conn))
             {
                 // Utilisation du type spécifique UniqueIdentifier pour éviter les erreurs de conversion
                 cmd.Parameters.Add("@id", System.Data.SqlDbType.UniqueIdentifier).Value = idGuid;
-                cmd.Parameters.AddWithValue("@numero",   payload.NUMERO.Trim());
-                cmd.Parameters.AddWithValue("@capacite", payload.CAPACITE);
+                cmd.Parameters.AddWithValue("@nom",   payload.NOM.Trim());
+                cmd.Parameters.AddWithValue("@ordre", payload.ORDRE);
                 cmd.Parameters.AddWithValue("@statut",   payload.STATUT);
 
                 conn.Open();
                 int rows = cmd.ExecuteNonQuery();
 
                 if (rows == 0) 
-                    throw new Exception("La salle n'existe pas ou aucune modification n'a été détectée.");
+                    throw new Exception("La Niveau n'existe pas ou aucune modification n'a été détectée.");
             }
 
             ctx.Response.Write("{\"success\":true}");
@@ -87,9 +87,9 @@ public class ModifierSalle : IHttpHandler, IRequiresSessionState
         {
             ctx.Response.StatusCode = 500;
             
-            // Gestion des erreurs de contraintes (ex: numéro de salle déjà pris par une autre salle)
+            // Gestion des erreurs de contraintes (ex: numéro de Niveau déjà pris par une autre Niveau)
             string msg = (ex.Message.Contains("UNIQUE") || ex.Message.Contains("UQ_"))
-                ? "Ce numéro de salle est déjà utilisé par une autre salle." 
+                ? "Ce numéro de Niveau est déjà utilisé par une autre Niveau." 
                 : ex.Message;
             
             ctx.Response.Write("{\"success\":false,\"message\":" + ser.Serialize(msg) + "}");
@@ -98,11 +98,11 @@ public class ModifierSalle : IHttpHandler, IRequiresSessionState
 
     public bool IsReusable { get { return false; } }
 
-    private class SallePayload
+    private class NiveauPayload
     {
         public string ID { get; set; } // Reçu en tant que String (GUID)
-        public string NUMERO { get; set; }
-        public int CAPACITE { get; set; }
+        public string NOM { get; set; }
+        public int ORDRE { get; set; }
         public bool STATUT { get; set; }
     }
 }

@@ -12,14 +12,12 @@ public class ModifierSalle : IHttpHandler, IRequiresSessionState
 {
     public void ProcessRequest(HttpContext ctx)
     {
-        // Configuration de la réponse
         ctx.Response.ContentType = "application/json";
         ctx.Response.Charset = "utf-8";
         ctx.Response.Cache.SetNoStore();
 
         JavaScriptSerializer ser = new JavaScriptSerializer();
 
-        // Vérification de la session
         if (ctx.Session["authenticated"] == null || !(bool)ctx.Session["authenticated"])
         {
             ctx.Response.StatusCode = 401;
@@ -27,7 +25,6 @@ public class ModifierSalle : IHttpHandler, IRequiresSessionState
             return;
         }
 
-        // Vérification de la méthode POST
         if (ctx.Request.HttpMethod != "POST")
         {
             ctx.Response.StatusCode = 405;
@@ -41,16 +38,21 @@ public class ModifierSalle : IHttpHandler, IRequiresSessionState
             using (var reader = new StreamReader(ctx.Request.InputStream))
                 body = reader.ReadToEnd();
 
-            // Désérialisation via une classe Payload pour plus de stabilité
             var payload = ser.Deserialize<SallePayload>(body);
 
+            // --- VALIDATIONS ---
             if (payload == null)
-                throw new ArgumentException("Données invalides.");
+                throw new ArgumentException("Données invalides (JSON vide).");
 
+            // Vérification du GUID (Crucial pour SQL Server)
+            Guid idGuid;
+            if (string.IsNullOrEmpty(payload.ID) || !Guid.TryParse(payload.ID, out idGuid))
+                throw new ArgumentException("Identifiant de salle invalide.");
+
+            // Vérification du NUMERO (C'est ici que votre erreur est déclenchée)
             if (string.IsNullOrWhiteSpace(payload.NUMERO))
                 throw new ArgumentException("Le numéro de salle est obligatoire.");
 
-            // Utilisation de la chaîne de connexion MaConnexion
             string connStr = ConfigurationManager.ConnectionStrings["MaConnexion"].ConnectionString;
 
             using (var conn = new SqlConnection(connStr))
@@ -61,16 +63,17 @@ public class ModifierSalle : IHttpHandler, IRequiresSessionState
                          STATUT   = @statut
                   WHERE  ID       = @id", conn))
             {
-                cmd.Parameters.AddWithValue("@id",       payload.ID);
-                cmd.Parameters.AddWithValue("@numero",   payload.NUMERO.Trim());
-                cmd.Parameters.AddWithValue("@capacite", payload.CAPACITE);
-                cmd.Parameters.AddWithValue("@statut",   payload.STATUT);
+                // Utilisation de SqlDbType.UniqueIdentifier pour le GUID
+                cmd.Parameters.Add("@id", System.Data.SqlDbType.UniqueIdentifier).Value = idGuid;
+                cmd.Parameters.Add("@numero", System.Data.SqlDbType.NVarChar).Value = payload.NUMERO.Trim();
+                cmd.Parameters.Add("@capacite", System.Data.SqlDbType.Int).Value = payload.CAPACITE;
+                cmd.Parameters.Add("@statut", System.Data.SqlDbType.Bit).Value = payload.STATUT;
 
                 conn.Open();
                 int rows = cmd.ExecuteNonQuery();
 
                 if (rows == 0) 
-                    throw new Exception("Salle introuvable (ID=" + payload.ID + ").");
+                    throw new Exception("La salle n'a pas pu être mise à jour (ID introuvable).");
             }
 
             ctx.Response.Write("{\"success\":true}");
@@ -83,25 +86,19 @@ public class ModifierSalle : IHttpHandler, IRequiresSessionState
         catch (Exception ex)
         {
             ctx.Response.StatusCode = 500;
-            
-            // Gestion des erreurs d'unicité (numéro de salle déjà pris)
             string msg = (ex.Message.Contains("UNIQUE") || ex.Message.Contains("UQ_"))
                 ? "Ce numéro de salle existe déjà."
                 : ex.Message;
-
             ctx.Response.Write("{\"success\":false,\"message\":" + ser.Serialize(msg) + "}");
         }
     }
 
-    public bool IsReusable
-    {
-        get { return false; }
-    }
+    public bool IsReusable { get { return false; } }
 
     private class SallePayload
     {
         public string ID { get; set; }
-        public string NUMERO { get; set; }
+        public string NUMERO { get; set; } // Doit correspondre EXACTEMENT à la clé JSON
         public int CAPACITE { get; set; }
         public bool STATUT { get; set; }
     }

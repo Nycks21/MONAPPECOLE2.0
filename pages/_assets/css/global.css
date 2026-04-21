@@ -684,3 +684,40 @@ select.form-control { appearance: auto; }
     gap: 10px;
 }
 .alert-erreur i { flex-shrink: 0; }
+
+/* Design moderne pour les listes déroulantes */
+.modern-select {
+    display: block;
+    width: 100%;
+    height: 45px; /* Hauteur confortable */
+    padding: 0 15px;
+    font-size: 15px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: #333;
+    background-color: #ffffff;
+    border: 2px solid #e0e0e0; /* Bordure fine grise */
+    border-radius: 8px; /* Coins arrondis modernes */
+    cursor: pointer;
+    appearance: none; /* Supprime le style par défaut du système */
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    transition: all 0.3s ease;
+    
+    /* Icône de flèche personnalisée en SVG */
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 15px center;
+    background-size: 12px;
+}
+
+/* Effet au survol */
+.modern-select:hover {
+    border-color: #bdc3c7;
+}
+
+/* Effet quand on clique (Focus) */
+.modern-select:focus {
+    outline: none;
+    border-color: #2ecc71; /* Vert pour correspondre à votre spinner */
+    box-shadow: 0 0 8px rgba(46, 204, 113, 0.2); /* Lueur douce */
+}
