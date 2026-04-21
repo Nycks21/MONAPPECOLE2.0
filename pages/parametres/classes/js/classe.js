@@ -20,7 +20,8 @@ var API = {
     modifier: '/pages/parametres/classes/handlers/ModifierClasse.ashx',
     supprimer: '/pages/parametres/classes/handlers/SupprimerClasse.ashx',
     niveaux: '/pages/parametres/niveaux/handlers/GetNiveaux.ashx',
-    salles: '/pages/parametres/salles/handlers/GetSalles.ashx'
+    salles: '/pages/parametres/salles/handlers/GetSalles.ashx',
+    users: '/pages/administrations/utilisateur/handlers/GetUsers.ashx'
 };
 
 // ─────────────────────────────────────────────
@@ -42,6 +43,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     chargerSalles();
     chargerNiveaux();
+    chargerUsers();
     chargerClasses(); // premier chargement depuis SQL Server
 });
 
@@ -60,7 +62,7 @@ async function chargerNiveaux() {
             
             data.niveaux.forEach(niv => {
                 const opt = document.createElement('option');
-                opt.value = niv.NOM; // On stocke le NOM (ou l'ID selon votre table Classes)
+                opt.value = niv.ID; // On stocke le GUID (ID) pour la clé étrangère
                 opt.textContent = niv.NOM;
                 select.appendChild(opt);
             });
@@ -103,7 +105,33 @@ async function chargerSalles() {
     }
 }
 // ─────────────────────────────────────────────
-// PRELOADER
+// CHARGER LES UTILISATEURS (TITULAIRES)
+// ─────────────────────────────────────────────
+async function chargerUsers() {
+    try {
+        const response = await fetch(API.users);
+        const data = await response.json();
+
+        if (data.success) {
+            const select = document.getElementById('ClasseUser');
+            if (!select) return;
+
+            select.innerHTML = '<option value="">-- Sélectionner un utilisateur --</option>';
+
+            const listeUsers = data.users || data.Users || [];
+            listeUsers.forEach(u => {
+                const opt = document.createElement('option');
+                // On stocke l'ID (int) dans la value pour la clé étrangère
+                opt.value = u.ID;
+                // On affiche le NOM pour l'utilisateur
+                opt.textContent = u.NOM;
+                select.appendChild(opt);
+            });
+        }
+    } catch (err) {
+        console.error("Erreur lors du chargement des utilisateurs:", err);
+    }
+}
 // ─────────────────────────────────────────────
 function hidePreloader() {
     var pre = document.getElementById('preloader');
@@ -340,9 +368,9 @@ function hideModal(id) {
 // ─────────────────────────────────────────────
 function resetClasseForm() {
     document.getElementById('ClasseNom').value = '';
-    document.getElementById('ClasseTitulaire').value = ''; // Corrigé (était ClasseEnseignant)
+    document.getElementById('ClasseUser').value = '';         // select utilisateur
     document.getElementById('ClasseSalle').value = '';
-    document.getElementById('ClasseEffectif').value = '0';  // Corrigé (était ClasseHeures)
+    document.getElementById('ClasseEffectif').value = '0';
     document.getElementById('ClasseNiveau').value = '';
     document.getElementById('ClasseStatut').value = 'Actif';
     clearFormErrors();
@@ -360,7 +388,7 @@ function saveClasse() {
     // Récupération des éléments pour vérification
     const elNom = document.getElementById('ClasseNom');
     const elNiveau = document.getElementById('ClasseNiveau'); // Le <select>
-    const elTitulaire = document.getElementById('ClasseTitulaire');
+    const elUser = document.getElementById('ClasseUser');     // Le <select> utilisateurs
     const elSalle = document.getElementById('ClasseSalle');   // Le <select>
     const elEffectif = document.getElementById('ClasseEffectif');
     const elStatut = document.getElementById('ClasseStatut');
@@ -372,11 +400,16 @@ function saveClasse() {
         return;
     }
 
+    if (!elUser.value || parseInt(elUser.value, 10) <= 0) {
+        Swal.fire('Attention', 'Veuillez sélectionner un titulaire valide dans la liste.', 'warning');
+        return;
+    }
+
     var payload = {
         NOM: elNom.value.trim(),
-        NIVEAU_ID: elNiveau.value, // Doit être le GUID (ex: 550e8400-e29b...)
-        TITULAIRE: elTitulaire.value.trim(),
-        SALLE_ID: elSalle.value,   // Doit être le GUID
+        NIVEAU_ID: elNiveau.value,              // GUID niveau
+        TITULAIRE_ID: parseInt(elUser.value, 10), // ID int de l'utilisateur
+        SALLE_ID: elSalle.value,                // GUID salle
         EFFECTIF: parseInt(elEffectif.value, 10) || 0,
         STATUT: elStatut.value === 'Actif' ? '1' : '0'
     };
@@ -449,9 +482,10 @@ function editClasse(id) {
 
     editId = id;
     document.getElementById('ClasseNom').value = m.NOM;
-    document.getElementById('ClasseNiveau').value = m.NIVEAU;
-    document.getElementById('ClasseTitulaire').value = m.TITULAIRE;
-    document.getElementById('ClasseSalle').value = m.SALLE;
+    // On utilise les GUIDs/IDs pour sélectionner la bonne option dans chaque liste déroulante
+    document.getElementById('ClasseNiveau').value = m.NIVEAU_ID;
+    document.getElementById('ClasseUser').value   = m.TITULAIRE_ID;
+    document.getElementById('ClasseSalle').value  = m.SALLE_ID;
     document.getElementById('ClasseEffectif').value = m.EFFECTIF;
 
     // --- CORRECTION DU STATUT POUR LE MODAL ---
@@ -573,9 +607,9 @@ function validateClasseForm() {
         ok = false;
     }
 
-    var titulaire = document.getElementById('ClasseTitulaire').value.trim();
-    if (!titulaire) {
-        showFieldError('ClasseTitulaire', "Le titulaire est obligatoire.");
+    var userElement = document.getElementById('ClasseUser');
+    if (userElement && !userElement.value) {
+        showFieldError('ClasseUser', 'Le titulaire est obligatoire.');
         ok = false;
     }
 

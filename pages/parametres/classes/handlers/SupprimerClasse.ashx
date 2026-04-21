@@ -40,7 +40,12 @@ public class SupprimerClasse : IHttpHandler, IRequiresSessionState
 
             var payload = ser.Deserialize<IdPayload>(body);
 
-            if (payload == null || payload.ID <= 0)
+            if (payload == null || string.IsNullOrWhiteSpace(payload.ID))
+                throw new ArgumentException("ID de classe invalide.");
+
+            // Validation GUID
+            Guid classeGuid;
+            if (!Guid.TryParse(payload.ID, out classeGuid))
                 throw new ArgumentException("ID de classe invalide.");
 
             string connStr = ConfigurationManager.ConnectionStrings["MaConnexion"].ConnectionString;
@@ -48,7 +53,7 @@ public class SupprimerClasse : IHttpHandler, IRequiresSessionState
             using (var conn = new SqlConnection(connStr))
             using (var cmd  = new SqlCommand("DELETE FROM [dbo].[Classes] WHERE ID = @id", conn))
             {
-                cmd.Parameters.AddWithValue("@id", payload.ID);
+                cmd.Parameters.Add("@id", System.Data.SqlDbType.UniqueIdentifier).Value = classeGuid;
                 conn.Open();
                 int rows = cmd.ExecuteNonQuery();
                 if (rows == 0) throw new Exception("Classe introuvable (ID=" + payload.ID + ").");
@@ -70,5 +75,5 @@ public class SupprimerClasse : IHttpHandler, IRequiresSessionState
 
     public bool IsReusable { get { return false; } }
 
-    private class IdPayload { public int ID { get; set; } }
+    private class IdPayload { public string ID { get; set; } }
 }

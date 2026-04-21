@@ -289,8 +289,9 @@
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label>Titulaire (Enseignant) *</label>
-                                    <input type="text" id="ClasseTitulaire" class="form-control"
-                                        placeholder="Nom du titulaire">
+                                    <select id="ClasseUser" class="form-control">
+                                        <option value="">-- Sélectionner un utilisateur --</option>
+                                    </select>
                                 </div>
                             </div>
                             <div class="col-md-6">

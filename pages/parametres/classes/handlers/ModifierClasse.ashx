@@ -42,33 +42,48 @@ public class ModifierClasse : IHttpHandler, IRequiresSessionState
 
             if (payload == null)
                 throw new ArgumentException("Données invalides.");
-            if (payload.ID <= 0)
-                throw new ArgumentException("ID invalide.");
+
+            // Validation ID classe (GUID)
+            Guid classeGuid;
+            if (!Guid.TryParse(payload.ID, out classeGuid))
+                throw new ArgumentException("ID de classe invalide.");
+
             if (string.IsNullOrWhiteSpace(payload.NOM))
                 throw new ArgumentException("Le nom de la classe est obligatoire.");
-            if (string.IsNullOrWhiteSpace(payload.TITULAIRE))
-                throw new ArgumentException("Le titulaire est obligatoire.");
+
+            // Validation TITULAIRE_ID (int > 0)
+            if (payload.TITULAIRE_ID <= 0)
+                throw new ArgumentException("Veuillez sélectionner un titulaire valide.");
+
+            // Validation des GUIDs Niveau et Salle
+            Guid niveauGuid, salleGuid;
+            if (!Guid.TryParse(payload.NIVEAU_ID, out niveauGuid))
+                throw new ArgumentException("Le niveau sélectionné est invalide.");
+            if (!Guid.TryParse(payload.SALLE_ID, out salleGuid))
+                throw new ArgumentException("La salle sélectionnée est invalide.");
 
             string connStr = ConfigurationManager.ConnectionStrings["MaConnexion"].ConnectionString;
 
             using (var conn = new SqlConnection(connStr))
             using (var cmd  = new SqlCommand(
                 @"UPDATE [dbo].[Classes]
-                  SET    NOM       = @nom,
-                         NIVEAU    = @niveau,
-                         TITULAIRE = @titulaire,
-                         SALLE     = @salle,
-                         EFFECTIF  = @effectif,
-                         STATUT    = @statut
+                  SET    NOM          = @nom,
+                         NIVEAU_ID    = @niveauId,
+                         TITULAIRE_ID = @titulaireId,
+                         SALLE_ID     = @salleId,
+                         EFFECTIF     = @effectif,
+                         STATUT       = @statut
                   WHERE  ID = @id", conn))
             {
-                cmd.Parameters.AddWithValue("@id",        payload.ID);
-                cmd.Parameters.AddWithValue("@nom",       payload.NOM.Trim());
-                cmd.Parameters.AddWithValue("@niveau",    payload.NIVEAU    ?? "");
-                cmd.Parameters.AddWithValue("@titulaire", payload.TITULAIRE.Trim());
-                cmd.Parameters.AddWithValue("@salle",     payload.SALLE     ?? "");
-                cmd.Parameters.AddWithValue("@effectif",  payload.EFFECTIF);
-                cmd.Parameters.AddWithValue("@statut",    payload.STATUT    ?? "Actif");
+                cmd.Parameters.Add("@id",          System.Data.SqlDbType.UniqueIdentifier).Value = classeGuid;
+                cmd.Parameters.Add("@nom",         System.Data.SqlDbType.NVarChar).Value         = payload.NOM.Trim();
+                cmd.Parameters.Add("@niveauId",    System.Data.SqlDbType.UniqueIdentifier).Value = niveauGuid;
+                cmd.Parameters.Add("@titulaireId", System.Data.SqlDbType.Int).Value             = payload.TITULAIRE_ID;
+                cmd.Parameters.Add("@salleId",     System.Data.SqlDbType.UniqueIdentifier).Value = salleGuid;
+                cmd.Parameters.Add("@effectif",    System.Data.SqlDbType.Int).Value             = payload.EFFECTIF;
+
+                bool isActif = (payload.STATUT == "1" || payload.STATUT == "true" || payload.STATUT == "Actif");
+                cmd.Parameters.Add("@statut",      System.Data.SqlDbType.Bit).Value             = isActif;
 
                 conn.Open();
                 int rows = cmd.ExecuteNonQuery();
@@ -85,7 +100,8 @@ public class ModifierClasse : IHttpHandler, IRequiresSessionState
         catch (Exception ex)
         {
             ctx.Response.StatusCode = 500;
-            ctx.Response.Write("{\"success\":false,\"message\":" + ser.Serialize(ex.Message) + "}");
+            string msg = ex.Message.Contains("UNIQUE") ? "Cette classe existe déjà." : ex.Message;
+            ctx.Response.Write("{\"success\":false,\"message\":" + ser.Serialize(msg) + "}");
         }
     }
 
@@ -93,12 +109,12 @@ public class ModifierClasse : IHttpHandler, IRequiresSessionState
 
     private class ClassePayload
     {
-        public int    ID        { get; set; }
-        public string NOM       { get; set; }
-        public string NIVEAU    { get; set; }
-        public string TITULAIRE { get; set; }
-        public string SALLE     { get; set; }
-        public int    EFFECTIF  { get; set; }
-        public string STATUT    { get; set; }
+        public string ID           { get; set; }
+        public string NOM          { get; set; }
+        public string NIVEAU_ID    { get; set; }
+        public int    TITULAIRE_ID { get; set; }
+        public string SALLE_ID     { get; set; }
+        public int    EFFECTIF     { get; set; }
+        public string STATUT       { get; set; }
     }
 }

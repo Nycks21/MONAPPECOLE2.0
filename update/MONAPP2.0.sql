@@ -74,18 +74,27 @@ BEGIN
     CREATE TABLE CLASSES (
         ID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
         NOM NVARCHAR(50) UNIQUE NOT NULL,
+        
+        -- Clés Étrangères en UNIQUEIDENTIFIER (GUID)
         NIVEAU_ID UNIQUEIDENTIFIER NOT NULL, 
-        EFFECTIF INT DEFAULT 0,
-        TITULAIRE NVARCHAR(100),
         SALLE_ID UNIQUEIDENTIFIER NOT NULL,
-        STATUT BIT NOT NULL DEFAULT 1,
+        
+        -- Relation avec l'enseignant titulaire (INT selon votre table USERROLE)
+        TITULAIRE_ID INT NOT NULL,
+        
+        EFFECTIF INT DEFAULT 0,
+        STATUT BIT NOT NULL DEFAULT 1, -- 1 pour Actif, 0 pour Inactif
         CREATED_AT DATETIME DEFAULT GETDATE(),
 
+        -- Définition des contraintes de clés étrangères
         CONSTRAINT FK_CLASSES_NIVEAU FOREIGN KEY (NIVEAU_ID) 
             REFERENCES NIVEAUX(ID),
         
         CONSTRAINT FK_CLASSES_SALLE FOREIGN KEY (SALLE_ID) 
-            REFERENCES SALLES(ID)
+            REFERENCES SALLES(ID),
+
+        CONSTRAINT FK_CLASSES_USERS FOREIGN KEY (TITULAIRE_ID) 
+            REFERENCES USERS(IDUSER)
     );
 END
 GO
