@@ -1,4 +1,4 @@
-﻿<%@ WebHandler Language="C#" Class="GetMatieres" %>
+<%@ WebHandler Language="C#" Class="GetMatieres" %>
 
 using System;
 using System.Collections.Generic;
@@ -13,10 +13,9 @@ public class GetMatieres : IHttpHandler, IRequiresSessionState
     public void ProcessRequest(HttpContext ctx)
     {
         ctx.Response.ContentType = "application/json";
-        ctx.Response.Charset = "utf-8";
+        ctx.Response.Charset     = "utf-8";
         ctx.Response.Cache.SetNoStore();
 
-        // Vérification session
         if (ctx.Session["authenticated"] == null || !(bool)ctx.Session["authenticated"])
         {
             ctx.Response.StatusCode = 401;
@@ -27,46 +26,64 @@ public class GetMatieres : IHttpHandler, IRequiresSessionState
         try
         {
             string connStr = ConfigurationManager.ConnectionStrings["MaConnexion"].ConnectionString;
-            var matieres = new List<object>();
+            var list = new List<object>();
 
             using (var conn = new SqlConnection(connStr))
-            using (var cmd = new SqlCommand(
-                @"SELECT ID, NOM, ENSEIGNANT, COEFFICIENT, HEURES_SEMAINE, NIVEAU, CREATED_AT
-                  FROM [dbo].[MATIERES]
-                  ORDER BY NOM ASC", conn))
+            using (var cmd  = new SqlCommand(
+                @"SELECT m.ID,
+                         m.NOM,
+                         m.ENSEIGNANT         AS ENSEIGNANT_ID,
+                         u.NOM                AS ENSEIGNANT_NOM,
+                         m.COEFFICIENT,
+                         m.HEURES_SEMAINE,
+                         m.NIVEAU             AS NIVEAU_ID,
+                         n.NOM                AS NIVEAU_NOM,
+                         m.CREATED_AT
+                  FROM   [dbo].[MATIERES] m
+                  LEFT JOIN [dbo].[USERS]   u ON u.IDUSER = m.ENSEIGNANT
+                  LEFT JOIN [dbo].[NIVEAUX] n ON n.ID     = m.NIVEAU
+                  ORDER  BY m.NOM ASC", conn))
             {
                 conn.Open();
                 using (var reader = cmd.ExecuteReader())
                 {
                     while (reader.Read())
                     {
-                        matieres.Add(new
+                        list.Add(new
                         {
-                            ID             = reader.GetInt32(0),
+                            ID             = reader.IsDBNull(0) ? "" : reader.GetGuid(0).ToString(),
                             NOM            = reader.IsDBNull(1) ? "" : reader.GetString(1),
-                            ENSEIGNANT     = reader.IsDBNull(2) ? "" : reader.GetString(2),
-                            COEFFICIENT    = reader.IsDBNull(3) ? 0m : reader.GetDecimal(3),
-                            HEURES_SEMAINE = reader.IsDBNull(4) ? 0 : reader.GetInt32(4),
-                            NIVEAU         = reader.IsDBNull(5) ? "" : reader.GetString(5),
-                            CREATED_AT     = reader.IsDBNull(6) ? null : reader.GetDateTime(6).ToString("yyyy-MM-dd HH:mm:ss")
+
+                            // ID int — pour pré-remplir le select Enseignant en mode édition
+                            ENSEIGNANT_ID  = reader.IsDBNull(2) ? 0  : reader.GetInt32(2),
+                            // Nom lisible — affiché dans le tableau
+                            ENSEIGNANT     = reader.IsDBNull(3) ? "" : reader.GetString(3),
+
+                            COEFFICIENT    = reader.IsDBNull(4) ? 0m : reader.GetDecimal(4),
+                            HEURES_SEMAINE = reader.IsDBNull(5) ? 0  : reader.GetInt32(5),
+
+                            // GUID brut — pour pré-remplir le select Niveau en mode édition
+                            NIVEAU_ID      = reader.IsDBNull(6) ? "" : reader.GetGuid(6).ToString(),
+                            // Nom lisible — affiché dans le tableau
+                            NIVEAU         = reader.IsDBNull(7) ? "" : reader.GetString(7),
+
+                            CREATED_AT     = reader.IsDBNull(8) ? null
+                                           : reader.GetDateTime(8).ToString("yyyy-MM-dd HH:mm:ss")
                         });
                     }
                 }
             }
 
-            var json = new JavaScriptSerializer().Serialize(new { success = true, matieres = matieres });
-            ctx.Response.Write(json);
+            ctx.Response.Write(new JavaScriptSerializer().Serialize(
+                new { success = true, matieres = list }));
         }
         catch (Exception ex)
         {
             ctx.Response.StatusCode = 500;
-            ctx.Response.Write("{\"success\":false,\"message\":" 
+            ctx.Response.Write("{\"success\":false,\"message\":"
                 + new JavaScriptSerializer().Serialize(ex.Message) + "}");
         }
     }
 
-    public bool IsReusable
-    {
-        get { return false; }
-    }
+    public bool IsReusable { get { return false; } }
 }

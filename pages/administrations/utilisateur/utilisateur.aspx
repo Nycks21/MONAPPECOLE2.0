@@ -343,6 +343,7 @@
             <script src="../../_assets/js/jszip.min.js"></script>
             <script src="../../_assets/js/pdfmake.min.js"></script>
             <script src="../../_assets/js/vfs_fonts.js"></script>
+            <script src="../../_assets/js/global.js"></script>
             <script src="js/users.js"></script>
             <div id="toastContainer"></div>
         </form>

@@ -301,7 +301,7 @@ function renderClassesTable() {
         // Niveau (Badge bleu)
         row.insertCell(1).innerHTML = `
             <span style="background-color: #e1f5fe; color: #01579b; padding: 3px 12px; border-radius: 15px; font-size: 11px; font-weight: 600; display: inline-block; border: 1px solid #b3e5fc;">
-                ${escHtml(classe.NIVEAU) || '-'}
+                <i class="fas fa-layer-group mr-1"></i> ${escHtml(classe.NIVEAU) || '-'}
             </span>`;
 
         row.insertCell(2).innerHTML = classe.EFFECTIF || '0';
@@ -309,13 +309,13 @@ function renderClassesTable() {
         // Niveau (Badge rouge)
         row.insertCell(3).innerHTML = `
             <span style="background-color: #e1f5fe; color: rgb(243, 10, 10); padding: 3px 12px; border-radius: 15px; font-size: 11px; font-weight: 600; display: inline-block; border: 1px solid #eea3ad;">
-                ${escHtml(classe.TITULAIRE) || '-'}
+                <i class="fas fa-user-tie mr-1"></i> ${escHtml(classe.TITULAIRE) || '-'}
             </span>`;
 
         // Niveau (Badge Vert)
         row.insertCell(4).innerHTML = ` 
             <span style="background-color: #e1f5fe; color: rgb(1, 155, 52); padding: 3px 12px; border-radius: 15px; font-size: 11px; font-weight: 600; display: inline-block; border: 1px solid rgb(179, 252, 207);">
-                ${escHtml(classe.SALLE) || '-'}
+                <i class="fas fa-door-open mr-1"></i> ${escHtml(classe.SALLE) || '-'}
             </span>`;
 
         // Statut

@@ -259,17 +259,20 @@
                             aria-label="Fermer">&times;</button>
                     </div>
                     <div class="modal-body">
-                        <input type="hidden" id="matiereEditNom">
+                        <input type="hidden" id="matiereEditId">
                         <div class="form-group">
                             <label for="matiereNom">Nom de la matière *</label>
                             <input type="text" id="matiereNom" class="form-control" placeholder="Ex: Mathématiques"
                                 maxlength="100">
                         </div>
+
                         <div class="form-group">
-                            <label for="matiereEnseignant">Enseignant responsable *</label>
-                            <input type="text" id="matiereEnseignant" class="form-control" placeholder="Ex: M. RAKOTO"
-                                maxlength="100">
+                            <label>Enseignant Responsable*</label>
+                            <select id="matiereEnseignant" class="form-control">
+                                <option value="">-- Sélectionner un enseignant --</option>
+                            </select>
                         </div>
+
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group">
@@ -286,10 +289,11 @@
                                 </div>
                             </div>
                         </div>
+
                         <div class="form-group">
-                            <label for="matiereNiveau">Niveau concerné</label>
+                            <label>Niveau</label>
                             <select id="matiereNiveau" class="form-control">
-                                <option value="">Sélectionnez un niveau...</option>
+                                <option value="">-- Sélectionner un niveau --</option>
                             </select>
                         </div>
                     </div>
@@ -309,7 +313,8 @@
 
             <!-- ═══ SCRIPTS ═══ -->
             <script src="js/matieres.js"></script>
-            <script src=".../../_assets/js/sweetalert2.all.min.js"></script>
+            <script src="../../_assets/js/sweetalert2.all.min.js"></script>
+            <script src="../../_assets/js/global.js"></script>
 
         </form>
     </body>

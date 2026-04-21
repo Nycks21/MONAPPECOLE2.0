@@ -290,7 +290,7 @@
                                 <div class="form-group">
                                     <label>Titulaire (Enseignant) *</label>
                                     <select id="ClasseUser" class="form-control">
-                                        <option value="">-- Sélectionner un utilisateur --</option>
+                                        <option value="">-- Sélectionner un titulaire --</option>
                                     </select>
                                 </div>
                             </div>
@@ -334,6 +334,7 @@
             <!-- ═══ SCRIPTS ═══ -->
             <script src="../../_assets/js/sweetalert2.all.min.js"></script>
             <script src="js/classe.js"></script>
+            <script src="../../_assets/js/global.js"></script>
         </form>
     </body>
 

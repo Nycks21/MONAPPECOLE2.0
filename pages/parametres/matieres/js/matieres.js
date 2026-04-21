@@ -1,31 +1,32 @@
 /**
  * matieres.js — Gestion Scolaire
- * Adapté à la table SQL Server : [MONAPPECOLE2].[dbo].[MATIERES]
- * Colonnes : ID, NOM, ENSEIGNANT, COEFFICIENT, HEURES_SEMAINE, NIVEAU, CREATED_AT
- *
- * Architecture :
- *   Toutes les opérations CRUD passent par des appels AJAX (fetch)
- *   vers les handlers ASP.NET (.ashx) côté serveur.
- *   Le JS ne stocke plus de données en mémoire — la source de vérité est SQL Server.
+ * Adapté à la table SQL Server : [dbo].[MATIERES]
+ * Colonnes : ID (GUID), NOM, ENSEIGNANT (int FK→USERS.IDUSER),
+ *            COEFFICIENT, HEURES_SEMAINE, NIVEAU (GUID FK→NIVEAUX.ID), CREATED_AT
  */
 
 'use strict';
 
 // ─────────────────────────────────────────────
-// URLS DES HANDLERS (relatifs à la page courante)
+// URLS DES HANDLERS
 // ─────────────────────────────────────────────
 var API = {
-    liste    : 'handlers/GetMatieres.ashx',
-    ajouter  : 'handlers/AjouterMatiere.ashx',
-    modifier : 'handlers/ModifierMatiere.ashx',
-    supprimer: 'handlers/SupprimerMatiere.ashx'
+    liste: '/pages/parametres/matieres/handlers/GetMatieres.ashx',
+    ajouter: '/pages/parametres/matieres/handlers/AjouterMatiere.ashx',
+    modifier: '/pages/parametres/matieres/handlers/ModifierMatiere.ashx',
+    supprimer: '/pages/parametres/matieres/handlers/SupprimerMatiere.ashx',
+    niveaux: '/pages/parametres/niveaux/handlers/GetNiveaux.ashx',
+    users: '/pages/administrations/utilisateur/handlers/GetUsers.ashx'
 };
 
 // ─────────────────────────────────────────────
-// ÉTAT LOCAL (sert uniquement à l'affichage)
+// ÉTAT LOCAL
 // ─────────────────────────────────────────────
-var matieresData = [];   // tableau d'objets rempli depuis le serveur
-var editId       = null; // ID SQL Server de la ligne en cours d'édition
+var matieresData = [];
+var editId = null;
+var currentPage = 1;
+var rowsPerPage = 10;
+var filteredMatieres = [];
 
 // ─────────────────────────────────────────────
 // INIT
@@ -34,8 +35,62 @@ document.addEventListener('DOMContentLoaded', function () {
     forceHideSpinner();
     hidePreloader();
     initUIControls();
-    chargerMatieres(); // premier chargement depuis SQL Server
+
+    chargerNiveaux();
+    chargerUsers();
+    chargerMatieres();
 });
+
+// ─────────────────────────────────────────────
+// CHARGER LES NIVEAUX
+// ─────────────────────────────────────────────
+async function chargerNiveaux() {
+    try {
+        const response = await fetch(API.niveaux);
+        const data = await response.json();
+
+        if (data.success) {
+            const select = document.getElementById('matiereNiveau');
+            if (!select) return;
+            select.innerHTML = '<option value="">-- Sélectionner un niveau --</option>';
+
+            data.niveaux.forEach(niv => {
+                const opt = document.createElement('option');
+                opt.value = niv.ID;       // GUID stocké comme valeur (clé étrangère)
+                opt.textContent = niv.NOM;
+                select.appendChild(opt);
+            });
+        }
+    } catch (err) {
+        console.error("Erreur lors du chargement des niveaux:", err);
+    }
+}
+
+// ─────────────────────────────────────────────
+// CHARGER LES UTILISATEURS (ENSEIGNANTS)
+// ─────────────────────────────────────────────
+async function chargerUsers() {
+    try {
+        const response = await fetch(API.users);
+        const data = await response.json();
+
+        if (data.success) {
+            const select = document.getElementById('matiereEnseignant');
+            if (!select) return;
+            select.innerHTML = '<option value="">-- Sélectionner un enseignant --</option>';
+
+            const listeUsers = data.users || data.Users || [];
+            listeUsers.forEach(u => {
+                const opt = document.createElement('option');
+                opt.value = u.ID;         // ID int stocké comme valeur (clé étrangère)
+                opt.textContent = u.NOM;
+                select.appendChild(opt);
+            });
+        }
+    } catch (err) {
+        console.error("Erreur lors du chargement des enseignants:", err);
+    }
+}
 
 // ─────────────────────────────────────────────
 // PRELOADER
@@ -58,68 +113,58 @@ function hidePreloader() {
 function forceHideSpinner() {
     var s = document.getElementById('spinnerOverlay');
     if (!s) return;
-    s.style.display    = 'none';
+    s.style.display = 'none';
     s.style.visibility = 'hidden';
-    s.style.opacity    = '0';
+    s.style.opacity = '0';
     s.setAttribute('aria-hidden', 'true');
 }
-
 function showSpinner() {
     var s = document.getElementById('spinnerOverlay');
     if (!s) return;
-    s.style.opacity    = '1';
+    s.style.opacity = '1';
     s.style.visibility = 'visible';
-    s.style.display    = 'flex';
+    s.style.display = 'flex';
     s.removeAttribute('aria-hidden');
 }
-
 function hideSpinner() { forceHideSpinner(); }
 
 // ─────────────────────────────────────────────
-// AJAX — helper générique
+// AJAX — helper générique POST JSON
 // ─────────────────────────────────────────────
-/**
- * Envoie une requête POST JSON vers un handler .ashx
- * @param {string} url
- * @param {object} payload  — sera sérialisé en JSON
- * @returns {Promise<object>}  — réponse JSON du serveur
- */
 function ajax(url, payload) {
     return fetch(url, {
-        method : 'POST',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json; charset=utf-8' },
-        body   : JSON.stringify(payload)
+        body: JSON.stringify(payload)
     })
-    .then(function (r) {
-        if (!r.ok) throw new Error('Erreur HTTP ' + r.status);
-        return r.json();
-    });
+        .then(function (r) {
+            if (!r.ok) throw new Error('Erreur HTTP ' + r.status);
+            return r.json();
+        });
 }
 
 // ─────────────────────────────────────────────
-// CHARGER LA LISTE DEPUIS SQL SERVER
+// CHARGER LA LISTE
 // ─────────────────────────────────────────────
 function chargerMatieres() {
     showSpinner();
-
     fetch(API.liste)
         .then(function (r) {
             if (!r.ok) throw new Error('Erreur HTTP ' + r.status);
             return r.json();
         })
         .then(function (data) {
-            // data = { success: true, matieres: [ {ID, NOM, ENSEIGNANT, ...}, ... ] }
             if (!data.success) throw new Error(data.message || 'Erreur serveur');
             matieresData = data.matieres || [];
+            filteredMatieres = [...matieresData];
+            currentPage = 1;
             renderMatiereStats();
             renderMatieresTable();
         })
         .catch(function (err) {
             afficherErreurGlobale('Impossible de charger les matières : ' + err.message);
         })
-        .finally(function () {
-            hideSpinner();
-        });
+        .finally(function () { hideSpinner(); });
 }
 
 // ─────────────────────────────────────────────
@@ -129,33 +174,32 @@ function renderMatiereStats() {
     var container = document.getElementById('matieresStatsContainer');
     if (!container) return;
 
-    var total      = matieresData.length;
+    var total = matieresData.length;
     var totalCoeff = 0;
-    var totalH     = 0;
+    var totalH = 0;
     var niveauxVus = {};
 
     for (var i = 0; i < matieresData.length; i++) {
         totalCoeff += parseFloat(matieresData[i].COEFFICIENT) || 0;
-        totalH     += parseInt(matieresData[i].HEURES_SEMAINE, 10) || 0;
-        niveauxVus[matieresData[i].NIVEAU] = true;
+        totalH += parseInt(matieresData[i].HEURES_SEMAINE, 10) || 0;
+        if (matieresData[i].NIVEAU) niveauxVus[matieresData[i].NIVEAU] = true;
     }
-    var niveaux = Object.keys(niveauxVus).length;
 
     var stats = [
-        { label: 'Matières',         value: total,                    icon: 'fas fa-book',          color: '#007bff' },
-        { label: 'Coeff. total',     value: totalCoeff.toFixed(1),    icon: 'fas fa-balance-scale',  color: '#28a745' },
-        { label: 'Heures / sem.',    value: totalH + 'h',             icon: 'fas fa-clock',          color: '#ffc107' },
-        { label: 'Niveaux couverts', value: niveaux,                  icon: 'fas fa-layer-group',    color: '#17a2b8' }
+        { label: 'Matières', value: total, icon: 'fas fa-book', color: '#007bff' },
+        { label: 'Coeff. total', value: totalCoeff.toFixed(1), icon: 'fas fa-balance-scale', color: '#28a745' },
+        { label: 'Heures / sem.', value: totalH + 'h', icon: 'fas fa-clock', color: '#ffc107' },
+        { label: 'Niveaux couverts', value: Object.keys(niveauxVus).length, icon: 'fas fa-layer-group', color: '#17a2b8' }
     ];
 
     container.innerHTML = stats.map(function (s) {
         return '<div class="absence-stat-card" style="border-left:4px solid ' + s.color + ';">' +
-               '  <div class="stat-icon" style="color:' + s.color + ';"><i class="' + s.icon + '"></i></div>' +
-               '  <div class="stat-info">' +
-               '    <span class="stat-value">' + s.value + '</span>' +
-               '    <span class="stat-label">' + escHtml(s.label) + '</span>' +
-               '  </div>' +
-               '</div>';
+            '  <div class="stat-icon" style="color:' + s.color + ';"><i class="' + s.icon + '"></i></div>' +
+            '  <div class="stat-info">' +
+            '    <span class="stat-value">' + s.value + '</span>' +
+            '    <span class="stat-label">' + escHtml(s.label) + '</span>' +
+            '  </div>' +
+            '</div>';
     }).join('');
 }
 
@@ -166,44 +210,68 @@ function renderMatieresTable() {
     var tbody = document.getElementById('matieresTableBody');
     if (!tbody) return;
 
-    if (matieresData.length === 0) {
+    const startIndex = (currentPage - 1) * rowsPerPage;
+    const pageMatieres = filteredMatieres.slice(startIndex, startIndex + rowsPerPage);
+    const totalPages = Math.ceil(filteredMatieres.length / rowsPerPage);
+
+    tbody.innerHTML = '';
+
+    if (!pageMatieres.length) {
         tbody.innerHTML =
-            '<tr><td colspan="7" style="text-align:center;color:#888;padding:24px;">' +
-            '<i class="fas fa-inbox" style="font-size:24px;display:block;margin-bottom:8px;"></i>' +
-            'Aucune matière enregistrée.</td></tr>';
+            '<tr><td colspan="7" style="text-align:center;color:#888;padding:40px;">' +
+            '<i class="fas fa-search" style="font-size:40px;color:#ccc;display:block;margin-bottom:12px;"></i>' +
+            'Aucune matière trouvée.</td></tr>';
         return;
     }
 
-    tbody.innerHTML = matieresData.map(function (m) {
-    var date = m.CREATED_AT
-        ? new Date(m.CREATED_AT).toLocaleDateString('fr-FR')
-        : '—';
+    pageMatieres.forEach(function (m) {
+        var date = m.CREATED_AT
+            ? new Date(m.CREATED_AT).toLocaleDateString('fr-FR')
+            : '—';
 
-    return '<tr>' +
-           '<td><strong>' + escHtml(m.NOM) + '</strong></td>' +
-           '<td>' + escHtml(m.ENSEIGNANT) + '</td>' +
-           '<td><span class="badge-coeff">' + (parseFloat(m.COEFFICIENT).toFixed(1)) + '</span></td>' +
-           '<td>' + escHtml(String(m.HEURES_SEMAINE)) + 'h</td>' +
-           // --- MODIFICATION ICI : Ajout du style du badge pour le NIVEAU ---
-           '<td>' +
-               '<span style="background-color: #e1f5fe; color: #01579b; padding: 3px 12px; border-radius: 15px; font-size: 11px; font-weight: 600; display: inline-block; border: 1px solid #b3e5fc;">' + 
-                   escHtml(m.NIVEAU) + 
-               '</span>' +
-           '</td>' +
-           // ---------------------------------------------------------------
-           '<td style="color:#888;font-size:12px;">' + date + '</td>' +
-           '<td class="action-cell">' +
-           '  <button type="button" class="btn btn-sm btn-primary"' +
-           '    onclick="editMatiere(' + m.ID + ')" title="Modifier">' +
-           '    <i class="fas fa-edit"></i>' +
-           '  </button>' +
-           '  <button type="button" class="btn btn-sm btn-danger"' +
-           '    onclick="deleteMatiere(' + m.ID + ',\'' + escHtml(m.NOM).replace(/'/g, "\\'") + '\')" title="Supprimer">' +
-           '    <i class="fas fa-trash"></i>' +
-           '  </button>' +
-           '</td>' +
-           '</tr>';
-}).join('');
+        var row = tbody.insertRow();
+
+        // Nom
+        var cellNom = row.insertCell(0);
+        cellNom.innerHTML = '<strong>' + escHtml(m.NOM) + '</strong>';
+
+        // Enseignant — NOM lisible avec badge stylisé
+        row.insertCell(1).innerHTML = `
+        <span style="background-color: #fce4ec; color: #d32f2f; padding: 3px 12px; border-radius: 15px; font-size: 11px; font-weight: 600; display: inline-block; border: 1px solid #ffcdd2;">
+            <i class="fas fa-user-tie mr-1"></i> ${escHtml(m.ENSEIGNANT) || '—'}
+        </span>`;
+
+        // Coefficient
+        row.insertCell(2).innerHTML =
+            '<span class="badge-coeff">' + parseFloat(m.COEFFICIENT).toFixed(1) + '</span>';
+
+        // Heures
+        row.insertCell(3).textContent = (m.HEURES_SEMAINE || 0) + 'h';
+
+        // Niveau — Affichage avec icône et badge stylisé
+        row.insertCell(4).innerHTML = `
+        <span style="background-color: #e1f5fe; color: #01579b; padding: 3px 12px; border-radius: 15px; font-size: 11px; font-weight: 600; display: inline-block; border: 1px solid #b3e5fc;">
+            <i class="fas fa-layer-group mr-1"></i> ${escHtml(m.NIVEAU) || '—'}
+        </span>`;
+
+        // Date
+        var cellDate = row.insertCell(5);
+        cellDate.textContent = date;
+        cellDate.style.cssText = 'color:#888;font-size:12px;';
+
+        // Actions — ID GUID entre guillemets simples comme dans classe.js
+        row.insertCell(6).innerHTML =
+            '<button type="button" class="btn btn-sm btn-primary"' +
+            ' onclick="editMatiere(\'' + m.ID + '\')" title="Modifier">' +
+            '  <i class="fas fa-edit"></i>' +
+            '</button> ' +
+            '<button type="button" class="btn btn-sm btn-danger"' +
+            ' onclick="deleteMatiere(\'' + m.ID + '\',\'' + escHtml(m.NOM).replace(/'/g, "\\'") + '\')" title="Supprimer">' +
+            '  <i class="fas fa-trash"></i>' +
+            '</button>';
+    });
+
+    if (typeof createPaginationControls === "function") createPaginationControls(totalPages);
 }
 
 // ─────────────────────────────────────────────
@@ -227,7 +295,6 @@ function showModal(id) {
     var m = document.getElementById(id);
     if (m) { m.style.display = 'flex'; m.classList.add('open'); }
 }
-
 function hideModal(id) {
     var m = document.getElementById(id);
     if (m) { m.style.display = 'none'; m.classList.remove('open'); }
@@ -237,11 +304,11 @@ function hideModal(id) {
 // FORMULAIRE — RESET
 // ─────────────────────────────────────────────
 function resetMatiereForm() {
-    document.getElementById('matiereNom').value        = '';
-    document.getElementById('matiereEnseignant').value = '';
-    document.getElementById('matiereCoeff').value      = '1';
-    document.getElementById('matiereHeures').value     = '3';
-    document.getElementById('matiereNiveau').value     = 'Tous niveaux';
+    document.getElementById('matiereNom').value = '';
+    document.getElementById('matiereEnseignant').value = '';  // select → valeur vide
+    document.getElementById('matiereCoeff').value = '1';
+    document.getElementById('matiereHeures').value = '3';
+    document.getElementById('matiereNiveau').value = '';  // select → valeur vide
     clearFormErrors();
 }
 
@@ -249,74 +316,77 @@ function resetMatiereForm() {
 // SAUVEGARDER (ajout ou modification)
 // ─────────────────────────────────────────────
 function saveMatiere() {
-    // 1. Validation du formulaire avant envoi
     if (!validateMatiereForm()) return;
 
-    // --- CRUCIAL : On mémorise si c'est une édition AVANT l'appel AJAX ---
     var estUneModification = (editId !== null);
 
-    // 2. Préparation des données (Payload)
+    var elNom = document.getElementById('matiereNom');
+    var elEnseignant = document.getElementById('matiereEnseignant'); // select
+    var elCoeff = document.getElementById('matiereCoeff');
+    var elHeures = document.getElementById('matiereHeures');
+    var elNiveau = document.getElementById('matiereNiveau');     // select
+
+    // Validation GUID niveau
+    if (!elNiveau.value || elNiveau.value.length < 10) {
+        Swal.fire('Attention', 'Veuillez sélectionner un niveau valide dans la liste.', 'warning');
+        return;
+    }
+
+    // Validation enseignant (int)
+    if (!elEnseignant.value || parseInt(elEnseignant.value, 10) <= 0) {
+        Swal.fire('Attention', 'Veuillez sélectionner un enseignant valide dans la liste.', 'warning');
+        return;
+    }
+
     var payload = {
-        NOM           : document.getElementById('matiereNom').value.trim(),
-        ENSEIGNANT    : document.getElementById('matiereEnseignant').value.trim(),
-        COEFFICIENT   : parseFloat(document.getElementById('matiereCoeff').value),
-        HEURES_SEMAINE: parseInt(document.getElementById('matiereHeures').value, 10),
-        NIVEAU        : document.getElementById('matiereNiveau').value
+        NOM: elNom.value.trim(),
+        ENSEIGNANT_ID: parseInt(elEnseignant.value, 10),  // int FK → USERS.IDUSER
+        COEFFICIENT: parseFloat(elCoeff.value),
+        HEURES_SEMAINE: parseInt(elHeures.value, 10),
+        NIVEAU_ID: elNiveau.value                     // GUID FK → NIVEAUX.ID
     };
 
     var url = API.ajouter;
-
     if (estUneModification) {
         payload.ID = editId;
         url = API.modifier;
     }
 
-    // 3. UI : Désactiver le bouton
     var btnSave = document.querySelector('#addMatiereModal .btn-primary');
-    if (btnSave) { 
-        btnSave.disabled = true; 
-        btnSave.textContent = 'Enregistrement...'; 
+    if (btnSave) {
+        btnSave.disabled = true;
+        btnSave.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enregistrement...';
     }
-
     showSpinner();
 
-    // 4. Appel AJAX
     ajax(url, payload)
         .then(function (data) {
             if (!data.success) throw new Error(data.message || 'Erreur serveur');
 
-            // --- SUCCÈS ---
             closeAddMatiereModal();
-
-            // Utilisation de la variable mémorisée pour le titre
-            var titreSucces = estUneModification ? 'Matière modifiée !' : 'Matière ajoutée !';
-            var texteSucces = estUneModification ? 
-                'Les modifications ont été enregistrées avec succès.' : 
-                'La nouvelle matière a été créée avec succès.';
 
             Swal.fire({
                 icon: 'success',
-                title: titreSucces,
-                text: texteSucces,
+                title: estUneModification ? 'Matière modifiée !' : 'Matière ajoutée !',
+                text: estUneModification
+                    ? 'Les modifications ont été enregistrées.'
+                    : 'La nouvelle matière a été créée avec succès.',
                 timer: 2500,
-                showConfirmButton: false,
-                target: document.body // Assure que l'alerte est au premier plan
+                showConfirmButton: false
             });
 
-            chargerMatieres(); 
+            chargerMatieres();
         })
         .catch(function (err) {
-            // --- ERREUR ---
             Swal.fire({
                 icon: 'error',
-                title: 'Erreur d\'enregistrement',
+                title: "Erreur d'enregistrement",
                 text: err.message,
-                confirmButtonColor: '#3085d6'
+                confirmButtonColor: '#d63030'
             });
-            hideSpinner();
         })
         .finally(function () {
-            // 5. UI : Réactiver le bouton
+            hideSpinner();
             if (btnSave) {
                 btnSave.disabled = false;
                 btnSave.innerHTML = '<i class="fas fa-save"></i> Enregistrer';
@@ -326,86 +396,61 @@ function saveMatiere() {
 
 // ─────────────────────────────────────────────
 // MODIFIER — ouvre le modal pré-rempli
-// @param {number} id — ID SQL Server
 // ─────────────────────────────────────────────
 function editMatiere(id) {
-    // Trouver la ligne dans le cache local
-    var m = null;
-    for (var i = 0; i < matieresData.length; i++) {
-        if (matieresData[i].ID === id) { m = matieresData[i]; break; }
-    }
+    var m = matieresData.find(function (x) { return x.ID === id; });
     if (!m) return;
 
     editId = id;
 
-    document.getElementById('matiereNom').value        = m.NOM;
-    document.getElementById('matiereEnseignant').value = m.ENSEIGNANT;
-    document.getElementById('matiereCoeff').value      = m.COEFFICIENT;
-    document.getElementById('matiereHeures').value     = m.HEURES_SEMAINE;
-    document.getElementById('matiereNiveau').value     = m.NIVEAU;
+    document.getElementById('matiereNom').value = m.NOM;
+    // On utilise les IDs pour sélectionner la bonne option dans chaque select
+    document.getElementById('matiereEnseignant').value = m.ENSEIGNANT_ID;  // int
+    document.getElementById('matiereCoeff').value = m.COEFFICIENT;
+    document.getElementById('matiereHeures').value = m.HEURES_SEMAINE;
+    document.getElementById('matiereNiveau').value = m.NIVEAU_ID;      // GUID
 
     document.getElementById('matiereModalTitle').innerHTML =
         '<i class="fas fa-edit"></i> Modifier : ' + escHtml(m.NOM);
 
     showModal('addMatiereModal');
-    if (result.success || result.status === "success") {
-            Swal.fire({ icon: 'success', title: "Utilisateur modifié !", timer: 1500, showConfirmButton: false });
-            setTimeout(() => {
-                closeAddUserModal();
-                loadUsers();
-            }, 1500);
-        } else {
-            Swal.fire({ icon: 'error', title: 'Erreur', text: result.message || "Erreur lors de la modification" });
-        }
 }
 
 // ─────────────────────────────────────────────
 // SUPPRIMER
-// @param {number} id  — ID SQL Server
-// @param {string} nom — pour le message de confirmation
 // ─────────────────────────────────────────────
 function deleteMatiere(id, nom) {
-    // Utilisation de SweetAlert2 au lieu du confirm() natif
     Swal.fire({
         title: 'Confirmation',
-        text: "Supprimer la matière « " + nom + " » ? Cette action est irréversible.",
+        text: 'Supprimer la matière « ' + nom + ' » ? Cette action est irréversible.',
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#d33',
         cancelButtonColor: '#3085d6',
         confirmButtonText: 'Oui, supprimer',
         cancelButtonText: 'Annuler',
-        // Empêche l'affichage derrière la modal en ciblant le body ou la modal elle-même
-        target: document.body 
-    }).then((result) => {
-        if (result.isConfirmed) {
-            showSpinner();
+        target: document.body
+    }).then(function (result) {
+        if (!result.isConfirmed) return;
+        showSpinner();
 
-            ajax(API.supprimer, { ID: id })
-                .then(function (data) {
-                    if (!data.success) throw new Error(data.message || 'Erreur serveur');
-                    
-                    // Alerte de succès
-                    Swal.fire({
-                        title: 'Supprimé !',
-                        text: 'La matière a été supprimée avec succès.',
-                        icon: 'success',
-                        timer: 2000,
-                        showConfirmButton: false
-                    });
+        ajax(API.supprimer, { ID: id })
+            .then(function (data) {
+                if (!data.success) throw new Error(data.message || 'Erreur serveur');
 
-                    chargerMatieres(); // recharge la liste 
-                })
-                .catch(function (err) {
-                    // Utilisation de SweetAlert pour l'erreur au lieu du bandeau global
-                    Swal.fire({
-                        title: 'Erreur',
-                        text: 'Erreur lors de la suppression : ' + err.message,
-                        icon: 'error'
-                    });
-                    hideSpinner();
+                Swal.fire({
+                    title: 'Supprimé !',
+                    text: 'La matière a été supprimée avec succès.',
+                    icon: 'success',
+                    timer: 2000,
+                    showConfirmButton: false
                 });
-        }
+                chargerMatieres();
+            })
+            .catch(function (err) {
+                Swal.fire({ title: 'Erreur', text: err.message, icon: 'error' });
+                hideSpinner();
+            });
     });
 }
 
@@ -413,30 +458,24 @@ function deleteMatiere(id, nom) {
 // EXPORT CSV
 // ─────────────────────────────────────────────
 function exportMatieres() {
-    if (matieresData.length === 0) {
-        alert('Aucune donnée à exporter.');
-        return;
-    }
-
+    if (matieresData.length === 0) { alert('Aucune donnée à exporter.'); return; }
     showSpinner();
-
     setTimeout(function () {
         try {
             var header = ['ID', 'Matière', 'Enseignant', 'Coefficient', 'Heures/sem.', 'Niveau', 'Créé le'];
             var rows = matieresData.map(function (m) {
                 var date = m.CREATED_AT
-                    ? new Date(m.CREATED_AT).toLocaleDateString('fr-FR')
-                    : '';
+                    ? new Date(m.CREATED_AT).toLocaleDateString('fr-FR') : '';
                 return [m.ID, m.NOM, m.ENSEIGNANT, m.COEFFICIENT, m.HEURES_SEMAINE, m.NIVEAU, date]
-                    .map(function (v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; })
-                    .join(',');
+                    .map(function (v) {
+                        return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+                    }).join(',');
             });
-
-            var csv  = [header.join(',')].concat(rows).join('\r\n');
+            var csv = [header.join(',')].concat(rows).join('\r\n');
             var blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-            var url  = URL.createObjectURL(blob);
-            var a    = document.createElement('a');
-            a.href     = url;
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
             a.download = 'matieres_export_' + dateDuJour() + '.csv';
             document.body.appendChild(a);
             a.click();
@@ -466,12 +505,10 @@ function validateMatiereForm() {
         ok = false;
     }
 
-    var enseignant = document.getElementById('matiereEnseignant').value.trim();
-    if (!enseignant) {
+    // Enseignant : select, valeur doit être un int > 0
+    var ensEl = document.getElementById('matiereEnseignant');
+    if (!ensEl || !ensEl.value) {
         showFieldError('matiereEnseignant', "L'enseignant est obligatoire.");
-        ok = false;
-    } else if (enseignant.length > 100) {
-        showFieldError('matiereEnseignant', 'Maximum 100 caractères.');
         ok = false;
     }
 
@@ -487,6 +524,13 @@ function validateMatiereForm() {
         ok = false;
     }
 
+    // Niveau : select, valeur doit être un GUID non vide
+    var niveauEl = document.getElementById('matiereNiveau');
+    if (!niveauEl || !niveauEl.value) {
+        showFieldError('matiereNiveau', 'Le niveau est obligatoire.');
+        ok = false;
+    }
+
     return ok;
 }
 
@@ -494,7 +538,7 @@ function showFieldError(fieldId, msg) {
     var field = document.getElementById(fieldId);
     if (!field) return;
     field.classList.add('is-invalid');
-    var err       = document.createElement('div');
+    var err = document.createElement('div');
     err.className = 'field-error';
     err.textContent = msg;
     field.parentNode.appendChild(err);
@@ -508,18 +552,18 @@ function clearFormErrors() {
 }
 
 // ─────────────────────────────────────────────
-// MESSAGE D'ERREUR GLOBAL (bandeau en haut du contenu)
+// MESSAGE D'ERREUR GLOBAL
 // ─────────────────────────────────────────────
 function afficherErreurGlobale(msg) {
     var existing = document.getElementById('alertErreurGlobal');
     if (existing) existing.parentNode.removeChild(existing);
 
     var div = document.createElement('div');
-    div.id        = 'alertErreurGlobal';
+    div.id = 'alertErreurGlobal';
     div.className = 'alert-erreur';
     div.innerHTML = '<i class="fas fa-exclamation-triangle"></i> ' + escHtml(msg) +
-                    '<button onclick="this.parentNode.remove()" style="float:right;background:none;border:none;' +
-                    'cursor:pointer;font-size:16px;color:inherit;">&times;</button>';
+        '<button onclick="this.parentNode.remove()" style="float:right;background:none;border:none;' +
+        'cursor:pointer;font-size:16px;color:inherit;">&times;</button>';
 
     var section = document.getElementById('section-matieres');
     if (section) section.insertBefore(div, section.firstChild);
@@ -531,8 +575,8 @@ function afficherErreurGlobale(msg) {
 function initUIControls() {
     // Sidebar toggle
     var menuToggle = document.getElementById('menuToggle');
-    var sidebar    = document.getElementById('sidebar');
-    var wrapper    = document.getElementById('contentWrapper');
+    var sidebar = document.getElementById('sidebar');
+    var wrapper = document.getElementById('contentWrapper');
     if (menuToggle && sidebar) {
         menuToggle.addEventListener('click', function () {
             sidebar.classList.toggle('sidebar-collapsed');
@@ -541,7 +585,7 @@ function initUIControls() {
     }
 
     // Notifications
-    var notifToggle   = document.getElementById('notifToggle');
+    var notifToggle = document.getElementById('notifToggle');
     var notifDropdown = document.getElementById('notifDropdown');
     if (notifToggle && notifDropdown) {
         notifToggle.addEventListener('click', function (e) {
@@ -564,9 +608,9 @@ function initUIControls() {
         fsToggle.addEventListener('click', function () {
             if (!document.fullscreenElement) {
                 document.documentElement.requestFullscreen &&
-                    document.documentElement.requestFullscreen().catch(function () {});
+                    document.documentElement.requestFullscreen().catch(function () { });
             } else {
-                document.exitFullscreen && document.exitFullscreen().catch(function () {});
+                document.exitFullscreen && document.exitFullscreen().catch(function () { });
             }
         });
     }
@@ -590,16 +634,16 @@ function initUIControls() {
 // ─────────────────────────────────────────────
 function escHtml(str) {
     return String(str == null ? '' : str)
-        .replace(/&/g,  '&amp;')
-        .replace(/</g,  '&lt;')
-        .replace(/>/g,  '&gt;')
-        .replace(/"/g,  '&quot;')
-        .replace(/'/g,  '&#039;');
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
 }
 
 function dateDuJour() {
     var d = new Date();
     return d.getFullYear() + '-' +
-           String(d.getMonth() + 1).padStart(2, '0') + '-' +
-           String(d.getDate()).padStart(2, '0');
+        String(d.getMonth() + 1).padStart(2, '0') + '-' +
+        String(d.getDate()).padStart(2, '0');
 }

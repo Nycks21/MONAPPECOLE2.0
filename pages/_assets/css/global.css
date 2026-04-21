@@ -721,3 +721,8 @@ select.form-control { appearance: auto; }
     border-color: #2ecc71; /* Vert pour correspondre à votre spinner */
     box-shadow: 0 0 8px rgba(46, 204, 113, 0.2); /* Lueur douce */
 }
+
+/* ── Les états sidebar sont gérés par .main-sidebar.sidebar-collapsed ──────
+   et .content-wrapper.sidebar-collapsed définis plus haut.
+   Le toggle JS utilise ces classes via global.js.
+   ────────────────────────────────────────────────────────────────────────── */

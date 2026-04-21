@@ -254,6 +254,7 @@
         <!-- ═══ SCRIPTS ═══ -->
         <script src="js/niveaux.js"></script>
         <script src="../../_assets/js/sweetalert2.all.min.js"></script>
+        <script src="../../_assets/js/global.js"></script>
 
     </form>
 </body>

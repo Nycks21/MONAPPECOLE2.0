@@ -13,10 +13,9 @@ public class ModifierMatiere : IHttpHandler, IRequiresSessionState
     public void ProcessRequest(HttpContext ctx)
     {
         ctx.Response.ContentType = "application/json";
-        ctx.Response.Charset = "utf-8";
+        ctx.Response.Charset     = "utf-8";
         ctx.Response.Cache.SetNoStore();
 
-        // Initialisation du sérialiseur ici pour qu'il soit accessible partout
         JavaScriptSerializer ser = new JavaScriptSerializer();
 
         if (ctx.Session["authenticated"] == null || !(bool)ctx.Session["authenticated"])
@@ -43,31 +42,42 @@ public class ModifierMatiere : IHttpHandler, IRequiresSessionState
 
             if (payload == null)
                 throw new ArgumentException("Données invalides.");
-            if (payload.ID <= 0)
-                throw new ArgumentException("ID invalide.");
-            if (string.IsNullOrEmpty(payload.NOM))
-                throw new ArgumentException("Le nom est obligatoire.");
-            if (string.IsNullOrEmpty(payload.ENSEIGNANT))
-                throw new ArgumentException("L'enseignant est obligatoire.");
+
+            // Validation ID matière (GUID)
+            Guid matiereGuid;
+            if (!Guid.TryParse(payload.ID, out matiereGuid))
+                throw new ArgumentException("ID de matière invalide.");
+
+            if (string.IsNullOrWhiteSpace(payload.NOM))
+                throw new ArgumentException("Le nom de la matière est obligatoire.");
+
+            // Validation ENSEIGNANT_ID (int > 0)
+            if (payload.ENSEIGNANT_ID <= 0)
+                throw new ArgumentException("Veuillez sélectionner un enseignant valide.");
+
+            // Validation NIVEAU (GUID)
+            Guid niveauGuid;
+            if (!Guid.TryParse(payload.NIVEAU_ID, out niveauGuid))
+                throw new ArgumentException("Le niveau sélectionné est invalide.");
 
             string connStr = ConfigurationManager.ConnectionStrings["MaConnexion"].ConnectionString;
 
             using (var conn = new SqlConnection(connStr))
-            using (var cmd = new SqlCommand(
+            using (var cmd  = new SqlCommand(
                 @"UPDATE [dbo].[MATIERES]
                   SET    NOM            = @nom,
-                         ENSEIGNANT      = @ens,
-                         COEFFICIENT     = @coeff,
-                         HEURES_SEMAINE  = @heures,
-                         NIVEAU          = @niveau
+                         ENSEIGNANT     = @ens,
+                         COEFFICIENT    = @coeff,
+                         HEURES_SEMAINE = @heures,
+                         NIVEAU         = @niveau
                   WHERE  ID = @id", conn))
             {
-                cmd.Parameters.AddWithValue("@id", payload.ID);
-                cmd.Parameters.AddWithValue("@nom", payload.NOM.Trim());
-                cmd.Parameters.AddWithValue("@ens", payload.ENSEIGNANT.Trim());
-                cmd.Parameters.AddWithValue("@coeff", payload.COEFFICIENT);
-                cmd.Parameters.AddWithValue("@heures", payload.HEURES_SEMAINE);
-                cmd.Parameters.AddWithValue("@niveau", payload.NIVEAU ?? "Tous niveaux");
+                cmd.Parameters.Add("@id",     System.Data.SqlDbType.UniqueIdentifier).Value = matiereGuid;
+                cmd.Parameters.Add("@nom",    System.Data.SqlDbType.NVarChar).Value         = payload.NOM.Trim();
+                cmd.Parameters.Add("@ens",    System.Data.SqlDbType.Int).Value              = payload.ENSEIGNANT_ID;
+                cmd.Parameters.Add("@coeff",  System.Data.SqlDbType.Decimal).Value          = payload.COEFFICIENT;
+                cmd.Parameters.Add("@heures", System.Data.SqlDbType.Int).Value              = payload.HEURES_SEMAINE;
+                cmd.Parameters.Add("@niveau", System.Data.SqlDbType.UniqueIdentifier).Value  = niveauGuid;
 
                 conn.Open();
                 int rows = cmd.ExecuteNonQuery();
@@ -84,22 +94,20 @@ public class ModifierMatiere : IHttpHandler, IRequiresSessionState
         catch (Exception ex)
         {
             ctx.Response.StatusCode = 500;
-            ctx.Response.Write("{\"success\":false,\"message\":" + ser.Serialize(ex.Message) + "}");
+            string msg = ex.Message.Contains("UNIQUE") ? "Cette matière existe déjà." : ex.Message;
+            ctx.Response.Write("{\"success\":false,\"message\":" + ser.Serialize(msg) + "}");
         }
     }
 
-    public bool IsReusable
-    {
-        get { return false; }
-    }
+    public bool IsReusable { get { return false; } }
 
     private class MatierePayload
     {
-        public int ID { get; set; }
-        public string NOM { get; set; }
-        public string ENSEIGNANT { get; set; }
-        public decimal COEFFICIENT { get; set; }
-        public int HEURES_SEMAINE { get; set; }
-        public string NIVEAU { get; set; }
+        public string  ID             { get; set; }
+        public string  NOM            { get; set; }
+        public int     ENSEIGNANT_ID  { get; set; }
+        public decimal COEFFICIENT    { get; set; }
+        public int     HEURES_SEMAINE { get; set; }
+        public string  NIVEAU_ID      { get; set; }
     }
 }

@@ -266,6 +266,7 @@
             <!-- ═══ SCRIPTS ═══ -->
             <script src="js/salles.js"></script>
             <script src="../../_assets/js/sweetalert2.all.min.js"></script>
+            <script src="../../_assets/js/global.js"></script>
 
         </form>
     </body>
