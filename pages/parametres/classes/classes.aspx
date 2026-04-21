@@ -8,10 +8,10 @@
         <title>Classes — Gestion Scolaire</title>
 
         <!-- Font Awesome -->
-        <link rel="stylesheet" href="css/all.min.css">
-        <link rel="stylesheet" href="css/fontawesome.css">
-        <link rel="stylesheet" href="css/fontawesome.min.css">
-        <link rel="stylesheet" href="../../global.css">
+        <link rel="stylesheet" href="../../_assets/css/all.min.css">
+        <link rel="stylesheet" href="../../_assets/css/fontawesome.css">
+        <link rel="stylesheet" href="../../_assets/css/fontawesome.min.css">
+        <link rel="stylesheet" href="../../_assets/css/global.css">
 
     </head>
 
@@ -332,7 +332,7 @@
             </div>
 
             <!-- ═══ SCRIPTS ═══ -->
-            <script src="../../../plugins/sweetalert2/sweetalert2.all.min.js"></script>
+            <script src="../../_assets/js/sweetalert2.all.min.js"></script>
             <script src="js/classe.js"></script>
         </form>
     </body>

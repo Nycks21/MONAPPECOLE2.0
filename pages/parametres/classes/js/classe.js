@@ -305,8 +305,18 @@ function renderClassesTable() {
             </span>`;
 
         row.insertCell(2).innerHTML = classe.EFFECTIF || '0';
-        row.insertCell(3).innerHTML = escHtml(classe.TITULAIRE) || '-';
-        row.insertCell(4).innerHTML = escHtml(classe.SALLE) || '-';
+
+        // Niveau (Badge rouge)
+        row.insertCell(3).innerHTML = `
+            <span style="background-color: #e1f5fe; color: rgb(243, 10, 10); padding: 3px 12px; border-radius: 15px; font-size: 11px; font-weight: 600; display: inline-block; border: 1px solid #eea3ad;">
+                ${escHtml(classe.TITULAIRE) || '-'}
+            </span>`;
+
+        // Niveau (Badge Vert)
+        row.insertCell(4).innerHTML = ` 
+            <span style="background-color: #e1f5fe; color: rgb(1, 155, 52); padding: 3px 12px; border-radius: 15px; font-size: 11px; font-weight: 600; display: inline-block; border: 1px solid rgb(179, 252, 207);">
+                ${escHtml(classe.SALLE) || '-'}
+            </span>`;
 
         // Statut
         const isActif = (

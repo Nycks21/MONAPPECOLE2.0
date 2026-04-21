@@ -8,10 +8,10 @@
         <title>Frais — Gestion Scolaire</title>
 
         <!-- Font Awesome -->
-        <link rel="stylesheet" href="css/all.min.css">
-        <link rel="stylesheet" href="css/fontawesome.css">
-        <link rel="stylesheet" href="css/fontawesome.min.css">
-        <link rel="stylesheet" href="../../global.css">
+        <link rel="stylesheet" href="../../_assets/css/all.min.css">
+        <link rel="stylesheet" href="../../_assets/css/fontawesome.css">
+        <link rel="stylesheet" href="../../_assets/css/fontawesome.min.css">
+        <link rel="stylesheet" href="../../_assets/global.css">
         <link rel="stylesheet" href="css/style.css">
 
     </head>

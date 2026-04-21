@@ -8,10 +8,10 @@
         <title>Utilisateur — Gestion Scolaire</title>
 
         <!-- Font Awesome -->
-        <link rel="stylesheet" href="css/all.min.css">
-        <link rel="stylesheet" href="css/fontawesome.css">
-        <link rel="stylesheet" href="css/fontawesome.min.css">
-        <link rel="stylesheet" href="../../global.css">
+        <link rel="stylesheet" href="../../_assets/css/all.min.css">
+        <link rel="stylesheet" href="../../_assets/css/fontawesome.css">
+        <link rel="stylesheet" href="../../_assets/css/fontawesome.min.css">
+        <link rel="stylesheet" href="../../_assets/css/global.css">
 
     </head>
 
@@ -340,9 +340,9 @@
             <!-- ═══ SCRIPTS ═══ -->
             <script src="../../_assets/js/jquery-3.6.0.min.js"></script>
             <script src="../../_assets/js/sweetalert2@11.js"></script>
-            <script src="../../../plugins/jszip/jszip.min.js"></script>
-            <script src="../../../plugins/pdfmake/pdfmake.min.js"></script>
-            <script src="../../../plugins/pdfmake/vfs_fonts.js"></script>
+            <script src="../../_assets/js/jszip.min.js"></script>
+            <script src="../../_assets/js/pdfmake.min.js"></script>
+            <script src="../../_assets/js/vfs_fonts.js"></script>
             <script src="js/users.js"></script>
             <div id="toastContainer"></div>
         </form>

@@ -11,17 +11,14 @@
     <title>Connexion</title>
 
     <!-- Google Font: Source Sans Pro -->
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback"
-    />
+    <link rel="stylesheet" href="../pages/_assets/css/family.css" />
     <!-- Font Awesome -->
-    <link rel="stylesheet" href="../../plugins/fontawesome-free/css/all.min.css" />
+    <link rel="stylesheet" href="../pages/_assets/css/all.min.css" />
     <!-- icheck bootstrap -->
-    <link rel="stylesheet" href="../../plugins/icheck-bootstrap/icheck-bootstrap.min.css" />
+    <link rel="stylesheet" href="../pages/_assets/css/icheck-bootstrap.min.css" />
     <!-- Theme style -->
-    <link rel="stylesheet" href="../../dist/css/adminlte.min.css" />
-    <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="../pages/_assets/css/adminlte.min.css" />
+    <link rel="stylesheet" href="css/styles.css" />
 </head>
 <body class="hold-transition login-page">
     <div class="login-box">
@@ -65,12 +62,12 @@
     </div>
 
     <!-- jQuery -->
-    <script src="../plugins/jquery/jquery.min.js"></script>
+    <script src="../pages/_assets/js/jquery.min.js"></script>
     <!-- Bootstrap 4 -->
-    <script src="../plugins/bootstrap/js/bootstrap.bundle.min.js"></script>
+    <script src="../pages/_assets/js/bootstrap.bundle.min.js"></script>
     <!-- AdminLTE App -->
-    <script src="../dist/js/adminlte.min.js"></script>
-    <script src="../dist/js/sweetalert2@11.js"></script>
+    <script src="../pages/_assets/js/adminlte.min.js"></script>
+    <script src="../pages/_assets/js/sweetalert2@11.js"></script>
     <script>
         (function () {
             // empêche le retour vers les pages protégées (après logout)
