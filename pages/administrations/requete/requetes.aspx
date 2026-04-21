@@ -1,4 +1,4 @@
-﻿<%@ Page Language="C#" AutoEventWireup="true" CodeFile="utilisateurs.cs" Inherits="utilisateurs" %>
+<%@ Page Language="C#" AutoEventWireup="true" CodeFile="requetes.cs" Inherits="requetes" %>
     <!DOCTYPE html>
     <html lang="fr">
 
@@ -167,8 +167,7 @@
                                 <!-- Identifiant -->
                                 <li class="nav-item">
                                     <div class="nav-section">Identifiant</div>
-                                    <a href="../../administrations/utilisateur/utilisateur.aspx"
-                                        class="nav-link active">
+                                    <a href="../../administrations/utilisateur/utilisateur.aspx" class="nav-link">
                                         <div style="width:30px; text-align:center; margin-right:10px;">
                                             <i class="fas fa-user"></i>
                                         </div>
@@ -176,7 +175,7 @@
                                     </a>
                                 </li>
                                 <li class="nav-item">
-                                    <a href="../../administrations/requete/requetes.aspx" class="nav-link">
+                                    <a href="requetes.aspx" class="nav-link active">
                                         <div style="width:30px; text-align:center; margin-right:10px;">
                                             <i class="fas fa-book"></i>
                                         </div>
@@ -196,12 +195,12 @@
                         <div class="container-fluid">
                             <div class="row">
                                 <div class="col-lg-6">
-                                    <h1 id="dynPageTitle">Liste des utilisateurs</h1>
+                                    <h1 id="dynPageTitle">Requetes SQL</h1>
                                 </div>
                                 <div class="col-lg-6">
                                     <ol class="breadcrumb" style="float: right;">
-                                        <li class="breadcrumb-item">Identifiant</li>
-                                        <li class="breadcrumb-item active" id="dynBreadcrumb">Utilisateur</li>
+                                        <li class="breadcrumb-item">Administration</li>
+                                        <li class="breadcrumb-item active" id="dynBreadcrumb">Requetes</li>
                                     </ol>
                                 </div>
                             </div>
@@ -211,134 +210,35 @@
                     <!-- ═══════════════════════════════════════════════════════════
                     pages/utilisateur.html  —  Section Gestion des utilisateurs
                     ═══════════════════════════════════════════════════════════ -->
-                    <section class="content" id="section-utilisateur">
-
-                        <div class="dash-card">
-                            <div class="dash-card-head">
-                                <span class="dash-card-title"><i class="fas fa-users-cog"></i> Gestion des
-                                    utilisateurs</span>
-                                <div class="action-buttons">
-                                    <button class="btn btn-success btn-sm" onclick="openAddUserModal()">
-                                        <i class="fas fa-plus"></i> Ajouter un utilisateur
-                                    </button>
-                                    <button class="btn btn-primary btn-sm" onclick="exportUsers()">
-                                        <i class="fas fa-download"></i> Exporter
-                                    </button>
-                                    <button class="btn btn-success btn-sm" onclick="exportUsersToExcelOnly()">
-                                        <i class="fas fa-file-excel"></i> Excel
-                                    </button>
-                                    <button class="btn btn-info btn-sm" onclick="exportUsersToCsvOnly()">
-                                        <i class="fas fa-file-csv"></i> CSV
-                                    </button>
-                                </div>
+                    <div class="dash-card">
+                        <div class="dash-card-head">
+                            <span class="dash-card-title"><i class="fas fa-terminal"></i> Console SQL SQL Server</span>
+                        </div>
+                        <div class="dash-card-body">
+                            <div class="alert alert-warning">
+                                <i class="fas fa-exclamation-triangle"></i> <strong>Attention :</strong> Toute commande validée impactera directement la base de données.
                             </div>
-
-                            <div class="dash-card-body">
-                                <!-- Tableau -->
-                                <div style="overflow-x:auto;">
-                                    <table class="dash-table" id="dash-tables">
-                                        <thead>
-                                            <tr>
-                                                <th>Nom d'utilisateur</th>
-                                                <th>Nom complet</th>
-                                                <th>Email</th>
-                                                <th>Rôle</th>
-                                                <th>Téléphone</th>
-                                                <th>Date de création</th>
-                                                <th>Statut</th>
-                                                <th>Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="usersTableBody"></tbody>
-                                    </table>
+                            <br />
+                            <textarea id="sqlConsole" class="form-control" rows="8"
+                                placeholder="Écrivez votre requête ici (Ex: UPDATE USERS SET STATUT = 'Actif' WHERE IDUSER = 1)"
+                                style="font-family: 'Consolas', monospace; background-color: #1e1e1e; color: #d4d4d4; padding: 15px;">
+                            </textarea>
+                            <br />
+                            <div class="mt-3 text-right">
+                                <button type="button" class="btn btn-danger" onclick="executeCustomSQL()">
+                                    <i class="fas fa-play"></i> Exécuter la requête
+                                </button>
+                            </div>
+                            <br />
+                            <div id="sqlExecutionResult" class="mt-4" style="min-height: 100px;">
+                                <div class="text-center text-muted">
+                                    <i class="fas fa-info-circle"></i> Les résultats de vos requêtes s'afficheront ici.
                                 </div>
                             </div>
                         </div>
-                    </section>
-                </div>
-            </div>
-
-            <!-- MODAL UTILISATEUR -->
-            <div id="addUserModal" class="modal">
-                <div class="modal-content" style="max-width:550px;">
-                    <div class="modal-header">
-                        <h3 id="userModalTitle"><i class="fas fa-user-plus"></i> Ajouter un utilisateur</h3>
-                    </div>
-                    <div class="modal-body">
-                        <input type="hidden" id="userEditEmail">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Nom d'utilisateur *</label>
-                                    <input type="text" id="username" class="form-control"
-                                        placeholder="Nom d'utilisateur">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Nom complet *</label>
-                                    <input type="text" id="Nom" class="form-control" placeholder="Nom et prénom">
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Email *</label>
-                                    <input type="email" id="userEmail" class="form-control"
-                                        placeholder="email@ecole.com">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Rôle</label>
-                                    <select id="userRole" class="form-control">
-                                        <option value="Administrateur">Administrateur</option>
-                                        <option value="Professeur">Professeur</option>
-                                        <option value="Secrétaire">Secrétaire</option>
-                                        <option value="Comptable">Comptable</option>
-                                        <option value="CPE">CPE</option>
-                                        <option value="Parent">Parent</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Téléphone</label>
-                                    <input type="tel" id="userTelephone" class="form-control"
-                                        placeholder="032 12 345 67">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Mot de passe</label>
-                                    <input type="password" id="userPassword" class="form-control"
-                                        placeholder="Mot de passe">
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Statut</label>
-                                    <select id="userStatut" class="form-control">
-                                        <option value="Actif">Actif</option>
-                                        <option value="Inactif">Inactif</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button class="btn btn-primary" onclick="saveUser()"><i class="fas fa-save"></i>
-                            Enregistrer</button>
-                        <button class="btn btn-danger" onclick="closeAddUserModal()">Annuler</button>
                     </div>
                 </div>
             </div>
-
 
             <!-- ═══ SPINNER ═══ -->
             <div id="spinnerOverlay" aria-hidden="true" style="display:none;visibility:hidden;">
@@ -348,11 +248,7 @@
             <!-- ═══ SCRIPTS ═══ -->
             <script src="../../_assets/js/jquery-3.6.0.min.js"></script>
             <script src="../../_assets/js/sweetalert2@11.js"></script>
-            <script src="../../_assets/js/jszip.min.js"></script>
-            <script src="../../_assets/js/pdfmake.min.js"></script>
-            <script src="../../_assets/js/vfs_fonts.js"></script>
-            <script src="../../_assets/js/global.js"></script>
-            <script src="js/users.js"></script>
+            <script src="js/script.js"></script>
             <div id="toastContainer"></div>
         </form>
     </body>
