@@ -164,9 +164,9 @@
                                     </a>
                                 </li>
 
-                                <!-- Identifiant -->
+                                <!-- Administration -->
                                 <li class="nav-item">
-                                    <div class="nav-section">Identifiant</div>
+                                    <div class="nav-section">Administrations</div>
                                     <a href="../../administrations/utilisateur/utilisateur.aspx" class="nav-link">
                                         <div style="width:30px; text-align:center; margin-right:10px;">
                                             <i class="fas fa-user"></i>
@@ -174,6 +174,17 @@
                                         <span>Utilisateur</span>
                                     </a>
                                 </li>
+                                <% if (AuthHelper.IsAdmin()) { %>
+                                    <li class="nav-item">
+                                        <a href="../../administrations/requete/requetes.aspx" class="nav-link"
+                                            style="display: flex; align-items: center;">
+                                            <div style="width:30px; text-align:center; margin-right:10px;">
+                                                <i class="fas fa-database"></i>
+                                            </div>
+                                            <span>Requetes SQL</span>
+                                        </a>
+                                    </li>
+                                <% } %>
                             </ul>
                         </nav>
                     </div>

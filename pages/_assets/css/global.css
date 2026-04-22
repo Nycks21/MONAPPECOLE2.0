@@ -281,14 +281,31 @@ ul { list-style: none; }
 ═══════════════════════════════════════════════ */
 .main-sidebar.sidebar-collapsed {
     width: 60px;
+    overflow: hidden;   /* empêche tout débordement au survol */
 }
+
+/* Masquer tous les textes / labels */
 .main-sidebar.sidebar-collapsed .brand-text,
 .main-sidebar.sidebar-collapsed .user-panel span,
 .main-sidebar.sidebar-collapsed .nav-pills .nav-link span,
-.main-sidebar.sidebar-collapsed .nav-section { display: none; }
-.main-sidebar.sidebar-collapsed .brand-link { justify-content: center; }
-.main-sidebar.sidebar-collapsed .user-panel { justify-content: center; }
-.main-sidebar.sidebar-collapsed .nav-pills .nav-link { justify-content: center; }
+.main-sidebar.sidebar-collapsed .nav-section {
+    display: none;
+    pointer-events: none;
+}
+
+/* Centrer les éléments restants */
+.main-sidebar.sidebar-collapsed .brand-link  { justify-content: center; }
+.main-sidebar.sidebar-collapsed .user-panel  { justify-content: center; }
+.main-sidebar.sidebar-collapsed .nav-pills .nav-link { justify-content: center; padding: 10px 0; }
+
+/* ── Désactiver tout effet d'élargissement au hover ─────────────────────── */
+.main-sidebar.sidebar-collapsed:hover { width: 60px !important; overflow: hidden; }
+.main-sidebar.sidebar-collapsed .nav-pills .nav-link:hover { background: rgba(255,255,255,.08); }
+.main-sidebar.sidebar-collapsed .brand-link:hover          { background: rgba(0,0,0,.25); }
+
+/* Supprimer tout pseudo-élément (tooltip CSS) au survol */
+.main-sidebar.sidebar-collapsed .nav-pills .nav-link::after,
+.main-sidebar.sidebar-collapsed .nav-pills .nav-link::before { display: none !important; }
 
 /* ═══════════════════════════════════════════════
    CONTENT WRAPPER
@@ -720,6 +737,22 @@ select.form-control { appearance: auto; }
     outline: none;
     border-color: #2ecc71; /* Vert pour correspondre à votre spinner */
     box-shadow: 0 0 8px rgba(46, 204, 113, 0.2); /* Lueur douce */
+}
+
+/* Force le conteneur à respecter la largeur de la zone de contenu */
+#sqlExecutionResult {
+    width: 100%;
+    max-width: 100%;
+    overflow: hidden; /* Empêche le scroll sur la page principale */
+}
+
+/* Style spécifique pour le wrapper du tableau */
+.sql-table-wrapper {
+    width: 100%;
+    overflow-x: auto; /* Active le scroll uniquement ici */
+    border: 1px solid #dee2e6;
+    border-radius: 4px;
+    background: #fff;
 }
 
 /* ── Les états sidebar sont gérés par .main-sidebar.sidebar-collapsed ──────

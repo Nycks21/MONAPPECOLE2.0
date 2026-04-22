@@ -1,142 +1,131 @@
-/**
- * script.js — Console SQL interactive
- * Gère l'envoi et l'affichage des requêtes vers ExecuteSQL.ashx
- */
+var sqlCurrentPage  = 1;
+var sqlRowsPerPage  = 10;
+var sqlAllData      = [];   
+var sqlAllColumns   = [];   
 
 function executeCustomSQL() {
-    const queryArea = document.getElementById('sqlConsole');
-    const resultDiv = document.getElementById('sqlExecutionResult');
-    
+    var queryArea  = document.getElementById('sqlConsole');
+    var resultDiv  = document.getElementById('sqlExecutionResult');
+
     if (!queryArea || !queryArea.value.trim()) {
-        Swal.fire({
-            icon: 'error',
-            title: 'Champ vide',
-            text: 'Veuillez saisir une requête SQL avant de valider.'
-        });
+        Swal.fire({ icon: 'error', title: 'Champ vide', text: 'Veuillez saisir une requête.' });
         return;
     }
 
-    const queryText = queryArea.value.trim();
+    var queryText = queryArea.value.trim();
 
-    // 1. Demande de confirmation de sécurité
     Swal.fire({
         title: 'Confirmer l\'exécution ?',
-        text: "Cette commande va interagir directement avec la base de données scolaire.",
+        text: 'Action directe sur la base de données scolaire.',
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonColor: '#d33',
-        cancelButtonColor: '#3085d6',
-        confirmButtonText: 'Oui, exécuter',
-        cancelButtonText: 'Annuler'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            
-            // Affichage du chargement
-            Swal.fire({
-                title: 'Exécution en cours...',
-                allowOutsideClick: false,
-                didOpen: () => { Swal.showLoading(); }
-            });
+        confirmButtonText: 'Oui, exécuter'
+    }).then(function (result) {
+        if (!result.isConfirmed) return;
 
-            // Préparation des données pour le handler
-            const formData = new URLSearchParams();
-            formData.append('query', queryText);
+        Swal.showLoading();
 
-            // 2. Appel au Handler
-            fetch('handlers/ExecuteSQL.ashx', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: formData
-            })
-            .then(response => {
-                if (!response.ok) throw new Error('Erreur réseau ou fichier introuvable (404)');
-                return response.json();
-            })
-            .then(res => {
-                Swal.close(); // Ferme le loader
+        var formData = new URLSearchParams();
+        formData.append('query', queryText);
 
-                if (res.success) {
-                    if (res.type === "SELECT") {
-                        // AFFICHAGE DANS L'INTERFACE (TABLEAU)
-                        renderSqlTable(res.data, resultDiv);
-                        
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Lecture réussie',
-                            text: res.data.length + ' ligne(s) récupérée(s).',
-                            timer: 2000,
-                            showConfirmButton: false
-                        });
-                    } else {
-                        // MESSAGE DE SUCCÈS POUR UPDATE/DELETE/INSERT
-                        resultDiv.innerHTML = `<div class="alert alert-success"><i class="fas fa-check-circle"></i> ${res.message}</div>`;
-                        Swal.fire('Réussi !', res.message, 'success');
-                    }
+        fetch('handlers/ExecuteSQL.ashx', {
+            method : 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body   : formData
+        })
+        .then(function (response) { return response.json(); })
+        .then(function (res) {
+            Swal.close();
+            if (res.success) {
+                if (res.type === 'SELECT') {
+                    sqlAllData     = res.data || [];
+                    sqlAllColumns  = sqlAllData.length > 0 ? Object.keys(sqlAllData[0]) : [];
+                    sqlCurrentPage = 1;
+                    renderSqlTablePaged(resultDiv);
                 } else {
-                    // Erreur SQL renvoyée par le C#
-                    Swal.fire('Erreur SQL', res.message, 'error');
-                    resultDiv.innerHTML = `<div class="alert alert-danger"><i class="fas fa-exclamation-triangle"></i> ${res.message}</div>`;
+                    resultDiv.innerHTML = '<div class="alert alert-success" style="margin:10px;">' + res.message + '</div>';
                 }
-            })
-            .catch(err => {
-                console.error(err);
-                Swal.fire('Erreur fatale', "Impossible de joindre le serveur : " + err.message, 'error');
-            });
-        }
+            } else {
+                resultDiv.innerHTML = '<div class="alert alert-danger" style="margin:10px;">' + res.message + '</div>';
+            }
+        })
+        .catch(function(err) {
+            Swal.fire('Erreur', 'Impossible de joindre le serveur.', 'error');
+        });
     });
 }
 
-/**
- * Construit un tableau HTML dynamique à partir des données JSON
- */
-function renderSqlTable(data, container) {
-    if (!data || data.length === 0) {
-        container.innerHTML = '<div class="alert alert-info">Requête réussie, mais aucun résultat trouvé.</div>';
+function renderSqlTablePaged(container) {
+    if (!sqlAllData || sqlAllData.length === 0) {
+        container.innerHTML = '<div class="alert alert-info" style="margin:10px;">Aucun résultat trouvé.</div>';
         return;
     }
 
-    // Récupérer les noms des colonnes à partir du premier objet
-    const columns = Object.keys(data[0]);
+    var start = (sqlCurrentPage - 1) * sqlRowsPerPage;
+    var end   = Math.min(start + sqlRowsPerPage, sqlAllData.length);
+    var pageData = sqlAllData.slice(start, end);
 
-    let html = `
-        <div class="table-responsive mt-3" style="max-height: 450px; overflow-y: auto; border: 1px solid #dee2e6;">
-            <table class="table table-bordered table-striped table-hover bg-white mb-0">
-                <thead class="thead-dark" style="position: sticky; top: 0; z-index: 10;">
-                    <tr>
-                        ${columns.map(col => `<th>${col}</th>`).join('')}
-                    </tr>
-                </thead>
-                <tbody>
-                    ${data.map(row => `
-                        <tr>
-                            ${columns.map(col => {
-                                const val = row[col];
-                                return `<td>${val === null ? '<i class="text-muted">null</i>' : val}</td>`;
-                            }).join('')}
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>
-        </div>
-        <div class="mt-2 text-muted small text-right">
-            <i class="fas fa-list"></i> Total : ${data.length} ligne(s)
-        </div>
-    `;
+    // Barre d'outils
+    var controlBar = '<div style="padding:10px; display:flex; justify-content:space-between; font-size:13px; background:#f8f9fa; border-bottom:1px solid #dee2e6;">' +
+        '<span>Lignes: <select onchange="onRowsPerPageChange(this.value)">' +
+        [5, 10, 20, 50, 100].map(function(n){ return '<option '+(n==sqlRowsPerPage?'selected':'')+'>'+n+'</option>'; }).join('') +
+        '</select></span>' +
+        '<span>' + (start+1) + '-' + end + ' sur ' + sqlAllData.length + '</span></div>';
 
-    container.innerHTML = html;
+    // Tableau : min-width force le scroll de l'ID parent (sqlExecutionResult)
+    var tableHtml = 
+        '<table style="width:100%; min-width:1200px; border-collapse:collapse; table-layout:fixed; background:#fff;">' +
+            '<thead style="background:#343a40; color:#fff;"><tr>' +
+                sqlAllColumns.map(function(col) { 
+                    return '<th style="width:150px; padding:12px; text-align:left; border:1px solid #454d55; white-space:nowrap;">' + col + '</th>'; 
+                }).join('') +
+            '</tr></thead>' +
+            '<tbody>' +
+                pageData.map(function(row) {
+                    return '<tr>' + sqlAllColumns.map(function(col) {
+                        var val = row[col];
+                        return '<td style="padding:10px; border:1px solid #dee2e6; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; font-size:13px;">' + 
+                               (val === null ? '<i style="color:#aaa;">null</i>' : escSql(val)) + '</td>';
+                    }).join('') + '</tr>';
+                }).join('') +
+            '</tbody>' +
+        '</table>';
+
+    var pagination = buildPagination(Math.ceil(sqlAllData.length / sqlRowsPerPage));
+
+    // Injection dans sqlExecutionResult
+    container.innerHTML = controlBar + tableHtml + pagination;
 }
 
-/**
- * Initialisation des événements
- */
-document.addEventListener('DOMContentLoaded', function() {
-    const consoleElem = document.getElementById('sqlConsole');
+function buildPagination(totalPages) {
+    if (totalPages <= 1) return '';
+    var html = '<div style="padding:15px; text-align:center; background:#f8f9fa; border-top:1px solid #dee2e6;">';
+    for (var i = 1; i <= totalPages; i++) {
+        html += '<button onclick="goToPage(' + i + ')" style="margin:2px; padding:6px 12px; border:1px solid #ddd; cursor:pointer; border-radius:4px; ' + (i==sqlCurrentPage?'background:#007bff; color:#fff;':'background:#fff;') + '">' + i + '</button>';
+    }
+    return html + '</div>';
+}
+
+function goToPage(p) { 
+    sqlCurrentPage = p; 
+    renderSqlTablePaged(document.getElementById('sqlExecutionResult')); 
+}
+
+function onRowsPerPageChange(v) { 
+    sqlRowsPerPage = parseInt(v); 
+    sqlCurrentPage = 1; 
+    renderSqlTablePaged(document.getElementById('sqlExecutionResult')); 
+}
+
+function escSql(s) { 
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); 
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    var consoleElem = document.getElementById('sqlConsole');
     if (consoleElem) {
-        consoleElem.addEventListener('keydown', function(e) {
-            if (e.ctrlKey && e.key === 'Enter') {
-                e.preventDefault();
-                executeCustomSQL();
-            }
+        consoleElem.addEventListener('keydown', function (e) {
+            if (e.ctrlKey && e.key === 'Enter') { e.preventDefault(); executeCustomSQL(); }
         });
     }
 });

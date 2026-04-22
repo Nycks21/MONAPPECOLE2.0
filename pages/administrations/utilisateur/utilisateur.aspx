@@ -12,7 +12,6 @@
         <link rel="stylesheet" href="../../_assets/css/fontawesome.css">
         <link rel="stylesheet" href="../../_assets/css/fontawesome.min.css">
         <link rel="stylesheet" href="../../_assets/css/global.css">
-
     </head>
 
     <body class="hold-transition">
@@ -164,9 +163,9 @@
                                     </a>
                                 </li>
 
-                                <!-- Identifiant -->
+                                <!-- Administration -->
                                 <li class="nav-item">
-                                    <div class="nav-section">Identifiant</div>
+                                    <div class="nav-section">Administrations</div>
                                     <a href="../../administrations/utilisateur/utilisateur.aspx"
                                         class="nav-link active">
                                         <div style="width:30px; text-align:center; margin-right:10px;">
@@ -175,14 +174,17 @@
                                         <span>Utilisateur</span>
                                     </a>
                                 </li>
-                                <li class="nav-item">
-                                    <a href="../../administrations/requete/requetes.aspx" class="nav-link">
-                                        <div style="width:30px; text-align:center; margin-right:10px;">
-                                            <i class="fas fa-book"></i>
-                                        </div>
-                                        <span>Requetes SQL</span>
-                                    </a>
-                                </li>
+                                <% if (AuthHelper.IsAdmin()) { %>
+                                    <li class="nav-item">
+                                        <a href="../requete/requetes.aspx" class="nav-link"
+                                            style="display: flex; align-items: center;">
+                                            <div style="width:30px; text-align:center; margin-right:10px;">
+                                                <i class="fas fa-database"></i>
+                                            </div>
+                                            <span>Requetes SQL</span>
+                                        </a>
+                                    </li>
+                                <% } %>
                             </ul>
                         </nav>
                     </div>
@@ -200,7 +202,7 @@
                                 </div>
                                 <div class="col-lg-6">
                                     <ol class="breadcrumb" style="float: right;">
-                                        <li class="breadcrumb-item">Identifiant</li>
+                                        <li class="breadcrumb-item">Administration</li>
                                         <li class="breadcrumb-item active" id="dynBreadcrumb">Utilisateur</li>
                                     </ol>
                                 </div>

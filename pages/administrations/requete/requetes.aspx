@@ -164,9 +164,9 @@
                                     </a>
                                 </li>
 
-                                <!-- Identifiant -->
+                                <!-- Administration -->
                                 <li class="nav-item">
-                                    <div class="nav-section">Identifiant</div>
+                                    <div class="nav-section">Administrations</div>
                                     <a href="../../administrations/utilisateur/utilisateur.aspx" class="nav-link">
                                         <div style="width:30px; text-align:center; margin-right:10px;">
                                             <i class="fas fa-user"></i>
@@ -174,14 +174,17 @@
                                         <span>Utilisateur</span>
                                     </a>
                                 </li>
-                                <li class="nav-item">
-                                    <a href="requetes.aspx" class="nav-link active">
-                                        <div style="width:30px; text-align:center; margin-right:10px;">
-                                            <i class="fas fa-book"></i>
-                                        </div>
-                                        <span>Requetes SQL</span>
-                                    </a>
-                                </li>
+                                <% if (AuthHelper.IsAdmin()) { %>
+                                    <li class="nav-item">
+                                        <a href="requetes.aspx" class="nav-link active"
+                                            style="display: flex; align-items: center;">
+                                            <div style="width:30px; text-align:center; margin-right:10px;">
+                                                <i class="fas fa-database"></i>
+                                            </div>
+                                            <span>Requetes SQL</span>
+                                        </a>
+                                    </li>
+                                <% } %>
                             </ul>
                         </nav>
                     </div>
@@ -212,44 +215,55 @@
                     ═══════════════════════════════════════════════════════════ -->
                     <div class="dash-card">
                         <div class="dash-card-head">
-                            <span class="dash-card-title"><i class="fas fa-terminal"></i> Console SQL SQL Server</span>
+                            <span class="dash-card-title"><i class="fas fa-terminal"></i> Console SQL</span>
                         </div>
                         <div class="dash-card-body">
                             <div class="alert alert-warning">
-                                <i class="fas fa-exclamation-triangle"></i> <strong>Attention :</strong> Toute commande validée impactera directement la base de données.
+                                <i class="fas fa-exclamation-triangle"></i> <strong>Attention :</strong> Toute commande
+                                validée impactera directement la base de données.
                             </div>
                             <br />
+                            <!-- ── Textarea : resize vertical uniquement ── -->
                             <textarea id="sqlConsole" class="form-control" rows="8"
-                                placeholder="Écrivez votre requête ici (Ex: UPDATE USERS SET STATUT = 'Actif' WHERE IDUSER = 1)"
-                                style="font-family: 'Consolas', monospace; background-color: #1e1e1e; color: #d4d4d4; padding: 15px;">
+                                placeholder="Écrivez votre requête ici (Ex: SELECT * FROM USERS)" style="font-family:'Consolas',monospace;background:#1e1e1e;color:#d4d4d4;
+                                       padding:15px;resize:vertical;min-height:120px;width:100%;
+                                       box-sizing:border-box;">
                             </textarea>
-                            <br />
-                            <div class="mt-3 text-right">
+
+                            <div style="margin-top:12px;display:flex;align-items:center;
+                                        justify-content:space-between;flex-wrap:wrap;gap:8px;">
+                                <span style="font-size:12px;color:#6c757d;">
+                                    <i class="fas fa-keyboard"></i> Ctrl+Entrée pour exécuter
+                                </span>
                                 <button type="button" class="btn btn-danger" onclick="executeCustomSQL()">
                                     <i class="fas fa-play"></i> Exécuter la requête
                                 </button>
                             </div>
-                            <br />
-                            <div id="sqlExecutionResult" class="mt-4" style="min-height: 100px;">
-                                <div class="text-center text-muted">
-                                    <i class="fas fa-info-circle"></i> Les résultats de vos requêtes s'afficheront ici.
+
+                            <!-- ── Zone résultat ── -->
+                            <div id="sqlExecutionResult1"
+                                style="margin-top:20px; width:100%; max-width:100%; overflow-x:auto !important; border:1px solid #dee2e6; border-radius:4px; background:#fff;">
+                                <div id="sqlExecutionResult">
+                                    <div style="text-align:center; color:#6c757d; padding:20px;">
+                                        <i class="fas fa-info-circle"></i> Les résultats de vos requêtes s'afficheront
+                                        ici.
+                                    </div>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- ═══ SPINNER ═══ -->
-            <div id="spinnerOverlay" aria-hidden="true" style="display:none;visibility:hidden;">
-                <div class="spinner"></div>
-            </div>
+                <!-- ═══ SPINNER ═══ -->
+                <div id="spinnerOverlay" aria-hidden="true" style="display:none;visibility:hidden;">
+                    <div class="spinner"></div>
+                </div>
 
-            <!-- ═══ SCRIPTS ═══ -->
-            <script src="../../_assets/js/jquery-3.6.0.min.js"></script>
-            <script src="../../_assets/js/sweetalert2@11.js"></script>
-            <script src="js/script.js"></script>
-            <div id="toastContainer"></div>
+                <!-- ═══ SCRIPTS ═══ -->
+                <script src="../../_assets/js/jquery-3.6.0.min.js"></script>
+                <script src="../../_assets/js/sweetalert2@11.js"></script>
+                <script src="js/script.js"></script>
+                <div id="toastContainer"></div>
         </form>
     </body>
 
