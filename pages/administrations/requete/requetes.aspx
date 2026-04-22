@@ -184,7 +184,7 @@
                                             <span>Requetes SQL</span>
                                         </a>
                                     </li>
-                                <% } %>
+                                    <% } %>
                             </ul>
                         </nav>
                     </div>
@@ -241,29 +241,34 @@
                             </div>
 
                             <!-- ── Zone résultat ── -->
-                            <div id="sqlExecutionResult1"
-                                style="margin-top:20px; width:100%; max-width:100%; overflow-x:auto !important; border:1px solid #dee2e6; border-radius:4px; background:#fff;">
-                                <div id="sqlExecutionResult">
-                                    <div style="text-align:center; color:#6c757d; padding:20px;">
-                                        <i class="fas fa-info-circle"></i> Les résultats de vos requêtes s'afficheront
-                                        ici.
-                                    </div>
+                            <div class="view">
+                                <div class="wrapper">
+                                    <table class="table">
+                                        <div id="sqlExecutionResult1"
+                                            style="margin-top:20px; width:100%; max-width:100%; overflow-x:auto !important; border:1px solid #dee2e6; border-radius:4px; background:#eeecec;">
+                                            <div id="sqlExecutionResult">
+                                                <div style="text-align:center; color:#6c757d; padding:20px;">
+                                                    <i class="fas fa-info-circle"></i> Les résultats de vos requêtes
+                                                    s'afficheront
+                                                    ici.
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </table>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </div>
 
-                <!-- ═══ SPINNER ═══ -->
-                <div id="spinnerOverlay" aria-hidden="true" style="display:none;visibility:hidden;">
-                    <div class="spinner"></div>
-                </div>
+                        <!-- ═══ SPINNER ═══ -->
+                        <div id="spinnerOverlay" aria-hidden="true" style="display:none;visibility:hidden;">
+                            <div class="spinner"></div>
+                        </div>
 
-                <!-- ═══ SCRIPTS ═══ -->
-                <script src="../../_assets/js/jquery-3.6.0.min.js"></script>
-                <script src="../../_assets/js/sweetalert2@11.js"></script>
-                <script src="js/script.js"></script>
-                <div id="toastContainer"></div>
+                        <!-- ═══ SCRIPTS ═══ -->
+                        <script src="../../_assets/js/jquery-3.6.0.min.js"></script>
+                        <script src="../../_assets/js/sweetalert2@11.js"></script>
+                        <script src="js/script.js"></script>
+                        <div id="toastContainer"></div>
         </form>
     </body>
 

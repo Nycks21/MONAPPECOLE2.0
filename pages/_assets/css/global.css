@@ -739,13 +739,6 @@ select.form-control { appearance: auto; }
     box-shadow: 0 0 8px rgba(46, 204, 113, 0.2); /* Lueur douce */
 }
 
-/* Force le conteneur à respecter la largeur de la zone de contenu */
-#sqlExecutionResult {
-    width: 100%;
-    max-width: 100%;
-    overflow: hidden; /* Empêche le scroll sur la page principale */
-}
-
 /* Style spécifique pour le wrapper du tableau */
 .sql-table-wrapper {
     width: 100%;
@@ -759,3 +752,24 @@ select.form-control { appearance: auto; }
    et .content-wrapper.sidebar-collapsed définis plus haut.
    Le toggle JS utilise ces classes via global.js.
    ────────────────────────────────────────────────────────────────────────── */
+
+/*
+Source - https://stackoverflow.com/a/78329024
+Posted by Abdur Rehman, modified by community. See post 'Timeline' for change history
+Retrieved 2026-04-22, License - CC BY-SA 4.0
+*/
+
+.view {
+    margin: auto;
+    width: 81.9vw;
+}
+
+table {
+    table-layout: fixed;
+
+    /* Removed the border-collapse and added border spacing 0  */
+    border-spacing: 0;
+}
+
+
+
