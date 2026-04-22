@@ -154,6 +154,7 @@
                                         <span>Classes</span>
                                     </a>
                                 </li>
+                                
                                 <li class="nav-item">
                                     <a href="../../parametres/matieres/matieres.aspx" class="nav-link">
                                         <div style="width:30px; text-align:center; margin-right:10px;">
