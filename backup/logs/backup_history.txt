@@ -1,0 +1,99 @@
+
+-------------------------------------------------------------------------------
+   ROBOCOPY   ::   Copie de fichiers robuste pour Windows     
+-------------------------------------------------------------------------------
+
+  Début : jeudi 23 avril 2026 09:30:21
+   Source : C:\Program Files\Microsoft SQL Server\MSSQL14.SQLECOLE\MSSQL\Backup\
+     Dest : E:\ONYX\LOGS\PROJET\MONAPPECOLE2.0\backup\
+
+    Fichiers : *.*
+	    
+  Options : *.* /S /E /DCOPY:DA /COPY:DAT /PURGE /MIR /NP /R:3 /W:5 
+
+-------------------------------------------------------------------------------
+
+	                   1	C:\Program Files\Microsoft SQL Server\MSSQL14.SQLECOLE\MSSQL\Backup\
+	*Rép. SUPPL.      -1	E:\ONYX\LOGS\PROJET\MONAPPECOLE2.0\backup\logs\
+	  *Fichier SUPPL.		       0	backup_history.txt
+2026/04/23 09:30:21 ERREUR 32 (0x00000020) Suppression du fichier supplémentaire E:\ONYX\LOGS\PROJET\MONAPPECOLE2.0\backup\logs\backup_history.txt
+Le processus ne peut pas accÃ©der au fichier car ce fichier est utilisÃ© par un autre processus.
+
+	  *Fichier SUPPL.		     490	sauvegarde_auto.bat
+
+-------------------------------------------------------------------------------
+
+               Total     Copié    IgnoréDiscordance     ÉCHEC    Extras
+     Rép :         1         0         1         0         0         1
+Fichiers :         1         0         1         0         0         2
+  Octets :    8.46 m         0    8.46 m         0         0       490
+   Heures:   0:00:00   0:00:00                       0:00:00   0:00:00
+   Fin : jeudi 23 avril 2026 09:30:21
+
+
+-------------------------------------------------------------------------------
+   ROBOCOPY   ::   Copie de fichiers robuste pour Windows     
+-------------------------------------------------------------------------------
+
+  Début : jeudi 23 avril 2026 09:31:05
+   Source : C:\Program Files\Microsoft SQL Server\MSSQL14.SQLECOLE\MSSQL\Backup\
+     Dest : E:\ONYX\LOGS\PROJET\MONAPPECOLE2.0\backup\
+
+    Fichiers : *.*
+	    
+  Options : *.* /S /E /DCOPY:DA /COPY:DAT /PURGE /MIR /NP /R:3 /W:5 
+
+-------------------------------------------------------------------------------
+
+	                   1	C:\Program Files\Microsoft SQL Server\MSSQL14.SQLECOLE\MSSQL\Backup\
+	*Rép. SUPPL.      -1	E:\ONYX\LOGS\PROJET\MONAPPECOLE2.0\backup\logs\
+	  *Fichier SUPPL.		    1590	backup_history.txt
+2026/04/23 09:31:05 ERREUR 32 (0x00000020) Suppression du fichier supplémentaire E:\ONYX\LOGS\PROJET\MONAPPECOLE2.0\backup\logs\backup_history.txt
+Le processus ne peut pas accÃ©der au fichier car ce fichier est utilisÃ© par un autre processus.
+
+
+-------------------------------------------------------------------------------
+
+               Total     Copié    IgnoréDiscordance     ÉCHEC    Extras
+     Rép :         1         0         1         0         0         1
+Fichiers :         1         0         1         0         0         1
+  Octets :    8.46 m         0    8.46 m         0         0     1.5 k
+   Heures:   0:00:00   0:00:00                       0:00:00   0:00:00
+   Fin : jeudi 23 avril 2026 09:31:05
+
+
+-------------------------------------------------------------------------------
+   ROBOCOPY   ::   Copie de fichiers robuste pour Windows     
+-------------------------------------------------------------------------------
+
+  Début : jeudi 23 avril 2026 09:31:56
+   Source : C:\Program Files\Microsoft SQL Server\MSSQL14.SQLECOLE\MSSQL\Backup\
+     Dest : E:\ONYX\LOGS\PROJET\MONAPPECOLE2.0\backup\
+
+    Fichiers : *.*
+	    
+  Options : *.* /S /E /DCOPY:DA /COPY:DAT /PURGE /MIR /NP /R:3 /W:5 
+
+-------------------------------------------------------------------------------
+
+	                   1	C:\Program Files\Microsoft SQL Server\MSSQL14.SQLECOLE\MSSQL\Backup\
+	*Rép. SUPPL.      -1	E:\ONYX\LOGS\PROJET\MONAPPECOLE2.0\backup\cmd\
+	  *Fichier SUPPL.		     490	sauvegarde_auto.bat
+2026/04/23 09:31:56 ERREUR 32 (0x00000020) Suppression du répertoire supplémentaire E:\ONYX\LOGS\PROJET\MONAPPECOLE2.0\backup\cmd\
+Le processus ne peut pas accÃ©der au fichier car ce fichier est utilisÃ© par un autre processus.
+
+	*Rép. SUPPL.      -1	E:\ONYX\LOGS\PROJET\MONAPPECOLE2.0\backup\logs\
+	  *Fichier SUPPL.		    3130	backup_history.txt
+2026/04/23 09:31:56 ERREUR 32 (0x00000020) Suppression du fichier supplémentaire E:\ONYX\LOGS\PROJET\MONAPPECOLE2.0\backup\logs\backup_history.txt
+Le processus ne peut pas accÃ©der au fichier car ce fichier est utilisÃ© par un autre processus.
+
+
+-------------------------------------------------------------------------------
+
+               Total     Copié    IgnoréDiscordance     ÉCHEC    Extras
+     Rép :         1         0         1         0         0         2
+Fichiers :         1         0         1         0         0         2
+  Octets :    8.46 m         0    8.46 m         0         0     3.5 k
+   Heures:   0:00:00   0:00:00                       0:00:00   0:00:00
+   Fin : jeudi 23 avril 2026 09:31:56
+
