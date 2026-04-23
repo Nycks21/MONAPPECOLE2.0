@@ -30,12 +30,24 @@ public static class AuthHelper
     }
 
     // NOUVELLE MÉTHODE : Vérifie si l'utilisateur est Admin (Role 0)
-    public static bool IsAdmin()
+    public static bool IsSuperAdmin()
     {
         var session = HttpContext.Current.Session;
         if (session["USERROLE"] == null) return false;
         try {
             return Convert.ToInt32(session["USERROLE"]) == 0;
+        } catch {
+            return false;
+        }
+    }
+
+    // NOUVELLE MÉTHODE : Vérifie si l'utilisateur est Admin (Role 1)
+    public static bool IsAdmin()
+    {
+        var session = HttpContext.Current.Session;
+        if (session["USERROLE"] == null) return false;
+        try {
+            return Convert.ToInt32(session["USERROLE"]) == 1;
         } catch {
             return false;
         }
