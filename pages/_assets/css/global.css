@@ -96,7 +96,6 @@ ul { list-style: none; }
 ═══════════════════════════════════════════════ */
 .wrapper {
     display: flex;
-    min-height: 100vh;
     position: relative;
 }
 
@@ -769,6 +768,11 @@ table {
 
     /* Removed the border-collapse and added border spacing 0  */
     border-spacing: 0;
+}
+
+.resizer:hover {
+    background: #007bff; /* Bleu quand on survole la bordure */
+    width: 2px;
 }
 
 

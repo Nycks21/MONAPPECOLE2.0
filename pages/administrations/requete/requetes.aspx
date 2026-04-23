@@ -213,7 +213,7 @@
                     <!-- ═══════════════════════════════════════════════════════════
                     pages/utilisateur.html  —  Section Gestion des utilisateurs
                     ═══════════════════════════════════════════════════════════ -->
-                    <div class="dash-card">
+                    <div class="dash-card" style="margin-top: -20px";>
                         <div class="dash-card-head">
                             <span class="dash-card-title"><i class="fas fa-terminal"></i> Console SQL</span>
                         </div>
@@ -222,6 +222,10 @@
                                 <i class="fas fa-exclamation-triangle"></i> <strong>Attention :</strong> Toute commande
                                 validée impactera directement la base de données.
                             </div>
+                            <br />
+                            <button type="button" class="btn btn-danger" onclick="executeCustomSQL()" style="margin-bottom: 10px;">
+                                    <i class="fas fa-play"></i> Exécuter la requête
+                            </button>
                             <br />
                             <!-- ── Textarea : resize vertical uniquement ── -->
                             <textarea id="sqlConsole" class="form-control" rows="8"
@@ -235,17 +239,14 @@
                                 <span style="font-size:12px;color:#6c757d;">
                                     <i class="fas fa-keyboard"></i> Ctrl+Entrée pour exécuter
                                 </span>
-                                <button type="button" class="btn btn-danger" onclick="executeCustomSQL()">
-                                    <i class="fas fa-play"></i> Exécuter la requête
-                                </button>
                             </div>
 
                             <!-- ── Zone résultat ── -->
                             <div class="view">
                                 <div class="wrapper">
                                     <table class="table">
-                                        <div id="sqlExecutionResult1"
-                                            style="margin-top:20px; width:100%; max-width:100%; overflow-x:auto !important; border:1px solid #dee2e6; border-radius:4px; background:#eeecec;">
+                                        <div id="sqlExecutionResult"
+                                            style="margin-top:20px; width:100%; max-width:100%; max-height: 100%; overflow-x:auto !important; border:1px solid #dee2e6; border-radius:4px; background:#eeecec;">
                                             <div id="sqlExecutionResult">
                                                 <div style="text-align:center; color:#6c757d; padding:20px;">
                                                     <i class="fas fa-info-circle"></i> Les résultats de vos requêtes
