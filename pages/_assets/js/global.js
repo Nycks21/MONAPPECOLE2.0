@@ -144,11 +144,28 @@
         }
     });
 
+    // ── Badge version (bas gauche) ───────────────────────────────────────────
+    function injectVersionBadge() {
+        var version = document.body
+            ? document.body.getAttribute('data-version')
+            : null;
+        if (!version) return; // pas de data-version sur cette page = pas de badge
+
+        var badge = document.createElement('div');
+        badge.id        = 'appVersionBadge';
+        badge.textContent = 'v' + version;
+        document.body.appendChild(badge);
+    }
+
     // ── Init au chargement ────────────────────────────────────────────────────
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
+        document.addEventListener('DOMContentLoaded', function () {
+            init();
+            injectVersionBadge();
+        });
     } else {
         init();
+        injectVersionBadge();
     }
 
 })();

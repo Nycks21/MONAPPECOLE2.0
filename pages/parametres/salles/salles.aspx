@@ -12,7 +12,7 @@
         <link rel="stylesheet" href="../../_assets/css/global.css?v=<%=AuthHelper.Version %>">
     </head>
 
-    <body class="hold-transition">
+    <body class="hold-transition" data-version="<%=AuthHelper.Version %>">
         <form id="form1" runat="server">
             <div class="wrapper">
 

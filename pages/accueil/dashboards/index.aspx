@@ -16,7 +16,7 @@
 
     </head>
 
-    <body class="hold-transition">
+    <body class="hold-transition" data-version="<%=AuthHelper.Version %>">
         <form id="form1" runat="server">
             <div class="wrapper">
 
