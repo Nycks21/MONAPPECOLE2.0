@@ -1,18 +1,17 @@
-﻿<%@ Page Language="C#" AutoEventWireup="true" CodeFile="classes.cs" Inherits="classes" %>
+﻿<%@ Page Language="C#" AutoEventWireup="true" CodeFile="annee.cs" Inherits="annee" %>
     <!DOCTYPE html>
     <html lang="fr">
 
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Classes — Gestion Scolaire</title>
+        <title>Année — Gestion Scolaire</title>
 
         <!-- Font Awesome -->
         <link rel="stylesheet" href="../../_assets/css/all.min.css?v=<%=AuthHelper.Version %>">
         <link rel="stylesheet" href="../../_assets/css/fontawesome.css?v=<%=AuthHelper.Version %>">
         <link rel="stylesheet" href="../../_assets/css/fontawesome.min.css?v=<%=AuthHelper.Version %>">
         <link rel="stylesheet" href="../../_assets/css/global.css?v=<%=AuthHelper.Version %>">
-
     </head>
 
     <body class="hold-transition" data-version="<%=AuthHelper.Version %>">
@@ -67,7 +66,7 @@
 
                 <!-- ═══ SIDEBAR ═══ -->
                 <aside class="main-sidebar" id="sidebar">
-                    <a href="#" class="brand-link" onclick="loadDashboard()">
+                    <a href="#" class="brand-link">
                         <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='33' height='33' viewBox='0 0 33 33'%3E%3Ccircle cx='16.5' cy='16.5' r='16.5' fill='%23007bff'/%3E%3Ctext x='16.5' y='22' font-size='16' font-weight='bold' text-anchor='middle' fill='white'%3EGS%3C/text%3E%3C/svg%3E"
                             alt="Logo" class="brand-image">
                         <span class="brand-text">Gestion Scolaire</span>
@@ -105,7 +104,7 @@
                                     </a>
                                 </li>
                                 <li class="nav-item">
-                                    <a href="../../modules/absences/absences.aspx" class="nav-link">
+                                    <a href="../absences/absences.aspx" class="nav-link">
                                         <div style="width:30px; text-align:center; margin-right:10px;">
                                             <i class="fas fa-calendar-times"></i>
                                         </div>
@@ -113,7 +112,7 @@
                                     </a>
                                 </li>
                                 <li class="nav-item">
-                                    <a href="../../modules/frais/frais.aspx" class="nav-link">
+                                    <a href="../frais/frais.aspx" class="nav-link">
                                         <div style="width:30px; text-align:center; margin-right:10px;">
                                             <i class="fas fa-money-bill-wave"></i>
                                         </div>
@@ -121,7 +120,7 @@
                                     </a>
                                 </li>
                                 <li class="nav-item">
-                                    <a href="../../modules/bulletins/bulletins.aspx" class="nav-link">
+                                    <a href="../bulletins/bulletins.aspx" class="nav-link">
                                         <div style="width:30px; text-align:center; margin-right:10px;">
                                             <i class="fas fa-file-alt"></i>
                                         </div>
@@ -148,13 +147,14 @@
                                     </a>
                                 </li>
                                 <li class="nav-item">
-                                    <a href="../../parametres/classes/classes.aspx" class="nav-link active">
+                                    <a href="../../parametres/classes/classes.aspx" class="nav-link">
                                         <div style="width:30px; text-align:center; margin-right:10px;">
                                             <i class="fas fa-folder"></i>
                                         </div>
                                         <span>Classes</span>
                                     </a>
                                 </li>
+
                                 <li class="nav-item">
                                     <a href="../../parametres/matieres/matieres.aspx" class="nav-link">
                                         <div style="width:30px; text-align:center; margin-right:10px;">
@@ -168,37 +168,39 @@
                                 <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin()) { %>
                                     <li class="nav-item">
                                         <div class="nav-section">Administrations</div>
-                                        <a href="../../administrations/annee/annee.aspx" class="nav-link">
+                                        <a href="annees.aspx" class="nav-link active">
                                             <div style="width:30px; text-align:center; margin-right:10px;">
                                                 <i class="fas fa-calendar-alt"></i>
                                             </div>
                                             <span>Années</span>
                                         </a>
                                     </li>
-                                <% } %>
+                                    <% } %>
+                                        <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin()) { %>
+                                            <li class="nav-item">
+                                                
+                                                <a href="../utilisateur/utilisateur.aspx"
+                                                    class="nav-link">
+                                                    <div style="width:30px; text-align:center; margin-right:10px;">
+                                                        <i class="fas fa-user"></i>
+                                                    </div>
+                                                    <span>Utilisateur</span>
+                                                </a>
+                                            </li>
+                                            <% } %>
 
-                                <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin()) { %>
-                                <li class="nav-item">
-                                    <a href="../../administrations/utilisateur/utilisateur.aspx" class="nav-link">
-                                        <div style="width:30px; text-align:center; margin-right:10px;">
-                                            <i class="fas fa-user"></i>
-                                        </div>
-                                        <span>Utilisateur</span>
-                                    </a>
-                                </li>
-                                <% } %>
-
-                                <% if (AuthHelper.IsSuperAdmin()) { %>
-                                    <li class="nav-item">
-                                        <a href="../../administrations/requete/requetes.aspx" class="nav-link"
-                                            style="display: flex; align-items: center;">
-                                            <div style="width:30px; text-align:center; margin-right:10px;">
-                                                <i class="fas fa-database"></i>
-                                            </div>
-                                            <span>Requetes SQL</span>
-                                        </a>
-                                    </li>
-                                <% } %>
+                                                <% if (AuthHelper.IsSuperAdmin()) { %>
+                                                    <li class="nav-item">
+                                                        <a href="../requete/requetes.aspx" class="nav-link"
+                                                            style="display: flex; align-items: center;">
+                                                            <div
+                                                                style="width:30px; text-align:center; margin-right:10px;">
+                                                                <i class="fas fa-database"></i>
+                                                            </div>
+                                                            <span>Requetes SQL</span>
+                                                        </a>
+                                                    </li>
+                                                    <% } %>
                             </ul>
                         </nav>
                     </div>
@@ -212,12 +214,12 @@
                         <div class="container-fluid">
                             <div class="row">
                                 <div class="col-lg-6">
-                                    <h1 id="dynPageTitle">Liste classes</h1>
+                                    <h1 id="dynPageTitle">Année</h1>
                                 </div>
                                 <div class="col-lg-6">
                                     <ol class="breadcrumb" style="float: right;">
                                         <li class="breadcrumb-item">Paramètres</li>
-                                        <li class="breadcrumb-item active">Classes</li>
+                                        <li class="breadcrumb-item active" id="dynBreadcrumb">Année</li>
                                     </ol>
                                 </div>
                             </div>
@@ -225,120 +227,79 @@
                     </div>
 
                     <!-- ═══════════════════════════════════════════════════════════
-                    pages/classes.html  —  Section Gestion des classes
+                    pages/utilisateur.html  —  Section Gestion des utilisateurs
                     ═══════════════════════════════════════════════════════════ -->
-                    <section class="content" id="section-Classes">
+                    <section class="content" id="section-annee">
 
                         <div class="dash-card">
                             <div class="dash-card-head">
-                                <span class="dash-card-title"><i class="fas fa-folder"></i> Gestion des classes</span>
+                                <span class="dash-card-title"><i class="fas fa-users-cog"></i> Paramétrages des années</span>
                                 <div class="action-buttons">
-                                    <button type="button" class="btn btn-success btn-sm" onclick="openAddClasseModal()">
-                                        <i class="fas fa-plus"></i> Ajouter une classe
-                                    </button>
-
-                                    <button type="button" class="btn btn-primary btn-sm" onclick="exportClasses()">
-                                        <i class="fas fa-download"></i> Exporter
+                                    <button class="btn btn-success btn-sm" onclick="openAddUserModal()">
+                                        <i class="fas fa-plus"></i> Ajouter
                                     </button>
                                 </div>
                             </div>
 
                             <div class="dash-card-body">
-
-                                <!-- Stats -->
-                                <div class="absence-stats"
-                                    style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin-bottom:20px;"
-                                    id="ClassesStatsContainer"></div>
-
                                 <!-- Tableau -->
                                 <div style="overflow-x:auto;">
-                                    <table class="dash-table">
+                                    <table class="dash-table" id="dash-tables">
                                         <thead>
                                             <tr>
-                                                <th>Classe</th>
-                                                <th>Niveau</th>
-                                                <th>Effectif</th>
-                                                <th>Titulaire</th>
-                                                <th>Salle</th>
-                                                <th>Statut</th>
+                                                <th>Annee</th>
+                                                <th>Date début</th>
+                                                <th>Date fin</th>
+                                                <th>Cloture</th>
+                                                <th>Date Cloture</th>
                                                 <th>Actions</th>
                                             </tr>
                                         </thead>
-                                        <tbody id="ClassesTableBody"></tbody>
+                                        <tbody id="anneeTableBody"></tbody>
                                     </table>
                                 </div>
-
                             </div>
                         </div>
-
                     </section>
-
-
                 </div>
-
-                <!-- ═══ SPINNER ═══ -->
-                <div id="spinnerOverlay">
-                    <div class="spinner"></div>
-                </div>
-
             </div>
 
-            <!-- MODAL CLASSE -->
-            <div id="addClasseModal" class="modal" role="dialog" aria-modal="true" aria-labelledby="classeModalTitle">
+            <!-- MODAL UTILISATEUR -->
+            <div id="addAnneeModal" class="modal">
                 <div class="modal-content" style="max-width:550px;">
                     <div class="modal-header">
-                        <h3 id="classeModalTitle"><i class="fas fa-book-medical"></i> Ajouter une classe</h3>
-                        <button type="button" class="btn-close-modal" onclick="closeAddClasseModal()"
-                            aria-label="Fermer">&times;</button>
+                        <h3 id="anneeModalTitle"><i class="fas fa-user-plus"></i> Ajouter un utilisateur</h3>
                     </div>
-
                     <div class="modal-body">
-                        <input type="hidden" id="matiereEditNom">
+                        <input type="hidden" id="anneeEditEmail">
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label>Nom de la classe *</label>
-                                    <input type="text" id="ClasseNom" class="form-control" placeholder="Ex: 6ème A">
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Niveau</label>
-                                    <select id="ClasseNiveau" class="form-control">
-                                        <option value="">-- Sélectionner un niveau --</option>
-                                    </select>
+                                    <label>Année scolaire *</label>
+                                    <input type="text" id="annee" class="form-control"
+                                        placeholder="Année scolaire">
                                 </div>
                             </div>
                         </div>
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label>Titulaire (Enseignant) *</label>
-                                    <select id="ClasseUser" class="form-control">
-                                        <option value="">-- Sélectionner un titulaire --</option>
-                                    </select>
+                                    <label>Date début *</label>
+                                    <input type="date" id="DateD" class="form-control" placeholder="Date début">
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label>Salle</label>
-                                    <select id="ClasseSalle" class="form-control">
-                                        <option value="">-- Sélectionner une salle --</option>
-                                    </select>
+                                    <label>Date fin *</label>
+                                    <input type="date" id="DateF" class="form-control" placeholder="Date fin">
                                 </div>
                             </div>
                         </div>
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group">
-                                    <label>Effectif</label>
-                                    <input type="number" id="ClasseEffectif" class="form-control" value="0">
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Statut</label>
-                                    <select id="ClasseStatut" class="form-control">
+                                    <label>Cloture *</label>
+                                    <select id="anneeStatut" class="form-control">
                                         <option value="Actif">Actif</option>
                                         <option value="Inactif">Inactif</option>
                                     </select>
@@ -346,20 +307,29 @@
                             </div>
                         </div>
                     </div>
-
                     <div class="modal-footer">
-                        <button type="button" class="btn btn-primary" onclick="saveClasse()">
-                            <i class="fas fa-save"></i> Enregistrer
-                        </button>
-                        <button type="button" class="btn btn-danger" onclick="closeAddClasseModal()">Annuler</button>
+                        <button class="btn btn-primary" onclick="saveAnnee()"><i class="fas fa-save"></i>
+                            Enregistrer</button>
+                        <button class="btn btn-danger" onclick="closeAddAnneeModal()">Annuler</button>
                     </div>
                 </div>
             </div>
 
+
+            <!-- ═══ SPINNER ═══ -->
+            <div id="spinnerOverlay" aria-hidden="true" style="display:none;visibility:hidden;">
+                <div class="spinner"></div>
+            </div>
+
             <!-- ═══ SCRIPTS ═══ -->
-            <script src="../../_assets/js/sweetalert2.all.min.js?v=<%=AuthHelper.Version %>"></script>
-            <script src="js/classe.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="../../_assets/js/jquery-3.6.0.min.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="../../_assets/js/sweetalert2@11.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="../../_assets/js/jszip.min.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="../../_assets/js/pdfmake.min.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="../../_assets/js/vfs_fonts.js?v=<%=AuthHelper.Version %>"></script>
             <script src="../../_assets/js/global.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="js/annee.js?v=<%=AuthHelper.Version %>"></script>
+            <div id="toastContainer"></div>
         </form>
     </body>
 

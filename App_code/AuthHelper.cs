@@ -17,7 +17,7 @@ public static class AuthHelper
             return;
         }
 
-        if (!IsTokenValid()) 
+        if (!IsTokenValid())
         {
             ForceLogout(page, true);
             return;
@@ -34,9 +34,12 @@ public static class AuthHelper
     {
         var session = HttpContext.Current.Session;
         if (session["userRole"] == null) return false;
-        try {
+        try
+        {
             return Convert.ToInt32(session["userRole"]) == 0;
-        } catch {
+        }
+        catch
+        {
             return false;
         }
     }
@@ -46,9 +49,12 @@ public static class AuthHelper
     {
         var session = HttpContext.Current.Session;
         if (session["userRole"] == null) return false;
-        try {
+        try
+        {
             return Convert.ToInt32(session["userRole"]) == 1;
-        } catch {
+        }
+        catch
+        {
             return false;
         }
     }
@@ -90,5 +96,23 @@ public static class AuthHelper
     public static string Version
     {
         get { return System.Configuration.ConfigurationManager.AppSettings["Version"]; }
+    }
+
+    public static int GetCurrentAnneeId()
+    {
+        if (HttpContext.Current.Session["ID_ANNEE_ACTIVE"] != null)
+        {
+            return Convert.ToInt32(HttpContext.Current.Session["ID_ANNEE_ACTIVE"]);
+        }
+
+        // Sinon, on récupère par défaut la dernière année non clôturée en base
+        using (SqlConnection conn = new SqlConnection(connStr))
+        {
+            string sql = "SELECT TOP 1 ID FROM RANNEE WHERE CLOTURE = 0 ORDER BY DATE_DEBUT DESC";
+            SqlCommand cmd = new SqlCommand(sql, conn);
+            conn.Open();
+            object result = cmd.ExecuteScalar();
+            return result != null ? (int)result : 0;
+        }
     }
 }

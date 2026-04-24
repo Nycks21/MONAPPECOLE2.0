@@ -154,7 +154,7 @@
                                         <span>Classes</span>
                                     </a>
                                 </li>
-                                
+
                                 <li class="nav-item">
                                     <a href="../../parametres/matieres/matieres.aspx" class="nav-link">
                                         <div style="width:30px; text-align:center; margin-right:10px;">
@@ -168,27 +168,38 @@
                                 <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin()) { %>
                                     <li class="nav-item">
                                         <div class="nav-section">Administrations</div>
-                                        <a href="../../administrations/utilisateur/utilisateur.aspx"
-                                            class="nav-link active">
+                                        <a href="../annee/annee.aspx" class="nav-link">
                                             <div style="width:30px; text-align:center; margin-right:10px;">
-                                                <i class="fas fa-user"></i>
+                                                <i class="fas fa-calendar-alt"></i>
                                             </div>
-                                            <span>Utilisateur</span>
+                                            <span>Années</span>
                                         </a>
                                     </li>
-                                <% } %>
+                                    <% } %>
+                                        <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin()) { %>
+                                            <li class="nav-item">
+                                                <a href="utilisateur.aspx"
+                                                    class="nav-link active">
+                                                    <div style="width:30px; text-align:center; margin-right:10px;">
+                                                        <i class="fas fa-user"></i>
+                                                    </div>
+                                                    <span>Utilisateur</span>
+                                                </a>
+                                            </li>
+                                            <% } %>
 
-                                <% if (AuthHelper.IsSuperAdmin()) { %>
-                                    <li class="nav-item">
-                                        <a href="../requete/requetes.aspx" class="nav-link"
-                                            style="display: flex; align-items: center;">
-                                            <div style="width:30px; text-align:center; margin-right:10px;">
-                                                <i class="fas fa-database"></i>
-                                            </div>
-                                            <span>Requetes SQL</span>
-                                        </a>
-                                    </li>
-                                <% } %>
+                                                <% if (AuthHelper.IsSuperAdmin()) { %>
+                                                    <li class="nav-item">
+                                                        <a href="../requete/requetes.aspx" class="nav-link"
+                                                            style="display: flex; align-items: center;">
+                                                            <div
+                                                                style="width:30px; text-align:center; margin-right:10px;">
+                                                                <i class="fas fa-database"></i>
+                                                            </div>
+                                                            <span>Requetes SQL</span>
+                                                        </a>
+                                                    </li>
+                                                    <% } %>
                             </ul>
                         </nav>
                     </div>

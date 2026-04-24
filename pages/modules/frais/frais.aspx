@@ -11,7 +11,7 @@
         <link rel="stylesheet" href="../../_assets/css/all.min.css?v=<%=AuthHelper.Version %>">
         <link rel="stylesheet" href="../../_assets/css/fontawesome.css?v=<%=AuthHelper.Version %>">
         <link rel="stylesheet" href="../../_assets/css/fontawesome.min.css?v=<%=AuthHelper.Version %>">
-        <link rel="stylesheet" href="../../_assets/global.css?v=<%=AuthHelper.Version %>">
+        <link rel="stylesheet" href="../../_assets/css/global.css?v=<%=AuthHelper.Version %>">
     </head>
 
     <body class="hold-transition" data-version="<%=AuthHelper.Version %>">
@@ -96,7 +96,7 @@
                                 <!-- Modules -->
                                 <li class="nav-item">
                                     <div class="nav-section">Modules</div>
-                                    <a href="eleves.aspx" class="nav-link active">
+                                    <a href="../eleves/eleves.aspx" class="nav-link">
                                         <div style="width:30px; text-align:center; margin-right:10px;">
                                             <i class="fas fa-users"></i>
                                         </div>
@@ -165,8 +165,19 @@
 
                                 <!-- Administration -->
                                 <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin()) { %>
+                                    <li class="nav-item">
+                                        <div class="nav-section">Administrations</div>
+                                        <a href="../../administrations/annee/annee.aspx" class="nav-link">
+                                            <div style="width:30px; text-align:center; margin-right:10px;">
+                                                <i class="fas fa-calendar-alt"></i>
+                                            </div>
+                                            <span>Années</span>
+                                        </a>
+                                    </li>
+                                <% } %>
+
+                                <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin()) { %>
                                 <li class="nav-item">
-                                    <div class="nav-section">Administrations</div>
                                     <a href="../../administrations/utilisateur/utilisateur.aspx" class="nav-link">
                                         <div style="width:30px; text-align:center; margin-right:10px;">
                                             <i class="fas fa-user"></i>

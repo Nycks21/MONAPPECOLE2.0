@@ -12,6 +12,23 @@ USE MONAPPECOLE2;
 GO
 
 -- ─────────────────────────────────────────────────
+-- TABLE ANNEE
+-- ─────────────────────────────────────────────────
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'RANNEE')
+BEGIN
+    CREATE TABLE [dbo].[RANNEE] (
+        ID           INT           IDENTITY(1,1) PRIMARY KEY,
+        ANNEE        NVARCHAR(9)   NOT NULL,        -- ex: "2025-2026"
+        DATE_DEBUT   DATE          NOT NULL,
+        DATE_FIN     DATE          NOT NULL,
+        CLOTURE      BIT           NOT NULL DEFAULT 0,
+        DATE_CLOTURE DATETIME      NULL,
+        CREATED_AT   DATETIME      NOT NULL DEFAULT GETDATE(),
+    );
+END
+GO
+
+-- ─────────────────────────────────────────────────
 -- TABLE NIVEAUX (Doit être créée avant CLASSES)
 -- ─────────────────────────────────────────────────
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'NIVEAUX')
@@ -238,6 +255,10 @@ BEGIN
         CreatedAt DATETIME DEFAULT GETDATE()
     );
 END
+
+
+INSERT INTO RANNEE (ANNEE, DATE_DEBUT, DATE_FIN, CLOTURE)
+VALUES ('2025-2026', '2025-09-01', '2026-06-30', 0);
 
 
 -- =====================================================
