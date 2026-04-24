@@ -8,10 +8,10 @@
         <title>Utilisateur — Gestion Scolaire</title>
 
         <!-- Font Awesome -->
-        <link rel="stylesheet" href="../../_assets/css/all.min.css">
-        <link rel="stylesheet" href="../../_assets/css/fontawesome.css">
-        <link rel="stylesheet" href="../../_assets/css/fontawesome.min.css">
-        <link rel="stylesheet" href="../../_assets/css/global.css">
+        <link rel="stylesheet" href="../../_assets/css/all.min.css?v=<%=AuthHelper.Version %>">
+        <link rel="stylesheet" href="../../_assets/css/fontawesome.css?v=<%=AuthHelper.Version %>">
+        <link rel="stylesheet" href="../../_assets/css/fontawesome.min.css?v=<%=AuthHelper.Version %>">
+        <link rel="stylesheet" href="../../_assets/css/global.css?v=<%=AuthHelper.Version %>">
 
     </head>
 
@@ -270,9 +270,9 @@
                         </div>
 
                         <!-- ═══ SCRIPTS ═══ -->
-                        <script src="../../_assets/js/jquery-3.6.0.min.js"></script>
-                        <script src="../../_assets/js/sweetalert2@11.js"></script>
-                        <script src="js/script.js"></script>
+                        <script src="../../_assets/js/jquery-3.6.0.min.js?v=<%=AuthHelper.Version %>"></script>
+                        <script src="../../_assets/js/sweetalert2@11.js?v=<%=AuthHelper.Version %>"></script>
+                        <script src="js/script.js?v=<%=AuthHelper.Version %>"></script>
                         <div id="toastContainer"></div>
         </form>
     </body>

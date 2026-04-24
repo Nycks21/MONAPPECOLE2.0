@@ -8,10 +8,10 @@
         <title>Utilisateur — Gestion Scolaire</title>
 
         <!-- Font Awesome -->
-        <link rel="stylesheet" href="../../_assets/css/all.min.css">
-        <link rel="stylesheet" href="../../_assets/css/fontawesome.css">
-        <link rel="stylesheet" href="../../_assets/css/fontawesome.min.css">
-        <link rel="stylesheet" href="../../_assets/css/global.css">
+        <link rel="stylesheet" href="../../_assets/css/all.min.css?v=<%=AuthHelper.Version %>">
+        <link rel="stylesheet" href="../../_assets/css/fontawesome.css?v=<%=AuthHelper.Version %>">
+        <link rel="stylesheet" href="../../_assets/css/fontawesome.min.css?v=<%=AuthHelper.Version %>">
+        <link rel="stylesheet" href="../../_assets/css/global.css?v=<%=AuthHelper.Version %>">
     </head>
 
     <body class="hold-transition">
@@ -352,13 +352,13 @@
             </div>
 
             <!-- ═══ SCRIPTS ═══ -->
-            <script src="../../_assets/js/jquery-3.6.0.min.js"></script>
-            <script src="../../_assets/js/sweetalert2@11.js"></script>
-            <script src="../../_assets/js/jszip.min.js"></script>
-            <script src="../../_assets/js/pdfmake.min.js"></script>
-            <script src="../../_assets/js/vfs_fonts.js"></script>
-            <script src="../../_assets/js/global.js"></script>
-            <script src="js/users.js"></script>
+            <script src="../../_assets/js/jquery-3.6.0.min.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="../../_assets/js/sweetalert2@11.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="../../_assets/js/jszip.min.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="../../_assets/js/pdfmake.min.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="../../_assets/js/vfs_fonts.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="../../_assets/js/global.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="js/users.js?v=<%=AuthHelper.Version %>"></script>
             <div id="toastContainer"></div>
         </form>
     </body>

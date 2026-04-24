@@ -8,11 +8,11 @@
         <title>Absences — Gestion Scolaire</title>
 
         <!-- Font Awesome -->
-        <link rel="stylesheet" href="../../_assets/css/all.min.css">
-        <link rel="stylesheet" href="../../_assets/css/fontawesome.css">
-        <link rel="stylesheet" href="../../_assets/css/fontawesome.min.css">
-        <link rel="stylesheet" href="../../_assets/css/global.css">
-        <link rel="stylesheet" href="css/style.css">
+        <link rel="stylesheet" href="../../_assets/css/all.min.css?v=<%=AuthHelper.Version %>">
+        <link rel="stylesheet" href="../../_assets/css/fontawesome.css?v=<%=AuthHelper.Version %>">
+        <link rel="stylesheet" href="../../_assets/css/fontawesome.min.css?v=<%=AuthHelper.Version %>">
+        <link rel="stylesheet" href="../../_assets/css/global.css?v=<%=AuthHelper.Version %>">
+        <link rel="stylesheet" href="css/style.css?v=<%=AuthHelper.Version %>">
 
     </head>
 
@@ -166,6 +166,7 @@
                                 </li>
 
                                 <!-- Administration -->
+                                <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin()) { %>
                                 <li class="nav-item">
                                     <div class="nav-section">Administrations</div>
                                     <a href="../../administrations/utilisateur/utilisateur.aspx" class="nav-link">
@@ -175,7 +176,9 @@
                                         <span>Utilisateur</span>
                                     </a>
                                 </li>
-                                <% if (AuthHelper.IsAdmin()) { %>
+                                <% } %>
+
+                                <% if (AuthHelper.IsSuperAdmin()) { %>
                                     <li class="nav-item">
                                         <a href="../../administrations/requete/requetes.aspx" class="nav-link"
                                             style="display: flex; align-items: center;">
@@ -375,9 +378,9 @@
             </div>
 
             <!-- ═══ SCRIPTS ═══ -->
-            <script src="js/absences.js"></script>
-            <script src="js/script.js"></script>
-            <script src="../../_assets/js/global.js"></script>
+            <script src="js/absences.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="js/script.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="../../_assets/js/global.js?v=<%=AuthHelper.Version %>"></script>
         </form>
     </body>
 

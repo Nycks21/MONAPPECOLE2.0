@@ -8,11 +8,11 @@
         <title>Tableau de bord — Gestion Scolaire</title>
 
         <!-- Font Awesome -->
-        <link rel="stylesheet" href="../../_assets/css/all.min.css">
-        <link rel="stylesheet" href="../../_assets/css/fontawesome.css">
-        <link rel="stylesheet" href="../../_assets/css/fontawesome.min.css">
-        <link rel="stylesheet" href="css/style.css">
-        <link rel="stylesheet" href="../../_assets/css/global.css">
+        <link rel="stylesheet" href="../../_assets/css/all.min.css?v=<%=AuthHelper.Version %>">
+        <link rel="stylesheet" href="../../_assets/css/fontawesome.css?v=<%=AuthHelper.Version %>">
+        <link rel="stylesheet" href="../../_assets/css/fontawesome.min.css?v=<%=AuthHelper.Version %>">
+        <link rel="stylesheet" href="css/style.css?v=<%=AuthHelper.Version %>">
+        <link rel="stylesheet" href="../../_assets/css/global.css?v=<%=AuthHelper.Version %>">
 
     </head>
 
@@ -978,9 +978,9 @@
             </div>
 
             <!-- ═══ SCRIPTS ═══ -->
-            <script src="js/dashboard.js"></script>
-            <script src="js/script.js"></script>
-            <script src="../../_assets/js/global.js"></script>
+            <script src="js/dashboard.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="js/script.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="../../_assets/js/global.js?v=<%=AuthHelper.Version %>"></script>
         </form>
     </body>
 

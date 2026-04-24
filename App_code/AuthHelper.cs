@@ -33,9 +33,9 @@ public static class AuthHelper
     public static bool IsSuperAdmin()
     {
         var session = HttpContext.Current.Session;
-        if (session["USERROLE"] == null) return false;
+        if (session["userRole"] == null) return false;
         try {
-            return Convert.ToInt32(session["USERROLE"]) == 0;
+            return Convert.ToInt32(session["userRole"]) == 0;
         } catch {
             return false;
         }
@@ -45,9 +45,9 @@ public static class AuthHelper
     public static bool IsAdmin()
     {
         var session = HttpContext.Current.Session;
-        if (session["USERROLE"] == null) return false;
+        if (session["userRole"] == null) return false;
         try {
-            return Convert.ToInt32(session["USERROLE"]) == 1;
+            return Convert.ToInt32(session["userRole"]) == 1;
         } catch {
             return false;
         }
@@ -85,5 +85,10 @@ public static class AuthHelper
         HttpContext.Current.Session.Abandon();
         string url = otherPc ? "~/auth/Login.aspx?msg=other_pc" : "~/auth/Login.aspx";
         page.Response.Redirect(url, true);
+    }
+
+    public static string Version
+    {
+        get { return System.Configuration.ConfigurationManager.AppSettings["Version"]; }
     }
 }

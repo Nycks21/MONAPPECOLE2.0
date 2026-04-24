@@ -175,7 +175,7 @@ public partial class Login : Page
         Session["authenticated"]  = true;
         Session["IDUSER"]         = idUser;
         Session["username"]       = username;
-        Session["userRole"]       = roleId;
+        Session["USERROLE"]       = roleId;
         Session["SESSION_TOKEN"]  = newToken;
         Session["PC"]             = currentPC;
 
