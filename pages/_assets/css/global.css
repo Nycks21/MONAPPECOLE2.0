@@ -84,7 +84,7 @@ ul { list-style: none; }
     width: 48px;
     height: 48px;
     border: 5px solid #fff;
-    border-top-color: var(--primary);
+    border-top-color: var(--success);
     border-radius: 50%;
     animation: spin .8s linear infinite;
 }

@@ -30,9 +30,9 @@
     var sidebar, contentWrapper, mainHeader;
 
     function init() {
-        sidebar        = document.getElementById('sidebar');
+        sidebar = document.getElementById('sidebar');
         contentWrapper = document.getElementById('contentWrapper');
-        mainHeader     = document.querySelector('.main-header');
+        mainHeader = document.querySelector('.main-header');
 
         if (!sidebar) return; // page sans sidebar (ex: Login)
 
@@ -86,9 +86,9 @@
         if (!toggle) return;
 
         if (!sidebar) {
-            sidebar        = document.getElementById('sidebar');
+            sidebar = document.getElementById('sidebar');
             contentWrapper = document.getElementById('contentWrapper');
-            mainHeader     = document.querySelector('.main-header');
+            mainHeader = document.querySelector('.main-header');
         }
         if (!sidebar) return;
 
@@ -114,7 +114,7 @@
 
     // ── Notifications dropdown ────────────────────────────────────────────────
     document.addEventListener('click', function (e) {
-        var notifToggle   = document.getElementById('notifToggle');
+        var notifToggle = document.getElementById('notifToggle');
         var notifDropdown = document.getElementById('notifDropdown');
         if (!notifToggle || !notifDropdown) return;
 
@@ -138,9 +138,9 @@
 
         if (!document.fullscreenElement) {
             document.documentElement.requestFullscreen &&
-                document.documentElement.requestFullscreen().catch(function () {});
+                document.documentElement.requestFullscreen().catch(function () { });
         } else {
-            document.exitFullscreen && document.exitFullscreen().catch(function () {});
+            document.exitFullscreen && document.exitFullscreen().catch(function () { });
         }
     });
 
@@ -152,7 +152,7 @@
         if (!version) return; // pas de data-version sur cette page = pas de badge
 
         var badge = document.createElement('div');
-        badge.id        = 'appVersionBadge';
+        badge.id = 'appVersionBadge';
         badge.textContent = 'v' + version;
         document.body.appendChild(badge);
     }
@@ -167,5 +167,23 @@
         init();
         injectVersionBadge();
     }
+
+    let lottieAnimation;
+
+    function initLottie() {
+        lottieAnimation = lottie.loadAnimation({
+            container: document.getElementById('lottieContainer'), // le container HTML
+            renderer: 'svg',
+            loop: true,
+            autoplay: true,
+            path: '../../_assets/json/lottieflow-loading-08-000000-easey.json' // Ajustez le chemin vers votre fichier
+        });
+    }
+
+    // Appelez l'initialisation dans le ready
+    $(document).ready(() => {
+        initLottie();
+        // ... reste de votre code
+    });
 
 })();
