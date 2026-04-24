@@ -1,0 +1,21 @@
+{
+  "sidebar": {
+    "dashboard"   : "Dashboard",
+    "eleves"      : "Students",
+    "absences"    : "Absences",
+    "frais"       : "School Fees",
+    "bulletins"   : "Report Cards",
+    "parametres"  : "Settings"
+  },
+  "common": {
+    "ajouter"     : "Add",
+    "modifier"    : "Edit",
+    "supprimer"   : "Delete",
+    "enregistrer" : "Save",
+    "annuler"     : "Cancel",
+    "confirmer"   : "Confirm",
+    "rechercher"  : "Search",
+    "annee_active": "Active year",
+    "lecture_seule": "Read only"
+  }
+}

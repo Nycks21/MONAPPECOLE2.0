@@ -1,0 +1,28 @@
+{
+  "sidebar": {
+    "dashboard"   : "Tableau de bord",
+    "eleves"      : "Élèves",
+    "absences"    : "Absences",
+    "frais"       : "Frais scolaires",
+    "bulletins"   : "Bulletins",
+    "parametres"  : "Paramètres"
+  },
+  "common": {
+    "ajouter"     : "Ajouter",
+    "modifier"    : "Modifier",
+    "supprimer"   : "Supprimer",
+    "enregistrer" : "Enregistrer",
+    "annuler"     : "Annuler",
+    "confirmer"   : "Confirmer",
+    "rechercher"  : "Rechercher",
+    "annee_active": "Année active",
+    "lecture_seule": "Lecture seule"
+  },
+  "annees": {
+    "titre"       : "Années Scolaires",
+    "nouvelle"    : "Nouvelle année scolaire",
+    "cloturer"    : "Clôturer",
+    "cloturee"    : "Clôturée",
+    "active"      : "Active"
+  }
+}

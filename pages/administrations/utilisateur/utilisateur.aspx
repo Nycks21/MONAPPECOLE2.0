@@ -61,6 +61,16 @@
                                 <i class="fas fa-expand-arrows-alt"></i>
                             </a>
                         </li>
+                        <li class="nav-item">
+                            <a class="nav-link" title="Langue">
+                                <select id="langSelect" onchange="loadLang(this.value)"><i
+                                        class="fas fa-expand-arrows-alt"></i>
+                                    <option value="fr">🇫🇷 Français</option>
+                                    <option value="en">🇬🇧 English</option>
+                                    <option value="mg">🇲🇬 Malagasy</option>
+                                </select>
+                            </a>
+                        </li>
                     </ul>
                 </nav>
 
@@ -178,8 +188,7 @@
                                     <% } %>
                                         <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin()) { %>
                                             <li class="nav-item">
-                                                <a href="utilisateur.aspx"
-                                                    class="nav-link active">
+                                                <a href="utilisateur.aspx" class="nav-link active">
                                                     <div style="width:30px; text-align:center; margin-right:10px;">
                                                         <i class="fas fa-user"></i>
                                                     </div>
@@ -235,8 +244,9 @@
                                 <span class="dash-card-title"><i class="fas fa-users-cog"></i> Gestion des
                                     utilisateurs</span>
                                 <div class="action-buttons">
-                                    <button class="btn btn-success btn-sm" onclick="openAddUserModal()">
-                                        <i class="fas fa-plus"></i> Ajouter un utilisateur
+                                    <button class="btn btn-success btn-sm" onclick="openAddUserModal()"
+                                        data-i18n="common.ajouter">
+                                        <i class="fas fa-plus"></i> Ajouter
                                     </button>
                                     <button class="btn btn-primary btn-sm" onclick="exportUsers()">
                                         <i class="fas fa-download"></i> Exporter
