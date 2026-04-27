@@ -168,46 +168,29 @@
         injectVersionBadge();
     }
 
-    let lottieAnimation;
-
-    function initLottie() {
-        lottieAnimation = lottie.loadAnimation({
-            container: document.getElementById('lottieContainer'), // le container HTML
-            renderer: 'svg',
-            loop: true,
-            autoplay: true,
-            path: '../../_assets/json/lottieflow-loading-08-000000-easey.json' // Ajustez le chemin vers votre fichier
-        });
-    }
-
-    // Appelez l'initialisation dans le ready
-    $(document).ready(() => {
-        initLottie();
-        // ... reste de votre code
-    });
-
-    var i18n = {}; // traductions chargées
-
-    function loadLang(lang) {
-        lang = lang || localStorage.getItem('appLang') || 'fr';
-        fetch('/_assets/lang/' + lang + '.json')
-            .then(r => r.json())
-            .then(function (data) {
-                i18n = data;
-                localStorage.setItem('appLang', lang);
-                applyTranslations();
-            });
-    }
-
-    // Applique les traductions sur les éléments avec data-i18n="clé"
-    function applyTranslations() {
-        document.querySelectorAll('[data-i18n]').forEach(function (el) {
-            var key = el.getAttribute('data-i18n'); // ex: "common.ajouter"
-            var keys = key.split('.');
-            var val = i18n;
-            keys.forEach(function (k) { val = val && val[k]; });
-            if (val) el.textContent = val;
-        });
-    }
-
 })();
+
+/* ── i18n — exposé globalement (accessible depuis toutes les pages) ─────── */
+var i18n = {};
+
+function loadLang(lang) {
+    lang = lang || localStorage.getItem('appLang') || 'fr';
+    fetch('/_assets/lang/' + lang + '.json')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            i18n = data;
+            localStorage.setItem('appLang', lang);
+            applyTranslations();
+        })
+        .catch(function() { /* fichier de langue absent — silencieux */ });
+}
+
+function applyTranslations() {
+    document.querySelectorAll('[data-i18n]').forEach(function(el) {
+        var key  = el.getAttribute('data-i18n');
+        var keys = key.split('.');
+        var val  = i18n;
+        keys.forEach(function(k) { val = val && val[k]; });
+        if (val) el.textContent = val;
+    });
+}

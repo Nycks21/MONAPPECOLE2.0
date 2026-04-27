@@ -65,20 +65,36 @@ IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'ELEVES')
 BEGIN
     CREATE TABLE ELEVES (
         ID INT IDENTITY(1,1) PRIMARY KEY,
+        
+        -- On utilise 'ID_ANNEE' pour être explicite, ou on garde 'ANNEE' 
+        -- mais il faut être cohérent avec la contrainte plus bas.
+        ANNEE_ID INT NOT NULL, 
+        
         MATRICULE NVARCHAR(20) UNIQUE NOT NULL,
         NOM NVARCHAR(100) NOT NULL,
-        CLASSE NVARCHAR(50) NOT NULL,
+        CLASSE UNIQUEIDENTIFIER NOT NULL,
+        
         STATUT NVARCHAR(20) DEFAULT 'actif' 
             CHECK (STATUT IN ('actif','inactif','suspendu')),
+            
         EMAIL NVARCHAR(100),
         TELEPHONE NVARCHAR(20),
         DATE_NAISSANCE DATE,
         GENRE NCHAR(1) DEFAULT 'M' CHECK (GENRE IN ('M','F')),
         ADRESSE NVARCHAR(MAX),
         PARENT NVARCHAR(100),
+        
         DATE_INSCRIPTION DATE DEFAULT GETDATE(),
         CREATED_AT DATETIME DEFAULT GETDATE(),
-        UPDATED_AT DATETIME DEFAULT GETDATE()
+        UPDATED_AT DATETIME DEFAULT GETDATE(),
+
+        -- Clé étrangère vers la table CLASSES
+        CONSTRAINT FK_ELEVES_CLASSES FOREIGN KEY (CLASSE) 
+            REFERENCES CLASSES(ID),
+
+        -- CORRECTION ICI : Le nom de la colonne doit correspondre (ANNEE_ID)
+        CONSTRAINT FK_ELEVES_RANNEE FOREIGN KEY (ANNEE_ID) 
+            REFERENCES RANNEE(ID)
     );
 END
 GO
@@ -353,3 +369,17 @@ BEGIN
     ('2024001', 'retard', '2024-03-12', 0.5, 'Transport', 'non'),
     ('2024002', 'absence', '2024-03-05', 1, 'Rendez-vous médical', 'oui');
 END
+
+
+
+-- Insertion des données exemples
+INSERT INTO [dbo].[ELEVES] 
+    (MATRICULE, ANNEE_ID, NOM, CLASSE, STATUT, EMAIL, TELEPHONE, DATE_NAISSANCE, GENRE, ADRESSE, PARENT)
+VALUES 
+    ('MAT-2024-001', '2025-2026', 'RAKOTO Jean', 'EE49A440-A695-4233-B42E-65FF13284634', 'actif', 'jean.rakoto@email.com', '0340011122', '2012-05-15', 'M', 'Lot IV G 12 Antananarivo', 'Rakoto Senior'),
+    ('MAT-2024-002', '2025-2026', 'RANDRIA Alice', 'EE49A440-A695-4233-B42E-65FF13284634', 'actif', 'alice.rand@email.com', '0320033344', '2013-02-20', 'F', 'Cité des 67ha', 'Mme Randria'),
+    ('MAT-2024-003', '2025-2026', 'ANDRY Solo', 'EE49A440-A695-4233-B42E-65FF13284634', 'suspendu', 'solo.andry@email.com', '0334455566', '2006-11-10', 'M', 'Analamahitsy P.78', 'Andry Père'),
+    ('MAT-2024-004', '2025-2026', 'PEREIRA Maria', 'EE49A440-A695-4233-B42E-65FF13284634', 'actif', 'maria.p@email.com', '0345566677', '2007-01-05', 'F', 'Ambohibao Sud', 'Pereira Manuel');
+
+-- Vérification
+SELECT * FROM ELEVES;
