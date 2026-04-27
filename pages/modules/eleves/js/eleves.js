@@ -1,6 +1,6 @@
 ﻿/**
  * eleves.js — Gestion Scolaire
- * Version Finale : Corrigée, Filtrage et Pagination Inclus
+ * Version Unifiée : Corrigée et Finalisée
  */
 
 'use strict';
@@ -18,27 +18,36 @@ const API = {
 // ─────────────────────────────────────────────
 // ÉTAT DE L'APPLICATION
 // ─────────────────────────────────────────────
-let allEleves = [];      // Source de vérité (depuis le serveur)
-let filteredEleves = []; // Données après recherche
-let editId = null;       // Stocke l'ID de l'élève en cours de modif
+let allEleves = [];      // Source de vérité
+let filteredEleves = []; // Données après filtrage
+let editId = null;       
 let currentPage = 1;
-const rowsPerPage = 10;
+let rowsPerPage = 10;
+let currentMode = null; 
 
 // ─────────────────────────────────────────────
 // INITIALISATION
 // ─────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function() {
     forceHideSpinner();
+    initApp();
+});
+
+function initApp() {
+    // 1. Charger les données
     chargerEleves();
 
-    // Ecouteur pour la barre de recherche
+    // 2. Créer l'interface des filtres
+    createFilterControls();
+
+    // 3. Liaison de la recherche globale (si l'ID existe dans le HTML)
     const searchInput = document.getElementById('searchEleve');
     if (searchInput) {
         searchInput.addEventListener('input', (e) => {
-            filterEleves(e.target.value);
+            applyFilters();
         });
     }
-});
+}
 
 // ─────────────────────────────────────────────
 // CHARGEMENT DES DONNÉES
@@ -48,12 +57,12 @@ function chargerEleves() {
     fetch(API.liste)
         .then(r => r.json())
         .then(res => {
-            if (res.success) {
-                allEleves = res.Eleves || [];
+            if (res.success || Array.isArray(res)) {
+                allEleves = res.Eleves || (Array.isArray(res) ? res : []);
                 filteredEleves = [...allEleves];
                 renderTable();
             } else {
-                Swal.fire('Erreur', res.message, 'error');
+                Swal.fire('Erreur', res.message || "Erreur de format", 'error');
             }
         })
         .catch(err => console.error("Erreur de chargement:", err))
@@ -61,16 +70,24 @@ function chargerEleves() {
 }
 
 // ─────────────────────────────────────────────
-// FILTRAGE / RECHERCHE
+// FILTRAGE DYNAMIQUE
 // ─────────────────────────────────────────────
-function filterEleves(query) {
-    const q = query.toLowerCase().trim();
-    filteredEleves = allEleves.filter(e => 
-        e.NOM.toLowerCase().includes(q) || 
-        e.MATRICULE.toLowerCase().includes(q) ||
-        e.CLASSE_NOM.toLowerCase().includes(q)
-    );
-    currentPage = 1; // Reset à la page 1
+function applyFilters() {
+    const searchQuery = (document.getElementById('search-filter')?.value || "").toLowerCase().trim();
+    const statusQuery = (document.getElementById('status-filter')?.value || "").toLowerCase();
+    
+    filteredEleves = allEleves.filter(e => {
+        const matchesSearch = 
+            (e.NOM && e.NOM.toLowerCase().includes(searchQuery)) || 
+            (e.MATRICULE && e.MATRICULE.toLowerCase().includes(searchQuery)) ||
+            (e.EMAIL && e.EMAIL.toLowerCase().includes(searchQuery));
+
+        const matchesStatus = statusQuery === "" || (e.STATUT && e.STATUT.toLowerCase() === statusQuery);
+
+        return matchesSearch && matchesStatus;
+    });
+
+    currentPage = 1;
     renderTable();
 }
 
@@ -100,8 +117,12 @@ function renderTable() {
                 <td>${escHtml(e.TELEPHONE || '-')}</td>
                 <td>${getStatutBadge(e.STATUT)}</td>
                 <td class="text-center">
-                    <button class="btn btn-sm btn-primary" onclick="editEleve('${e.ID}')"><i class="fas fa-edit"></i></button>
-                    <button class="btn btn-sm btn-danger" onclick="deleteEleve('${e.ID}', '${escHtml(e.NOM).replace(/'/g, "\\'")}')"><i class="fas fa-trash"></i></button>
+                    <button class="btn btn-sm btn-primary" onclick="openEditEleveModal('${e.ID}')" title="Modifier">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-sm btn-danger" onclick="deleteEleve('${e.ID}', '${escHtml(e.NOM).replace(/'/g, "\\'")}')" title="Supprimer">
+                        <i class="fas fa-trash"></i>
+                    </button>
                 </td>
             `;
         });
@@ -110,11 +131,14 @@ function renderTable() {
 }
 
 // ─────────────────────────────────────────────
-// GESTION PAGINATION
+// PAGINATION
 // ─────────────────────────────────────────────
 function changePage(delta) {
-    currentPage += delta;
-    renderTable();
+    const totalPages = Math.ceil(filteredEleves.length / rowsPerPage);
+    if (currentPage + delta >= 1 && currentPage + delta <= totalPages) {
+        currentPage += delta;
+        renderTable();
+    }
 }
 
 function updatePaginationUI() {
@@ -128,39 +152,103 @@ function updatePaginationUI() {
     if (nextBtn) nextBtn.disabled = (currentPage >= totalPages || totalPages === 0);
 }
 
-// ─────────────────────────────────────────────
-// CRUD (AJOUTER / MODIFIER / SUPPRIMER)
-// ─────────────────────────────────────────────
+// ============================================================================
+// MODAL - AJOUT / MODIFICATION
+// ============================================================================
 
-function openAddEleveModal() {
-    editId = null;
-    document.getElementById('modalTitle').innerText = "Ajouter un élève";
-    document.getElementById('eleveForm').reset();
+/**
+ * Ferme la modal si on clique à l'extérieur du contenu blanc
+ */
+function initModalCloseOnClickOutside() {
+    const modal = document.getElementById('eleveModal'); // ID harmonisé
+    if (modal) {
+        modal.addEventListener('click', (event) => {
+            const modalContent = modal.querySelector('.modal-content');
+            // Si la cible du clic est le background (modal) et non le contenu (modalContent)
+            if (event.target === modal) {
+                closeEleveModal();
+            }
+        });
+    }
+}
+
+/**
+ * Ouvre la modal en mode Ajout
+ */
+function openAddEleveModal(event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+
+    editId = null; // Important pour saveEleve()
+    currentMode = "ajout";
+    
+    const form = document.getElementById('eleveForm');
+    if (form) form.reset();
+
+    // Configuration visuelle du titre
+    const titleElement = document.getElementById('modalTitle');
+    if (titleElement) {
+        titleElement.innerHTML = '<i class="fas fa-user-plus"></i> Ajouter un élève';
+    }
+
+    // Gestion du champ matricule (activé en ajout)
+    const matriculeField = document.getElementById('eleveMatricule');
+    if (matriculeField) {
+        matriculeField.disabled = false;
+        matriculeField.style.backgroundColor = '#ffffff';
+        matriculeField.style.cursor = 'text';
+    }
+
     showModal('eleveModal');
 }
 
-function editEleve(id) {
-    const eleve = allEleves.find(x => x.ID == id);
-    if (!eleve) return;
+/**
+ * Ouvre la modal en mode Modification
+ */
+function openEditEleveModal(eleveId) {
+    // On cherche l'élève dans la source de vérité
+    const eleve = allEleves.find(x => x.ID == eleveId);
+    if (!eleve) {
+        Swal.fire({ icon: 'error', title: 'Erreur', text: 'Élève introuvable' });
+        return;
+    }
 
-    editId = id;
-    document.getElementById('modalTitle').innerText = "Modifier l'élève";
-    
+    editId = eleveId;
+    currentMode = "modification";
+
+    const title = document.getElementById('modalTitle');
+    if (title) {
+        title.innerHTML = '<i class="fas fa-edit"></i> Modifier l\'élève';
+    }
+
     // Remplissage des champs avec les données SQL
-    document.getElementById('eleveMatricule').value = eleve.MATRICULE;
-    document.getElementById('eleveNom').value       = eleve.NOM;
-    document.getElementById('eleveAnnee').value     = eleve.ANNEE_ID; // L'ID pour le select
-    document.getElementById('eleveClasse').value    = eleve.CLASSE_ID; // Le GUID pour le select
-    document.getElementById('eleveEmail').value     = eleve.EMAIL;
-    document.getElementById('eleveTel').value       = eleve.TELEPHONE;
-    document.getElementById('eleveStatut').value    = eleve.STATUT;
+    if(document.getElementById('eleveAnnee'))     document.getElementById('eleveAnnee').value = eleve.ANNEE_ID || '';
+    if(document.getElementById('eleveNom'))       document.getElementById('eleveNom').value = eleve.NOM || '';
+    if(document.getElementById('eleveClasse'))    document.getElementById('eleveClasse').value = eleve.CLASSE_ID || '';
+    if(document.getElementById('eleveEmail'))     document.getElementById('eleveEmail').value = eleve.EMAIL || '';
+    if(document.getElementById('eleveTel'))       document.getElementById('eleveTel').value = eleve.TELEPHONE || '';
+    if(document.getElementById('eleveStatut'))    document.getElementById('eleveStatut').value = eleve.STATUT || '';
     
+    // Cas particulier du Matricule : souvent figé en modification
+    const m = document.getElementById('eleveMatricule');
+    if (m) {
+        m.value = eleve.MATRICULE || '';
+        m.disabled = true; 
+        m.style.backgroundColor = '#e9ecef'; // Aspect grisé
+        m.style.cursor = 'not-allowed';
+    }
+
     showModal('eleveModal');
 }
 
+/**
+ * Enregistre les données (Ajout ou Modif)
+ */
 function saveEleve() {
     const data = {
-        ID: editId,
+        ID: editId, // null si ajout, GUID si modif
         ANNEE_ID:  document.getElementById('eleveAnnee').value,
         MATRICULE: document.getElementById('eleveMatricule').value,
         NOM:       document.getElementById('eleveNom').value,
@@ -169,6 +257,12 @@ function saveEleve() {
         TELEPHONE: document.getElementById('eleveTel').value,
         STATUT:    document.getElementById('eleveStatut').value
     };
+
+    // Validation simple
+    if (!data.NOM || !data.MATRICULE || !data.CLASSE) {
+        Swal.fire('Champs requis', 'Le nom, le matricule et la classe sont obligatoires', 'warning');
+        return;
+    }
 
     const url = editId ? API.modifier : API.ajouter;
 
@@ -181,23 +275,31 @@ function saveEleve() {
     .then(r => r.json())
     .then(res => {
         if (res.success) {
-            Swal.fire('Succès', 'Données enregistrées', 'success');
+            Swal.fire('Succès', 'Données enregistrées avec succès', 'success');
             closeEleveModal();
-            chargerEleves();
+            chargerEleves(); // Rafraîchir la liste
         } else {
-            Swal.fire('Erreur', res.message, 'error');
+            Swal.fire('Erreur', res.message || "Erreur lors de l'enregistrement", 'error');
         }
+    })
+    .catch(err => {
+        console.error("Erreur Save:", err);
+        Swal.fire('Erreur', "Impossible de contacter le serveur", 'error');
     })
     .finally(() => hideSpinner());
 }
 
+/**
+ * Supprime un élève
+ */
 function deleteEleve(id, nom) {
     Swal.fire({
         title: 'Supprimer ?',
-        text: `Confirmez-vous la suppression de ${nom} ?`,
+        text: `Confirmez-vous la suppression définitive de l'élève ${nom} ?`,
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: 'Supprimer',
+        confirmButtonText: 'Oui, supprimer',
+        cancelButtonText: 'Annuler',
         confirmButtonColor: '#d33'
     }).then((result) => {
         if (result.isConfirmed) {
@@ -206,35 +308,105 @@ function deleteEleve(id, nom) {
                 .then(r => r.json())
                 .then(res => {
                     if (res.success) {
-                        Swal.fire('Supprimé', '', 'success');
+                        Swal.fire('Supprimé', 'L\'élève a été retiré de la base.', 'success');
                         chargerEleves();
                     } else {
                         Swal.fire('Erreur', res.message, 'error');
                     }
                 })
+                .catch(err => console.error("Erreur Delete:", err))
                 .finally(() => hideSpinner());
         }
     });
 }
 
 // ─────────────────────────────────────────────
-// UTILITAIRES
+// UTILITAIRES & FILTRES UI
 // ─────────────────────────────────────────────
+function createFilterControls() {
+    if (document.getElementById('filter-container')) return;
+
+    const dashCardBody = document.querySelector('.dash-card-body');
+    if (!dashCardBody) return;
+
+    const filterContainer = document.createElement('div');
+    filterContainer.id = 'filter-container';
+    filterContainer.style.cssText = `
+        margin: 0 0 20px 0; padding: 15px 20px;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 10px; display: flex; gap: 15px; flex-wrap: wrap;
+        align-items: flex-end; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: 1px solid #dee2e6;
+    `;
+
+    filterContainer.innerHTML = `
+        <div style="flex: 2; min-width: 200px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #495057;">Recherche :</label>
+            <input type="text" id="search-filter" class="form-control" placeholder="Nom, email, matricule...">
+        </div>
+        <div style="min-width: 140px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #495057;">Statut :</label>
+            <select id="status-filter" class="form-control">
+                <option value="">Tous</option>
+                <option value="actif">Actif</option>
+                <option value="inactif">Inactif</option>
+                <option value="suspendu">Suspendu</option>
+            </select>
+        </div>
+        <div style="min-width: 140px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #495057;">Lignes :</label>
+            <select id="rows-per-page-top" class="form-control">
+                <option value="10">10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+            </select>
+        </div>
+        <div>
+            <button id="reset-filters" style="padding: 10px 24px; background: #6c757d; color: white; 
+                    border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">
+                <i class="fas fa-undo-alt"></i> Réinitialiser
+            </button>
+        </div>
+    `;
+
+    dashCardBody.insertBefore(filterContainer, dashCardBody.firstChild);
+
+    document.getElementById('search-filter').addEventListener('input', applyFilters);
+    document.getElementById('status-filter').addEventListener('change', applyFilters);
+    document.getElementById('rows-per-page-top').addEventListener('change', (e) => {
+        rowsPerPage = parseInt(e.target.value);
+        renderTable();
+    });
+    document.getElementById('reset-filters').addEventListener('click', resetFilters);
+}
+
+function resetFilters() {
+    if (document.getElementById('search-filter')) document.getElementById('search-filter').value = '';
+    if (document.getElementById('status-filter')) document.getElementById('status-filter').value = '';
+    rowsPerPage = 10;
+    currentPage = 1;
+    applyFilters();
+}
+
 function getStatutBadge(statut) {
     const s = String(statut || '').toLowerCase().trim();
-    if (s === 'actif') return '<span class="badge bg-success">Actif</span>';
-    if (s === 'suspendu') return '<span class="badge bg-warning">Suspendu</span>';
-    return '<span class="badge bg-danger">Inactif</span>';
+    const color = s === 'actif' ? 'bg-success' : (s === 'suspendu' ? 'bg-warning' : 'bg-danger');
+    return `<span class="badge ${color}">${statut || 'Inactif'}</span>`;
 }
 
 function escHtml(str) {
-    return String(str || '').replace(/[&<>"']/g, m => ({
-        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-    }[m]));
+    return String(str || '').replace(/[&<>"']/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m]));
 }
 
 function showModal(id) { document.getElementById(id).style.display = 'flex'; }
 function closeEleveModal() { document.getElementById('eleveModal').style.display = 'none'; }
-function showSpinner() { document.getElementById('spinnerOverlay').style.display = 'flex'; }
-function hideSpinner() { document.getElementById('spinnerOverlay').style.display = 'none'; }
+function showSpinner() { const s = document.getElementById('spinnerOverlay'); if(s) s.style.display = 'flex'; }
+function hideSpinner() { const s = document.getElementById('spinnerOverlay'); if(s) s.style.display = 'none'; }
 function forceHideSpinner() { hideSpinner(); }
+
+// Globalisation pour les appels onclick du HTML
+window.openAddEleveModal = openAddEleveModal;
+window.openEditEleveModal = openEditEleveModal;
+window.saveEleve = saveEleve;
+window.deleteEleve = deleteEleve;
+window.changePage = changePage;
+window.resetFilters = resetFilters;

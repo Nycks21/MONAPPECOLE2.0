@@ -12,8 +12,6 @@
         <link rel="stylesheet" href="../../_assets/css/fontawesome.css?v=<%=AuthHelper.Version %>">
         <link rel="stylesheet" href="../../_assets/css/fontawesome.min.css?v=<%=AuthHelper.Version %>">
         <link rel="stylesheet" href="../../_assets/css/global.css?v=<%=AuthHelper.Version %>">
-        <link rel="stylesheet" href="css/style.css?v=<%=AuthHelper.Version %>">
-
     </head>
 
     <body class="hold-transition" data-version="<%=AuthHelper.Version %>">
@@ -235,46 +233,26 @@
 
                         <div class="dash-card">
                             <div class="dash-card-head">
-                                <span class="dash-card-title"><i class="fas fa-users"></i> Liste des élèves</span>
+                                <span class="dash-card-title"><i class="fas fa-users-cog"></i> Gestion des
+                                    élèves</span>
                                 <div class="action-buttons">
-                                    <button class="btn btn-success btn-sm" onclick="openAddEleveModal()">
-                                        <i class="fas fa-plus"></i> Ajouter un élève
+                                    <button class="btn btn-success btn-sm" onclick="openAddEleveModal()"
+                                        data-i18n="common.ajouter">
+                                        <i class="fas fa-plus"></i> Ajouter
                                     </button>
                                     <button class="btn btn-primary btn-sm" onclick="exportEleves()">
                                         <i class="fas fa-download"></i> Exporter
+                                    </button>
+                                    <button class="btn btn-success btn-sm" onclick="exportElevesToExcelOnly()">
+                                        <i class="fas fa-file-excel"></i> Excel
+                                    </button>
+                                    <button class="btn btn-info btn-sm" onclick="exportElevesToCsvOnly()">
+                                        <i class="fas fa-file-csv"></i> CSV
                                     </button>
                                 </div>
                             </div>
 
                             <div class="dash-card-body">
-
-                                <!-- Stats élèves -->
-                                <div class="eleves-stats" id="elevesStatsContainer"></div>
-
-                                <!-- Filtres -->
-                                <div class="eleves-filters">
-                                    <div class="search-box-eleve">
-                                        <i class="fas fa-search"></i>
-                                        <input type="text" class="form-control" id="searchEleve"
-                                            placeholder="Rechercher par nom, matricule, classe..."
-                                            oninput="filterEleves()">
-                                    </div>
-                                    <select class="form-control" id="filterClasse" onchange="filterEleves()"
-                                        style="max-width:160px;">
-                                        <option value="">Toutes les classes</option>
-                                    </select>
-                                    <div class="btn-group-eleve">
-                                        <button class="btn btn-sm" id="btnAll" onclick="filterByStatut('all')"
-                                            style="background:var(--primary);color:white;">Tous</button>
-                                        <button class="btn btn-sm" id="btnActif" onclick="filterByStatut('actif')"
-                                            style="background:#e9ecef;">Actifs</button>
-                                        <button class="btn btn-sm" id="btnInactif" onclick="filterByStatut('inactif')"
-                                            style="background:#e9ecef;">Inactifs</button>
-                                        <button class="btn btn-sm" id="btnSuspendu" onclick="filterByStatut('suspendu')"
-                                            style="background:#e9ecef;">Suspendus</button>
-                                    </div>
-                                </div>
-
                                 <!-- Tableau -->
                                 <div style="overflow-x:auto;">
                                     <table class="dash-table">
@@ -293,36 +271,10 @@
                                         <tbody id="elevesTableBody"></tbody>
                                     </table>
                                 </div>
-
-                                <!-- Pagination -->
-                                <div
-                                    style="display:flex;justify-content:space-between;align-items:center;margin-top:15px;flex-wrap:wrap;gap:10px;">
-                                    <span id="elevesPaginationInfo" style="color:#6c757d;font-size:13px;"></span>
-                                    <div class="action-buttons">
-                                        <button class="btn btn-sm btn-secondary" id="elevesPrevBtn"
-                                            onclick="previousElevesPage()" disabled>
-                                            <i class="fas fa-chevron-left"></i> Précédent
-                                        </button>
-                                        <button class="btn btn-sm btn-secondary" id="elevesNextBtn"
-                                            onclick="nextElevesPage()">
-                                            Suivant <i class="fas fa-chevron-right"></i>
-                                        </button>
-                                    </div>
-                                </div>
-
                             </div>
                         </div>
-
                     </section>
-
-
                 </div>
-
-                <!-- ═══ SPINNER ═══ -->
-                <div id="spinnerOverlay">
-                    <div class="spinner"></div>
-                </div>
-
             </div>
 
             <!-- MODAL AJOUT / MODIFICATION ÉLÈVE -->
@@ -419,13 +371,20 @@
                 </div>
             </div>
 
+            <!-- ═══ SPINNER ═══ -->
+            <div id="spinnerOverlay" aria-hidden="true" style="display:none;visibility:hidden;">
+                <div class="spinner"></div>
+            </div>
+
             <!-- ═══ SCRIPTS ═══ -->
-            <!-- global.js en premier : sidebar, notifications, plein écran, i18n -->
+            <script src="../../_assets/js/jquery-3.6.0.min.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="../../_assets/js/sweetalert2@11.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="../../_assets/js/jszip.min.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="../../_assets/js/pdfmake.min.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="../../_assets/js/vfs_fonts.js?v=<%=AuthHelper.Version %>"></script>
             <script src="../../_assets/js/global.js?v=<%=AuthHelper.Version %>"></script>
-            <!-- SweetAlert2 requis par eleves.js -->
-            <script src="../../_assets/js/sweetalert2.min.js"></script>
-            <!-- Page spécifique en dernier -->
             <script src="js/eleves.js?v=<%=AuthHelper.Version %>"></script>
+            <div id="toastContainer"></div>
         </form>
     </body>
 

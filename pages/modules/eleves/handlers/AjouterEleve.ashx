@@ -1,4 +1,4 @@
-<%@ WebHandler Language="C#" Class="AjouterClasse" %>
+<%@ WebHandler Language="C#" Class="AjouterEleve" %>
 
 using System;
 using System.Configuration;
@@ -8,16 +8,17 @@ using System.Web;
 using System.Web.Script.Serialization;
 using System.Web.SessionState;
 
-public class AjouterClasse : IHttpHandler, IRequiresSessionState
+public class AjouterEleve : IHttpHandler, IRequiresSessionState
 {
     public void ProcessRequest(HttpContext ctx)
     {
         ctx.Response.ContentType = "application/json";
-        ctx.Response.Charset     = "utf-8";
+        ctx.Response.Charset = "utf-8";
         ctx.Response.Cache.SetNoStore();
 
         JavaScriptSerializer ser = new JavaScriptSerializer();
 
+        // 1. Vérification de l'authentification
         if (ctx.Session["authenticated"] == null || !(bool)ctx.Session["authenticated"])
         {
             ctx.Response.StatusCode = 401;
@@ -25,6 +26,7 @@ public class AjouterClasse : IHttpHandler, IRequiresSessionState
             return;
         }
 
+        // 2. Vérification de la méthode POST
         if (ctx.Request.HttpMethod != "POST")
         {
             ctx.Response.StatusCode = 405;
@@ -34,52 +36,57 @@ public class AjouterClasse : IHttpHandler, IRequiresSessionState
 
         try
         {
+            // 3. Lecture du corps de la requête JSON
             string body;
             using (var reader = new StreamReader(ctx.Request.InputStream))
                 body = reader.ReadToEnd();
 
-            var payload = ser.Deserialize<ClassePayload>(body);
+            var payload = ser.Deserialize<ElevePayload>(body);
 
-            if (payload == null)
-                throw new ArgumentException("Les données envoyées sont vides ou invalides.");
+            // 4. Validations de base
+            if (payload == null) throw new ArgumentException("Données invalides.");
+            if (string.IsNullOrWhiteSpace(payload.NOM)) throw new ArgumentException("Le nom est obligatoire.");
+            if (string.IsNullOrWhiteSpace(payload.MATRICULE)) throw new ArgumentException("Le matricule est obligatoire.");
 
-            if (string.IsNullOrWhiteSpace(payload.NOM))
-                throw new ArgumentException("Le nom de la classe est obligatoire.");
+            // Conversion des identifiants (GUID et INT)
+            Guid classeGuid;
+            if (!Guid.TryParse(payload.CLASSE, out classeGuid))
+                throw new ArgumentException("La classe sélectionnée est invalide.");
 
-            // Validation TITULAIRE_ID (int > 0)
-            if (payload.TITULAIRE_ID <= 0)
-                throw new ArgumentException("Veuillez sélectionner un titulaire valide.");
+            int anneeId;
+            if (!int.TryParse(payload.ANNEE_ID, out anneeId))
+                throw new ArgumentException("L'année scolaire est invalide.");
 
-            // Validation des GUIDs (Niveau et Salle)
-            Guid niveauGuid, salleGuid;
-            if (!Guid.TryParse(payload.NIVEAU_ID, out niveauGuid))
-                throw new ArgumentException("Le niveau sélectionné est invalide.");
-            if (!Guid.TryParse(payload.SALLE_ID, out salleGuid))
-                throw new ArgumentException("La salle sélectionnée est invalide.");
-
+            // 5. Connexion à la base de données
             string connStr = ConfigurationManager.ConnectionStrings["MaConnexion"].ConnectionString;
 
             using (var conn = new SqlConnection(connStr))
-            using (var cmd  = new SqlCommand(
-                @"INSERT INTO [dbo].[CLASSES]
-                    (ID, NOM, NIVEAU_ID, TITULAIRE_ID, SALLE_ID, EFFECTIF, STATUT, CREATED_AT)
+            using (var cmd = new SqlCommand(
+                @"INSERT INTO [dbo].[ELEVES]
+                    (ID, ANNEE_ID, MATRICULE, NOM, CLASSE_ID, EMAIL, TELEPHONE, STATUT, CREATED_AT, UPDATED_AT)
                   VALUES
-                    (NEWID(), @nom, @niveauId, @titulaireId, @salleId, @effectif, @statut, GETDATE())", conn))
+                    (NEWID(), @anneeId, @matricule, @nom, @classeId, @email, @tel, @statut, GETDATE(), GETDATE())", conn))
             {
-                cmd.Parameters.Add("@nom",         System.Data.SqlDbType.NVarChar).Value        = payload.NOM.Trim();
-                cmd.Parameters.Add("@niveauId",    System.Data.SqlDbType.UniqueIdentifier).Value = niveauGuid;
-                cmd.Parameters.Add("@titulaireId", System.Data.SqlDbType.Int).Value             = payload.TITULAIRE_ID;
-                cmd.Parameters.Add("@salleId",     System.Data.SqlDbType.UniqueIdentifier).Value = salleGuid;
-                cmd.Parameters.Add("@effectif",    System.Data.SqlDbType.Int).Value             = payload.EFFECTIF;
-
-                bool isActif = (payload.STATUT == "1" || payload.STATUT == "true" || payload.STATUT == "Actif");
-                cmd.Parameters.Add("@statut",      System.Data.SqlDbType.Bit).Value             = isActif;
+                // Paramètres
+                cmd.Parameters.Add("@anneeId",   System.Data.SqlDbType.Int).Value = anneeId;
+                cmd.Parameters.Add("@matricule", System.Data.SqlDbType.NVarChar).Value = payload.MATRICULE.Trim();
+                cmd.Parameters.Add("@nom",       System.Data.SqlDbType.NVarChar).Value = payload.NOM.Trim();
+                cmd.Parameters.Add("@classeId",  System.Data.SqlDbType.UniqueIdentifier).Value = classeGuid;
+                
+                // Gestion des valeurs optionnelles (NULL)
+                cmd.Parameters.Add("@email",     System.Data.SqlDbType.NVarChar).Value = (object)payload.EMAIL ?? DBNull.Value;
+                cmd.Parameters.Add("@tel",       System.Data.SqlDbType.NVarChar).Value = (object)payload.TELEPHONE ?? DBNull.Value;
+                
+                // Statut par défaut 'Actif' si non précisé ou vide
+                string finalStatut = string.IsNullOrWhiteSpace(payload.STATUT) ? "Actif" : payload.STATUT;
+                cmd.Parameters.Add("@statut",    System.Data.SqlDbType.NVarChar).Value = finalStatut;
 
                 conn.Open();
                 cmd.ExecuteNonQuery();
             }
 
-            ctx.Response.Write("{\"success\":true}");
+            // Réponse de succès
+            ctx.Response.Write("{\"success\":true, \"message\":\"Élève ajouté avec succès\"}");
         }
         catch (ArgumentException ex)
         {
@@ -89,20 +96,27 @@ public class AjouterClasse : IHttpHandler, IRequiresSessionState
         catch (Exception ex)
         {
             ctx.Response.StatusCode = 500;
-            string msg = ex.Message.Contains("UNIQUE") ? "Cette classe existe déjà." : ex.Message;
+            string msg = ex.Message;
+            
+            // Gestion propre des doublons de matricule (Contrainte UNIQUE dans SQL)
+            if (msg.Contains("UNIQUE") || msg.Contains("PRIMARY"))
+                msg = "Erreur : Ce matricule est déjà utilisé par un autre élève.";
+            
             ctx.Response.Write("{\"success\":false,\"message\":" + ser.Serialize(msg) + "}");
         }
     }
 
     public bool IsReusable { get { return false; } }
 
-    private class ClassePayload
+    // Structure des données reçues du JavaScript (eleves.js)
+    private class ElevePayload
     {
-        public string NOM          { get; set; }
-        public string NIVEAU_ID    { get; set; }
-        public int    TITULAIRE_ID { get; set; }
-        public string SALLE_ID     { get; set; }
-        public int    EFFECTIF     { get; set; }
-        public string STATUT       { get; set; }
+        public string ANNEE_ID { get; set; }
+        public string MATRICULE { get; set; }
+        public string NOM       { get; set; }
+        public string CLASSE    { get; set; } // Reçu comme string GUID
+        public string EMAIL     { get; set; }
+        public string TELEPHONE { get; set; }
+        public string STATUT    { get; set; }
     }
 }
