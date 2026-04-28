@@ -5,6 +5,7 @@
 let currentMode = null; 
 let currentEleveId = null;
 let elevesData = [];
+let baseFilteredData = [];  // Données après validation du MODAL (Le périmètre)
 let filteredEleves = [];
 let currentPage = 1;
 let rowsPerPage = 10;
@@ -194,13 +195,13 @@ function applyFilters() {
     const searchTerm = document.getElementById('search-filter')?.value.toLowerCase().trim() || '';
     const statusFilter = document.getElementById('status-filter')?.value || '';
 
-    filteredEleves = elevesData.filter(eleve => {
+    // On filtre UNIQUEMENT sur les résultats déjà validés par le modal
+    filteredEleves = baseFilteredData.filter(eleve => {
         let matchSearch = true;
         if (searchTerm) {
             matchSearch = (eleve.NOM?.toLowerCase().includes(searchTerm)) ||
-                (eleve.MATRICULE?.toLowerCase().includes(searchTerm)) ||
-                (eleve.EMAIL?.toLowerCase().includes(searchTerm)) ||
-                (eleve.TELEPHONE?.toLowerCase().includes(searchTerm));
+                          (eleve.MATRICULE?.toLowerCase().includes(searchTerm)) ||
+                          (eleve.EMAIL?.toLowerCase().includes(searchTerm));
         }
 
         let matchStatus = true;
@@ -359,9 +360,9 @@ async function loadEleves() {
 
 function applyInitialFilters(criteria) {
     isInitialLoad = false; 
-    
-    // 1. Filtrage des données
-    filteredEleves = elevesData.filter(eleve => {
+
+    // On définit le périmètre de base (le "Master Set")
+    baseFilteredData = elevesData.filter(eleve => {
         const matchAnnee = criteria.annee ? (eleve.ANNEE_TEXTE === criteria.annee) : true;
         const matchMatricule = criteria.matricule ? (eleve.MATRICULE?.toLowerCase().includes(criteria.matricule.toLowerCase())) : true;
         const matchNom = criteria.nom ? (eleve.NOM?.toLowerCase().includes(criteria.nom.toLowerCase())) : true;
@@ -369,18 +370,14 @@ function applyInitialFilters(criteria) {
         return matchAnnee && matchMatricule && matchNom && matchStatus;
     });
 
-    // 2. Créer les contrôles de la barre du haut s'ils n'existent pas
-    createFilterControls(); 
+    // On synchronise filteredEleves pour l'affichage initial
+    filteredEleves = [...baseFilteredData];
 
-    // 3. Synchroniser les valeurs du modal vers la barre du haut
-    if(document.getElementById('search-filter')) {
-        document.getElementById('search-filter').value = criteria.nom || criteria.matricule || '';
-    }
-    if(document.getElementById('status-filter')) {
-        document.getElementById('status-filter').value = criteria.status;
-    }
-
-    // 4. Afficher le tableau
+    createFilterControls(); // Crée la barre du haut si besoin
+    
+    // On vide la barre de recherche du haut pour ne pas créer de confusion
+    if(document.getElementById('search-filter')) document.getElementById('search-filter').value = '';
+    
     currentPage = 1;
     renderSimpleTable();
 
