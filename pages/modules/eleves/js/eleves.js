@@ -2,26 +2,44 @@
 // GESTION COMPLÈTE DES ÉLÈVES
 // ============================================================================
 
-let currentMode = null; 
+let currentMode = null;
 let currentEleveId = null;
 let elevesData = [];
 let baseFilteredData = [];  // Données après validation du MODAL (Le périmètre)
 let filteredEleves = [];
 let currentPage = 1;
 let rowsPerPage = 10;
-let isInitialLoad = true; // Pour savoir si on doit afficher le modal de démarrage
+let isInitialLoad = true;
+let classesData = [];
+let anneesData = []; // Pour savoir si on doit afficher le modal de démarrage
 
 // ============================================================================
 // INITIALISATION
 // ============================================================================
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     console.log("🔵 Page Élèves chargée - Initialisation");
     forceHideSpinner();
     preventFormAutoSubmit();
     ensureButtonsHaveTypeButton();
-    loadEleves(); 
+    loadEleves();
     bindButtonEvents();
 });
+
+async function loadClasses() {
+    const res = await fetch("/pages/parametres/classes/handlers/GetClasse.ashx");
+    const data = await safeJson(res);
+    if (data.success) {
+        classesData = data.Classes || [];
+    }
+}
+
+async function loadAnnees() {
+    const res = await fetch("/pages/administrations/annee/handlers/GetAnnee.ashx");
+    const data = await safeJson(res);
+    if (data.success) {
+        anneesData = data.Annees || [];
+    }
+}
 
 // ============================================================================
 // GESTION DU PRELOADER & SPINNER
@@ -79,6 +97,17 @@ function ensureButtonsHaveTypeButton() {
 // FILTRE INITIAL
 // ============================================================================
 function showInitialFilterModal() {
+    // 1. Récupérer l'ancien filtre ou créer un objet vide par défaut
+    const savedFilter = JSON.parse(localStorage.getItem('lastInitialFilter')) || {};
+    // Utilise l'opérateur || pour tester plusieurs noms de colonnes probables
+    const anneeOptions = anneesData.map(a =>
+        `<option value="${a.NOM || a.LIBELLE || a.ANNEE}">${a.NOM || a.LIBELLE || a.ANNEE}</option>`
+    ).join('');
+
+    const classeOptions = classesData.map(c =>
+        `<option value="${c.ID}">${c.NOM}</option>`
+    ).join('');
+
     Swal.fire({
         title: '<i class="fas fa-filter"></i> Filtrer les élèves',
         html: `
@@ -86,14 +115,22 @@ function showInitialFilterModal() {
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #495057;">Année Scolaire</label>
                 <select id="init-annee" class="form-control mb-2">
                     <option value="">-- Toutes --</option>
-                    <option value="2025-2026">2025-2026</option>
+                    ${anneeOptions}
+                </select>
+
+                <label class="form-label" style="font-weight:600;">Classe</label>
+                <select id="init-classe" class="form-control mb-3">
+                    <option value="">-- Toutes les classes --</option>
+                    ${classeOptions}
                 </select>
                 
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #495057;">Matricule</label>
-                <input type="text" id="init-matricule" class="form-control mb-2" placeholder="Ex: MAT-2024...">
+                <input type="text" id="init-matricule" class="form-control mb-2"
+                    value="${savedFilter.matricule || ''}" placeholder="Ex: MAT-2024..." placeholder="Ex: MAT-2024...">
                 
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #495057;">Nom de l'élève</label>
-                <input type="text" id="init-nom" class="form-control mb-2" placeholder="Nom ou partie du nom...">
+                <input type="text" id="init-nom" class="form-control mb-2" 
+                       value="${savedFilter.nom || ''}" placeholder="Nom...">
                 
                 <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #495057;">Statut</label>
                 <select id="init-status" class="form-control">
@@ -104,12 +141,14 @@ function showInitialFilterModal() {
                 </select>
             </div>
         `,
+        confirmButtonText: '<i class="fas fa-check"></i> Appliquer le filtre',
         confirmButtonColor: '#007bff',
         showCancelButton: true,
         cancelButtonText: 'Annuler',
         preConfirm: () => {
             return {
                 annee: document.getElementById('init-annee').value,
+                classe: document.getElementById('init-classe').value, // Nouveau
                 matricule: document.getElementById('init-matricule').value.trim(),
                 nom: document.getElementById('init-nom').value.trim(),
                 status: document.getElementById('init-status').value
@@ -200,8 +239,8 @@ function applyFilters() {
         let matchSearch = true;
         if (searchTerm) {
             matchSearch = (eleve.NOM?.toLowerCase().includes(searchTerm)) ||
-                          (eleve.MATRICULE?.toLowerCase().includes(searchTerm)) ||
-                          (eleve.EMAIL?.toLowerCase().includes(searchTerm));
+                (eleve.MATRICULE?.toLowerCase().includes(searchTerm)) ||
+                (eleve.EMAIL?.toLowerCase().includes(searchTerm));
         }
 
         let matchStatus = true;
@@ -306,7 +345,7 @@ function createPaginationButton(text, onClick, isDisabled = false, isDots = fals
 
     if (onClick && !isDisabled && !isActive) {
         button.onclick = onClick;
-        
+
         // Effets de survol uniquement pour les boutons cliquables
         button.onmouseover = () => {
             button.style.background = '#007bff';
@@ -335,23 +374,43 @@ async function loadEleves() {
     showSpinner();
     showPreloader();
     try {
-        const res = await fetch("handlers/GetEleve.ashx");
-        const data = await safeJson(res);
-        if (data.success) {
-            elevesData = data.Eleves || [];
-            
-            // Si c'est le premier chargement, on force le filtre modal
+        // Charger les pré-requis en parallèle pour gagner du temps
+        await Promise.all([loadAnnees(), loadClasses()]);
+
+        const resClasses = await fetch("/pages/parametres/classes/handlers/GetClasse.ashx");
+        if (!resClasses.ok) throw new Error("Handler Classes introuvable (404)");
+
+        const dataClasses = await safeJson(resClasses);
+        if (dataClasses.success) {
+            classesData = dataClasses.Classes || [];
+        }
+
+        // 2. Charger les ÉLÈVES (Chemin absolu depuis la racine /)
+        const resEleves = await fetch("/pages/modules/eleves/handlers/GetEleve.ashx");
+        if (!resEleves.ok) throw new Error("Handler Eleves introuvable (404)");
+
+        const dataEleves = await safeJson(resEleves); // Utilisation d'un nom clair pour éviter les erreurs
+
+        if (dataEleves.success) {
+            elevesData = dataEleves.Eleves || [];
+
             if (isInitialLoad) {
                 hideSpinner();
                 hidePreloader();
-                showInitialFilterModal(); 
+                showInitialFilterModal();
             } else {
-                // Sinon on rafraîchit simplement
                 applyFilters();
             }
+        } else {
+            Swal.fire('Erreur', dataEleves.message, 'error');
         }
+
     } catch (err) {
         console.error("Erreur chargement:", err);
+        // Si le handler n'est pas trouvé, on affiche une alerte claire
+        if (err.message.includes("404")) {
+            Swal.fire('Erreur 404', "Le fichier au chemin /handlers/GetClasse.ashx est introuvable.", 'error');
+        }
     } finally {
         hideSpinner();
         hidePreloader();
@@ -359,32 +418,40 @@ async function loadEleves() {
 }
 
 function applyInitialFilters(criteria) {
-    isInitialLoad = false; 
+    // Sauvegarde du filtre dans le localStorage
+    localStorage.setItem('lastInitialFilter', JSON.stringify(criteria));
+    
+    isInitialLoad = false;
 
-    // On définit le périmètre de base (le "Master Set")
+    // On définit le périmètre de base (baseFilteredData)
     baseFilteredData = elevesData.filter(eleve => {
         const matchAnnee = criteria.annee ? (eleve.ANNEE_TEXTE === criteria.annee) : true;
+
+        // Filtrage par Classe (vérifie l'ID de la classe)
+        const matchClasse = criteria.classe ? (eleve.ID_CLASSE === criteria.classe) : true;
+
         const matchMatricule = criteria.matricule ? (eleve.MATRICULE?.toLowerCase().includes(criteria.matricule.toLowerCase())) : true;
         const matchNom = criteria.nom ? (eleve.NOM?.toLowerCase().includes(criteria.nom.toLowerCase())) : true;
         const matchStatus = criteria.status ? (eleve.STATUT?.toLowerCase() === criteria.status.toLowerCase()) : true;
-        return matchAnnee && matchMatricule && matchNom && matchStatus;
+
+        return matchAnnee && matchClasse && matchMatricule && matchNom && matchStatus;
     });
 
-    // On synchronise filteredEleves pour l'affichage initial
+    // Synchronisation pour l'affichage
     filteredEleves = [...baseFilteredData];
 
-    createFilterControls(); // Crée la barre du haut si besoin
-    
-    // On vide la barre de recherche du haut pour ne pas créer de confusion
-    if(document.getElementById('search-filter')) document.getElementById('search-filter').value = '';
-    
+    createFilterControls();
+
+    // Reset du champ de recherche rapide en haut
+    if (document.getElementById('search-filter')) document.getElementById('search-filter').value = '';
+
     currentPage = 1;
     renderSimpleTable();
 
     // Notification optionnelle
-        const count = filteredEleves.length;
-        const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 });
-        Toast.fire({ icon: 'success', title: `${count} élève(s) trouvé(s)` });
+    const count = filteredEleves.length;
+    const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 });
+    Toast.fire({ icon: 'success', title: `${count} élève(s) trouvé(s)` });
 }
 
 function renderSimpleTable() {
@@ -450,7 +517,7 @@ function openAddEleveModal() {
     currentEleveId = null;
     document.getElementById('eleveForm').reset();
     const title = document.getElementById('eleveModalTitle');
-    if(title) title.innerHTML = '<i class="fas fa-plus"></i> Nouvel Élève';
+    if (title) title.innerHTML = '<i class="fas fa-plus"></i> Nouvel Élève';
     showModal();
 }
 
@@ -466,14 +533,14 @@ function openEditEleveModal(id) {
     document.getElementById('eleveTelephone').value = eleve.TELEPHONE || '';
     document.getElementById('eleveStatut').value = eleve.STATUT?.toLowerCase() || 'actif';
     const title = document.getElementById('eleveModalTitle');
-    if(title) title.innerHTML = '<i class="fas fa-edit"></i> Modifier Élève';
+    if (title) title.innerHTML = '<i class="fas fa-edit"></i> Modifier Élève';
     showModal();
 }
 
 async function saveEleve() {
     const body = {
         ID: currentEleveId,
-        ANNEE_ID: document.getElementById('eleveAnnee')?.value || 1, 
+        ANNEE_ID: document.getElementById('eleveAnnee')?.value || 1,
         MATRICULE: document.getElementById('eleveMatricule').value.trim(),
         NOM: document.getElementById('eleveNom').value.trim(),
         CLASSE: document.getElementById('eleveClasse').value,
@@ -532,10 +599,10 @@ function updateCounter() {
         counter.id = 'record-counter';
         counter.className = 'text-muted small mt-2 text-center';
         const table = document.querySelector('.dash-table');
-        if(table) table.after(counter);
+        if (table) table.after(counter);
     }
     const count = filteredEleves.length;
-    if(counter) counter.innerHTML = `Affichage de <b>${count}</b> élève(s) ${count !== elevesData.length ? '(filtrés)' : ''}`;
+    if (counter) counter.innerHTML = `Affichage de <b>${count}</b> élève(s) ${count !== elevesData.length ? '(filtrés)' : ''}`;
 }
 
 function goToPage(page) {
