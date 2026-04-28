@@ -522,7 +522,7 @@ function getStatutBadge(statut) {
     const s = String(statut || '').toLowerCase();
     let style = "padding: 4px 10px; border-radius: 20px; color: white; font-size: 12px; font-weight: 500;";
     if (s === 'actif') return `<span class="badge" style="background: #28a745; ${style}">✓ Actif</span>`;
-    if (s === 'suspendu') return `<span class="badge" style="background: #ffc107; ${style}">⚠ Suspendu</span>`;
+    if (s === 'suspendu') return `<span class="badge" style="background: #6c757d; ${style}">⚠ Suspendu</span>`;
     return `<span class="badge" style="background: #dc3545; ${style}">✗ Inactif</span>`;
 }
 

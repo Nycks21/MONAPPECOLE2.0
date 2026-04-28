@@ -175,31 +175,32 @@
                                             <span>Années</span>
                                         </a>
                                     </li>
-                                <% } %>
+                                    <% } %>
 
-                                <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin()) { %>
-                                    <li class="nav-item">
-                                        <a href="../utilisateur/utilisateur.aspx" class="nav-link">
-                                            <div style="width:30px; text-align:center; margin-right:10px;">
-                                                <i class="fas fa-user"></i>
-                                            </div>
-                                            <span>Utilisateur</span>
-                                        </a>
-                                    </li>
+                                        <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin()) { %>
+                                            <li class="nav-item">
+                                                <a href="../utilisateur/utilisateur.aspx" class="nav-link">
+                                                    <div style="width:30px; text-align:center; margin-right:10px;">
+                                                        <i class="fas fa-user"></i>
+                                                    </div>
+                                                    <span>Utilisateur</span>
+                                                </a>
+                                            </li>
 
-                                <% } %>
+                                            <% } %>
 
-                                <% if (AuthHelper.IsSuperAdmin()) { %>
-                                    <li class="nav-item">
-                                        <a href="requetes.aspx" class="nav-link active"
-                                            style="display: flex; align-items: center;">
-                                            <div style="width:30px; text-align:center; margin-right:10px;">
-                                                <i class="fas fa-database"></i>
-                                            </div>
-                                            <span>Requetes SQL</span>
-                                        </a>
-                                    </li>
-                                <% } %>
+                                                <% if (AuthHelper.IsSuperAdmin()) { %>
+                                                    <li class="nav-item">
+                                                        <a href="requetes.aspx" class="nav-link active"
+                                                            style="display: flex; align-items: center;">
+                                                            <div
+                                                                style="width:30px; text-align:center; margin-right:10px;">
+                                                                <i class="fas fa-database"></i>
+                                                            </div>
+                                                            <span>Requetes SQL</span>
+                                                        </a>
+                                                    </li>
+                                                    <% } %>
                             </ul>
                         </nav>
                     </div>
@@ -228,63 +229,68 @@
                     <!-- ═══════════════════════════════════════════════════════════
                     pages/utilisateur.html  —  Section Gestion des utilisateurs
                     ═══════════════════════════════════════════════════════════ -->
-                    <div class="dash-card" style="margin-top: -20px";>
-                        <div class="dash-card-head">
-                            <span class="dash-card-title"><i class="fas fa-terminal"></i> Console SQL</span>
-                        </div>
-                        <div class="dash-card-body">
-                            <div class="alert alert-warning">
-                                <i class="fas fa-exclamation-triangle"></i> <strong>Attention :</strong> Toute commande
-                                validée impactera directement la base de données.
+                    <section class="content" id="section-requetes">
+                        <div class="dash-card">
+                            <div class="dash-card-head">
+                                <span class="dash-card-title"><i class="fas fa-terminal"></i> Console SQL</span>
                             </div>
-                            <br />
-                            <button type="button" class="btn btn-danger" onclick="executeCustomSQL()" style="margin-bottom: 10px;">
+                            <div class="dash-card-body">
+                                <div class="alert alert-warning">
+                                    <i class="fas fa-exclamation-triangle"></i> <strong>Attention :</strong> Toute
+                                    commande
+                                    validée impactera directement la base de données.
+                                </div>
+                                <br />
+                                <button type="button" class="btn btn-danger" onclick="executeCustomSQL()"
+                                    style="margin-bottom: 10px;">
                                     <i class="fas fa-play"></i> Exécuter la requête
-                            </button>
-                            <br />
-                            <!-- ── Textarea : resize vertical uniquement ── -->
-                            <textarea id="sqlConsole" class="form-control" rows="8"
-                                placeholder="Écrivez votre requête ici (Ex: SELECT * FROM USERS)" style="font-family:'Consolas',monospace;background:#1e1e1e;color:#d4d4d4;
+                                </button>
+                                <br />
+                                <!-- ── Textarea : resize vertical uniquement ── -->
+                                <textarea id="sqlConsole" class="form-control" rows="8"
+                                    placeholder="Écrivez votre requête ici (Ex: SELECT * FROM USERS)" style="font-family:'Consolas',monospace;background:#1e1e1e;color:#d4d4d4;
                                        padding:15px;resize:vertical;min-height:120px;width:100%;
                                        box-sizing:border-box;">
                             </textarea>
 
-                            <div style="margin-top:12px;display:flex;align-items:center;
+                                <div style="margin-top:12px;display:flex;align-items:center;
                                         justify-content:space-between;flex-wrap:wrap;gap:8px;">
-                                <span style="font-size:12px;color:#6c757d;">
-                                    <i class="fas fa-keyboard"></i> Ctrl+Entrée pour exécuter
-                                </span>
-                            </div>
+                                    <span style="font-size:12px;color:#6c757d;">
+                                        <i class="fas fa-keyboard"></i> Ctrl+Entrée pour exécuter
+                                    </span>
+                                </div>
 
-                            <!-- ── Zone résultat ── -->
-                            <div class="view">
-                                <div class="wrapper">
-                                    <table class="table">
-                                        <div id="sqlExecutionResult"
-                                            style="margin-top:20px; width:100%; max-width:100%; max-height: 100%; overflow-x:auto !important; border:1px solid #dee2e6; border-radius:4px; background:#eeecec;">
-                                            <div id="sqlExecutionResult">
-                                                <div style="text-align:center; color:#6c757d; padding:20px;">
-                                                    <i class="fas fa-info-circle"></i> Les résultats de vos requêtes
-                                                    s'afficheront
-                                                    ici.
+                                <!-- ── Zone résultat ── -->
+                                <div class="view">
+                                    <div class="wrapper">
+                                        <table class="table">
+                                            <div id="sqlExecutionResult"
+                                                style="margin-top:20px; width:100%; max-width:100%; max-height: 100%; overflow-x:auto !important; border:1px solid #dee2e6; border-radius:4px; background:#eeecec;">
+                                                <div id="sqlExecutionResult">
+                                                    <div style="text-align:center; color:#6c757d; padding:20px;">
+                                                        <i class="fas fa-info-circle"></i> Les résultats de vos requêtes
+                                                        s'afficheront
+                                                        ici.
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    </table>
+                                        </table>
+                                    </div>
                                 </div>
                             </div>
                         </div>
+                    </section>
 
-                        <!-- ═══ SPINNER ═══ -->
-                        <div id="spinnerOverlay" aria-hidden="true" style="display:none;visibility:hidden;">
-                            <div class="spinner"></div>
-                        </div>
+                    <!-- ═══ SPINNER ═══ -->
+                    <div id="spinnerOverlay" aria-hidden="true" style="display:none;visibility:hidden;">
+                        <div class="spinner"></div>
+                    </div>
 
-                        <!-- ═══ SCRIPTS ═══ -->
-                        <script src="../../_assets/js/jquery-3.6.0.min.js?v=<%=AuthHelper.Version %>"></script>
-                        <script src="../../_assets/js/sweetalert2@11.js?v=<%=AuthHelper.Version %>"></script>
-                        <script src="js/script.js?v=<%=AuthHelper.Version %>"></script>
-                        <div id="toastContainer"></div>
+                    <!-- ═══ SCRIPTS ═══ -->
+                    <script src="../../_assets/js/jquery-3.6.0.min.js?v=<%=AuthHelper.Version %>"></script>
+                    <script src="../../_assets/js/sweetalert2@11.js?v=<%=AuthHelper.Version %>"></script>
+                    <script src="js/script.js?v=<%=AuthHelper.Version %>"></script>
+                    <div id="toastContainer"></div>
         </form>
     </body>
 

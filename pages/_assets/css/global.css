@@ -314,7 +314,10 @@ ul { list-style: none; }
     margin-top: var(--topbar-h);
     flex: 1;
     min-height: calc(100vh - var(--topbar-h));
-    padding: 20px;
+    padding-bottom: 20px;
+    padding-left: 20px;
+    padding-right: 20px;
+    padding-top: 10px;
     transition: margin-left var(--transition);
 }
 .content-wrapper.sidebar-collapsed { margin-left: 60px; }
@@ -322,8 +325,8 @@ ul { list-style: none; }
 /* ═══════════════════════════════════════════════
    CONTENT HEADER / BREADCRUMB
 ═══════════════════════════════════════════════ */
-.content-header { margin-bottom: 20px; }
-.content-header h1 { font-size: 22px; font-weight: 700; color: var(--text); }
+/*.content-header { margin-bottom: 20px; }
+.content-header h1 { font-size: 22px; font-weight: 700; color: var(--text); }*/
 
 .row { display: flex; flex-wrap: wrap; margin: 0 -8px; }
 .col-lg-6 { flex: 0 0 50%; max-width: 50%; padding: 0 8px; }
@@ -805,4 +808,15 @@ table {
 /* S'estompe légèrement quand la sidebar est ouverte sur mobile */
 @media (max-width: 768px) {
     #appVersionBadge { opacity: 0.6; }
+}
+
+/* Réduit l'espace au-dessus et en-dessous du titre "Eleves" */
+.content-header {
+    padding: 0px !important; /* Ajustez le 5px selon votre besoin */
+}
+
+/* Supprime la marge par défaut du titre h1 */
+.content-header h1 {
+    margin: -1 !important;
+    font-size: 1.5rem; /* Optionnel : réduit aussi la taille du texte si besoin */
 }
