@@ -224,7 +224,7 @@ function createPaginationControls(totalPages) {
     const paginationContainer = document.createElement('div');
     paginationContainer.id = 'pagination-container';
     paginationContainer.style.cssText = `
-        margin: 20px 0 0 0;
+        margin: 20px 0;
         display: flex;
         justify-content: center;
         align-items: center;
@@ -232,8 +232,8 @@ function createPaginationControls(totalPages) {
         flex-wrap: wrap;
     `;
 
-    const firstBtn = createPaginationButton('« Première', () => goToPage(1), currentPage === 1);
-    const prevBtn = createPaginationButton('‹ Précédent', () => {
+    const firstBtn = createPaginationButton('«', () => goToPage(1), currentPage === 1);
+    const prevBtn = createPaginationButton('‹', () => {
         if (currentPage > 1) {
             currentPage--;
             renderSimpleTable();
@@ -268,13 +268,13 @@ function createPaginationControls(totalPages) {
         paginationContainer.appendChild(createPaginationButton(totalPages, () => goToPage(totalPages)));
     }
 
-    const nextBtn = createPaginationButton('Suivant ›', () => {
+    const nextBtn = createPaginationButton('›', () => {
         if (currentPage < totalPages) {
             currentPage++;
             renderSimpleTable();
         }
     }, currentPage === totalPages);
-    const lastBtn = createPaginationButton('Dernière »', () => goToPage(totalPages), currentPage === totalPages);
+    const lastBtn = createPaginationButton('»', () => goToPage(totalPages), currentPage === totalPages);
     paginationContainer.appendChild(nextBtn);
     paginationContainer.appendChild(lastBtn);
 
@@ -286,36 +286,41 @@ function createPaginationButton(text, onClick, isDisabled = false, isDots = fals
     const button = document.createElement('button');
     button.textContent = text;
 
+    // Détecter si c'est la page actuelle (active)
+    const isActive = (text == currentPage && !isNaN(text));
+
     if (isDots) {
         button.style.cssText = `padding: 8px 12px; margin: 0 2px; border: none; background: transparent; color: #6c757d; cursor: default; font-size: 14px;`;
         return button;
     }
 
     button.style.cssText = `
-        padding: 8px 16px;
-        margin: 0 3px;
-        border: 1px solid ${isDisabled ? '#dee2e6' : '#007bff'};
-        background: ${isDisabled ? '#e9ecef' : 'white'};
-        color: ${isDisabled ? '#6c757d' : '#007bff'};
-        cursor: ${isDisabled ? 'default' : 'pointer'};
+        padding: 8px 14px;
+        border: 1px solid ${isActive || !isDisabled ? '#007bff' : '#dee2e6'};
+        background: ${isActive ? '#007bff' : (isDisabled ? '#e9ecef' : 'white')};
+        color: ${isActive ? 'white' : (isDisabled ? '#6c757d' : '#007bff')};
+        cursor: ${isDisabled || isActive ? 'default' : 'pointer'};
         border-radius: 6px;
-        font-size: 14px;
-        font-weight: 500;
+        font-weight: ${isActive ? '700' : '500'};
         transition: all 0.2s;
         min-width: 40px;
     `;
 
-    if (onClick && !isDisabled) {
+    if (onClick && !isDisabled && !isActive) {
         button.onclick = onClick;
+        
+        // Effets de survol uniquement pour les boutons cliquables
         button.onmouseover = () => {
             button.style.background = '#007bff';
             button.style.color = 'white';
             button.style.transform = 'translateY(-1px)';
+            button.style.boxShadow = '0 2px 5px rgba(0,123,255,0.3)';
         };
         button.onmouseout = () => {
             button.style.background = 'white';
             button.style.color = '#007bff';
             button.style.transform = 'translateY(0)';
+            button.style.boxShadow = 'none';
         };
     } else if (isDisabled) {
         button.disabled = true;

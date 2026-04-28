@@ -195,3 +195,34 @@ Fichiers :         1         1         0         0         0         1
    Débit :           40065.789 Méga-octets/min.
    Fin : lundi 27 avril 2026 12:00:02
 
+
+-------------------------------------------------------------------------------
+   ROBOCOPY   ::   Copie de fichiers robuste pour Windows     
+-------------------------------------------------------------------------------
+
+  Début : mardi 28 avril 2026 12:00:01
+   Source : C:\Program Files\Microsoft SQL Server\MSSQL14.SQLECOLE\MSSQL\Backup\
+     Dest : E:\ONYX\LOGS\PROJET\MONAPPECOLE2.0\backup\
+
+    Fichiers : *.*
+	    
+  Options : *.* /S /E /DCOPY:DA /COPY:DAT /PURGE /MIR /NP /R:3 /W:5 
+
+-------------------------------------------------------------------------------
+
+	                   1	C:\Program Files\Microsoft SQL Server\MSSQL14.SQLECOLE\MSSQL\Backup\
+	*Rép. SUPPL.      -1	E:\ONYX\LOGS\PROJET\MONAPPECOLE2.0\backup\logs\
+	  *Fichier SUPPL.		    9790	backup_history.txt
+2026/04/28 12:00:01 ERREUR 32 (0x00000020) Suppression du fichier supplémentaire E:\ONYX\LOGS\PROJET\MONAPPECOLE2.0\backup\logs\backup_history.txt
+Le processus ne peut pas accÃ©der au fichier car ce fichier est utilisÃ© par un autre processus.
+
+
+-------------------------------------------------------------------------------
+
+               Total     Copié    IgnoréDiscordance     ÉCHEC    Extras
+     Rép :         1         0         1         0         0         1
+Fichiers :         1         0         1         0         0         1
+  Octets :   12.68 m         0   12.68 m         0         0     9.5 k
+   Heures:   0:00:00   0:00:00                       0:00:00   0:00:00
+   Fin : mardi 28 avril 2026 12:00:01
+

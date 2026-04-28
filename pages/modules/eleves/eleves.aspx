@@ -236,6 +236,9 @@
                                 <span class="dash-card-title"><i class="fas fa-users-cog"></i> Gestion des
                                     élèves</span>
                                 <div class="action-buttons">
+                                    <button type="button" class="btn btn-info" onclick="showInitialFilterModal()">
+                                        <i class="fas fa-search"></i> Rechercher
+                                    </button>
                                     <button class="btn btn-success btn-sm" onclick="openAddEleveModal()"
                                         data-i18n="common.ajouter">
                                         <i class="fas fa-plus"></i> Ajouter

@@ -18,7 +18,7 @@ IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'RANNEE')
 BEGIN
     CREATE TABLE [dbo].[RANNEE] (
         ID           INT           IDENTITY(1,1) PRIMARY KEY,
-        ANNEE        NVARCHAR(9)   NOT NULL,        -- ex: "2025-2026"
+        ANNEE        NVARCHAR(9)   NOT NULL,        -- ex: "1"
         DATE_DEBUT   DATE          NOT NULL,
         DATE_FIN     DATE          NOT NULL,
         CLOTURE      BIT           NOT NULL DEFAULT 0,
@@ -218,43 +218,6 @@ BEGIN
 END
 GO
 
--- ─────────────────────────────────────────────────
--- DONNÉES INITIALES — NIVEAUX
--- (cohérentes avec les données déjà insérées dans CLASSES)
--- ─────────────────────────────────────────────────
-IF NOT EXISTS (SELECT 1 FROM NIVEAUX)
-BEGIN
-    INSERT INTO NIVEAUX (NOM, ORDRE, STATUT) VALUES
-    (N'6ème',      1, 1),
-    (N'5ème',      2, 1),
-    (N'4ème',      3, 1),
-    (N'3ème',      4, 1),
-    (N'2nde',      5, 1),
-    (N'1ère',      6, 1),
-    (N'Terminale', 7, 1);
-END
-GO
-
--- ─────────────────────────────────────────────────
--- DONNÉES INITIALES — SALLES
--- (cohérentes avec les données déjà insérées dans CLASSES)
--- ─────────────────────────────────────────────────
-IF NOT EXISTS (SELECT 1 FROM SALLES)
-BEGIN
-    INSERT INTO SALLES (NUMERO, CAPACITE, STATUT) VALUES
-    (N'Salle 101', 35, 1),
-    (N'Salle 102', 35, 1),
-    (N'Salle 201', 35, 1),
-    (N'Salle 202', 35, 1),
-    (N'Salle 203', 35, 1),
-    (N'Salle 301', 35, 1),
-    (N'Salle 401', 40, 1),
-    (N'Salle 402', 40, 1),
-    (N'Salle 403', 40, 1),
-    (N'Salle 404', 40, 1);
-END
-GO
-
 -- Table pour stocker les logs d'erreurs
 IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'ErrorLogs')
 BEGIN
@@ -272,43 +235,18 @@ BEGIN
     );
 END
 
-
-INSERT INTO RANNEE (ANNEE, DATE_DEBUT, DATE_FIN, CLOTURE)
-VALUES ('2025-2026', '2025-09-01', '2026-06-30', 0);
-
-
 -- =====================================================
 -- INSERTION DES DONNÉES INITIALES
 -- =====================================================
 
--- Insertion des classes
-IF NOT EXISTS (SELECT 1 FROM CLASSES)
+-- Insertion des ANNEE
+IF NOT EXISTS (SELECT 1 FROM RANNEE)
 BEGIN
-    INSERT INTO CLASSES (NOM, NIVEAU, EFFECTIF, TITULAIRE, SALLE, STATUT) VALUES
-    ('6ème A', '6ème', 32, 'Mme RABE', 'Salle 101', N'1'),
-    ('6ème B', '6ème', 30, 'M. RAKOTO', 'Salle 102', N'1'),
-    ('5ème A', '5ème', 28, 'Mme RAVELO', 'Salle 201', N'1'),
-    ('5ème B', '5ème', 29, 'M. ANDRIA', 'Salle 202', N'1'),
-    ('4ème A', '4ème', 27, 'Mme RALISON', 'Salle 203', N'1'),
-    ('3ème A', '3ème', 25, 'M. RANDRIAN', 'Salle 301', N'1'),
-    ('2nde A', '2nde', 35, 'Mme RABE', 'Salle 401', N'1'),
-    ('1ère A', '1ère', 30, 'M. RAKOTO', 'Salle 402', N'1'),
-    ('Tle C', 'Terminale', 28, 'Mme RAVELO', 'Salle 403', N'1'),
-    ('Tle D', 'Terminale', 26, 'M. ANDRIA', 'Salle 404', N'1');
+    INSERT INTO RANNEE (ANNEE, DATE_DEBUT, DATE_FIN, CLOTURE)
+    VALUES ('1', '2025-09-01', '2026-06-30', 0);
 END
 
--- Insertion des matières
-IF NOT EXISTS (SELECT 1 FROM MATIERES)
-BEGIN
-    INSERT INTO MATIERES (NOM, ENSEIGNANT, COEFFICIENT, HEURES_SEMAINE, NIVEAU) VALUES
-    ('Mathématiques', 'M. RAKOTO', 5, 5, 'Tous niveaux'),
-    ('Français', 'Mme RABE', 4, 4, 'Tous niveaux'),
-    ('Anglais', 'M. ANDRIA', 3, 3, 'Tous niveaux'),
-    ('Physique-Chimie', 'Mme RAVELO', 4, 4, 'Lycée'),
-    ('SVT', 'M. RANDRIAN', 4, 3, 'Tous niveaux'),
-    ('Histoire-Géo', 'Mme RALISON', 3, 3, 'Tous niveaux');
-END
-
+-- Insertion des USERROLE
 IF NOT EXISTS (SELECT 1 FROM USERROLE)
 BEGIN
     INSERT INTO USERROLE (ROLEID, ROLENAME)VALUES
@@ -326,60 +264,39 @@ BEGIN
     INSERT INTO USERS (USERNAME, NOM, EMAIL, PWD, ROLEID, TELEPHONE, ACTIVE)
     VALUES
     (N'SuperAdmin', N'SuperAdmin', N'admin@ecole.com', N'0', 0, N'0321234500', N'1'),
-    (N'RAKOTO', N'RAKOTO', N'prof.rakoto@ecole.com', N'1', 3, N'0321234501', N'1');
 END
-
--- Insertion des élèves
-IF NOT EXISTS (SELECT 1 FROM ELEVES)
-BEGIN
-    INSERT INTO ELEVES (MATRICULE, NOM, CLASSE, STATUT, EMAIL, TELEPHONE, DATE_NAISSANCE, GENRE, ADRESSE, PARENT, DATE_INSCRIPTION) VALUES
-    ('2024001', 'Jean RAKOTO', '3ème A', 'actif', 'jean.rakoto@ecole.com', '0321234567', '2010-05-12', 'M', 'Antananarivo', 'M. RAKOTO', '2024-01-15'),
-    ('2024002', 'Marie RABE', '5ème B', 'actif', 'marie.rabe@ecole.com', '0321234568', '2009-08-23', 'F', 'Antananarivo', 'Mme RABE', '2024-01-15'),
-    ('2024003', 'Paul ANDRIA', '2nde A', 'actif', 'paul.andria@ecole.com', '0321234569', '2008-11-05', 'M', 'Antsirabe', 'M. ANDRIA', '2024-01-16'),
-    ('2024004', 'Sophie RAVO', '4ème C', 'inactif', 'sophie.ravo@ecole.com', '0321234570', '2009-02-18', 'F', 'Fianarantsoa', 'Mme RAVO', '2024-01-14'),
-    ('2024005', 'Luc RADO', '6ème B', 'actif', 'luc.rado@ecole.com', '0321234571', '2011-07-30', 'M', 'Toamasina', 'M. RADO', '2024-01-17');
-END
-
--- Insertion des frais scolaires
-IF NOT EXISTS (SELECT 1 FROM FRAIS_SCOLAIRES)
-BEGIN
-    INSERT INTO FRAIS_SCOLAIRES (ELEVE_MATRICULE, MONTANT_TOTAL, PAYE, DERNIER_PAIEMENT, STATUT) VALUES
-    ('2024001', 250000, 150000, '2024-03-15', 'Partiel'),
-    ('2024002', 250000, 250000, '2024-03-20', 'Payé'),
-    ('2024003', 250000, 80000, '2024-02-10', 'En retard'),
-    ('2024004', 250000, 200000, '2024-03-10', 'Partiel'),
-    ('2024005', 250000, 250000, '2024-03-18', 'Payé');
-END
-
--- Insertion des bulletins
-IF NOT EXISTS (SELECT 1 FROM BULLETINS)
-BEGIN
-    INSERT INTO BULLETINS (ELEVE_MATRICULE, MATIERE_NOM, ENSEIGNANT, NOTE, COEFFICIENT, PERIODE) VALUES
-    ('2024001', 'Mathématiques', 'M. RAKOTO', 15, 5, 'T1'),
-    ('2024001', 'Français', 'Mme RABE', 14, 4, 'T1'),
-    ('2024002', 'Mathématiques', 'M. RAKOTO', 17, 5, 'T1'),
-    ('2024002', 'Français', 'Mme RABE', 16, 4, 'T1');
-END
-
--- Insertion des absences
-IF NOT EXISTS (SELECT 1 FROM CLASSES)
-BEGIN
-    INSERT INTO ABSENCES_RETARDS (ELEVE_MATRICULE, TYPE_ENUM, DATE_ABSENCE, DUREE, MOTIF, JUSTIFIE) VALUES
-    ('2024001', 'absence', '2024-03-10', 1, 'Maladie', 'non'),
-    ('2024001', 'retard', '2024-03-12', 0.5, 'Transport', 'non'),
-    ('2024002', 'absence', '2024-03-05', 1, 'Rendez-vous médical', 'oui');
-END
-
-
 
 -- Insertion des données exemples
+IF NOT EXISTS (SELECT 1 FROM ELEVES)
+BEGIN
 INSERT INTO [dbo].[ELEVES] 
     (MATRICULE, ANNEE_ID, NOM, CLASSE, STATUT, EMAIL, TELEPHONE, DATE_NAISSANCE, GENRE, ADRESSE, PARENT)
 VALUES 
-    ('MAT-2024-001', '2025-2026', 'RAKOTO Jean', 'EE49A440-A695-4233-B42E-65FF13284634', 'actif', 'jean.rakoto@email.com', '0340011122', '2012-05-15', 'M', 'Lot IV G 12 Antananarivo', 'Rakoto Senior'),
-    ('MAT-2024-002', '2025-2026', 'RANDRIA Alice', 'EE49A440-A695-4233-B42E-65FF13284634', 'actif', 'alice.rand@email.com', '0320033344', '2013-02-20', 'F', 'Cité des 67ha', 'Mme Randria'),
-    ('MAT-2024-003', '2025-2026', 'ANDRY Solo', 'EE49A440-A695-4233-B42E-65FF13284634', 'suspendu', 'solo.andry@email.com', '0334455566', '2006-11-10', 'M', 'Analamahitsy P.78', 'Andry Père'),
-    ('MAT-2024-004', '2025-2026', 'PEREIRA Maria', 'EE49A440-A695-4233-B42E-65FF13284634', 'actif', 'maria.p@email.com', '0345566677', '2007-01-05', 'F', 'Ambohibao Sud', 'Pereira Manuel');
+    ('MAT-2024-001', '1', 'RAKOTO Jean', 'EE49A440-A695-4233-B42E-65FF13284634', 'actif', 'jean.rakoto@email.com', '0340011122', '2012-05-15', 'M', 'Lot IV G 12 Antananarivo', 'Rakoto Senior'),
+    ('MAT-2024-002', '1', 'RANDRIA Alice', 'EE49A440-A695-4233-B42E-65FF13284634', 'actif', 'alice.rand@email.com', '0320033344', '2013-02-20', 'F', 'Cité des 67ha', 'Mme Randria'),
+    ('MAT-2024-003', '1', 'ANDRY Solo', 'EE49A440-A695-4233-B42E-65FF13284634', 'suspendu', 'solo.andry@email.com', '0334455566', '2006-11-10', 'M', 'Analamahitsy P.78', 'Andry Père'),
+    ('MAT-2024-004', '1', 'PEREIRA Maria', 'EE49A440-A695-4233-B42E-65FF13284634', 'actif', 'maria.p@email.com', '0345566677', '2007-01-05', 'F', 'Ambohibao Sud', 'Pereira Manuel'),
+    ('MAT-2024-005', '1', 'RASOA Marie', 'EE49A440-A695-4233-B42E-65FF13284634', 'actif', 'marie.rasoa@email.com', '0341122233', '2011-03-12', 'F', 'Sabotsy Namehana', 'Rasoa Pierre'),
+    ('MAT-2024-006', '1', 'MANITRA Tahina', 'EE49A440-A695-4233-B42E-65FF13284634', 'actif', 'tahina.m@email.com', '0324455566', '2010-07-25', 'M', 'Ivato Aéroport', 'Manitra David'),
+    ('MAT-2024-007', '1', 'RAVELO Fano', 'EE49A440-A695-4233-B42E-65FF13284634', 'inactif', 'fano.r@email.com', '0337788899', '2012-12-01', 'M', 'Tanjombato', 'Ravelo Jean'),
+    ('MAT-2024-008', '1', 'SITRAKA Noella', 'EE49A440-A695-4233-B42E-65FF13284634', 'actif', 'noella.s@email.com', '0348899900', '2013-05-30', 'F', 'Itaosy', 'Mme Sitraka'),
+    ('MAT-2024-009', '1', 'HARINAIVO Luc', 'EE49A440-A695-4233-B42E-65FF13284634', 'suspendu', 'luc.h@email.com', '0321112233', '2008-09-14', 'M', 'Ambohipo', 'Harinaivo Paul'),
+    ('MAT-2024-010', '1', 'ANDRIANINA Mamy', 'EE49A440-A695-4233-B42E-65FF13284634', 'actif', 'mamy.a@email.com', '0332223344', '2009-10-10', 'M', 'Besarety', 'Andrianina Eric'),
+    ('MAT-2024-011', '1', 'ZAFY Louise', 'EE49A440-A695-4233-B42E-65FF13284634', 'actif', 'louise.z@email.com', '0343334455', '2014-01-20', 'F', 'Ampefiloha', 'Zafy Marc'),
+    ('MAT-2024-012', '1', 'TOJO Kely', 'EE49A440-A695-4233-B42E-65FF13284634', 'actif', 'tojo.k@email.com', '0325556677', '2012-04-18', 'M', 'Anosizato', 'Mme Tojo'),
+    ('MAT-2024-013', '1', 'MIALISOA Fitia', 'EE49A440-A695-4233-B42E-65FF13284634', 'actif', 'fitia.m@email.com', '0336667788', '2011-11-22', 'F', 'Manjakaray', 'Mialisoa Robert'),
+    ('MAT-2024-014', '1', 'NIRINA Bakoly', 'EE49A440-A695-4233-B42E-65FF13284634', 'inactif', 'bakoly.n@email.com', '0347778899', '2010-06-05', 'F', 'Ambanidia', 'Nirina Simon'),
+    ('MAT-2024-015', '1', 'TSIRY Arnaud', 'EE49A440-A695-4233-B42E-65FF13284634', 'actif', 'arnaud.t@email.com', '0329990011', '2009-08-12', 'M', 'Ambohidratrimo', 'Tsiry Gerard'),
+    ('MAT-2024-016', '1', 'VONY Clara', 'EE49A440-A695-4233-B42E-65FF13284634', 'suspendu', 'clara.v@email.com', '0330001122', '2007-03-25', 'F', 'Alasora', 'Vony Jacques'),
+    ('MAT-2024-017', '1', 'MAMY Henri', 'EE49A440-A695-4233-B42E-65FF13284634', 'actif', 'henri.m@email.com', '0342224466', '2012-05-02', 'M', 'Isoraka', 'Mme Henriette'),
+    ('MAT-2024-018', '1', 'LALAO Martine', 'EE49A440-A695-4233-B42E-65FF13284634', 'actif', 'martine.l@email.com', '0323335577', '2013-07-14', 'F', 'Andravoahangy', 'Lalao Francois'),
+    ('MAT-2024-019', '1', 'HASINA Ranto', 'EE49A440-A695-4233-B42E-65FF13284634', 'actif', 'ranto.h@email.com', '0334446688', '2008-02-28', 'M', 'Analamahitsy', 'Hasina Alain'),
+    ('MAT-2024-020', '1', 'SOA Volana', 'EE49A440-A695-4233-B42E-65FF13284634', 'actif', 'volana.s@email.com', '0345557799', '2011-09-09', 'F', 'Ambohibao Sud', 'Soa Thomas'),
+    ('MAT-2024-021', '1', 'DIMBY Herisoa', 'EE49A440-A695-4233-B42E-65FF13284634', 'inactif', 'dimby.h@email.com', '0326668800', '2010-01-15', 'M', 'Ambohimanarina', 'Dimby Jean-Noel'),
+    ('MAT-2024-022', '1', 'FANJA Dina', 'EE49A440-A695-4233-B42E-65FF13284634', 'actif', 'dina.f@email.com', '0337779911', '2012-10-31', 'F', '67ha Nord', 'Fanja Pascal'),
+    ('MAT-2024-023', '1', 'RAOUL Julien', 'EE49A440-A695-4233-B42E-65FF13284634', 'actif', 'julien.r@email.com', '0348880022', '2013-04-12', 'M', 'Mahamasina', 'Mme Raoul'),
+    ('MAT-2024-024', '1', 'KOLOINA Sarah', 'EE49A440-A695-4233-B42E-65FF13284634', 'actif', 'sarah.k@email.com', '0321113355', '2009-05-20', 'F', 'Ankadifotsy', 'Koloina Felix');
+END
 
 -- Vérification
 SELECT * FROM ELEVES;
