@@ -11,7 +11,8 @@ let currentPage = 1;
 let rowsPerPage = 10;
 let isInitialLoad = true;
 let classesData = [];
-let anneesData = []; // Pour savoir si on doit afficher le modal de démarrage
+let anneesData = [];
+let sortDirection = 1; // 1 pour ASC, -1 pour DESC // Pour savoir si on doit afficher le modal de démarrage
 
 // ============================================================================
 // INITIALISATION
@@ -263,6 +264,22 @@ function resetFilters() {
     applyFilters();
 }
 
+function sortData(column) {
+    sortDirection *= -1; // Alterne la direction à chaque clic
+
+    filteredEleves.sort((a, b) => {
+        let valA = (a[column] || "").toString().toLowerCase();
+        let valB = (b[column] || "").toString().toLowerCase();
+
+        if (valA < valB) return -1 * sortDirection;
+        if (valA > valB) return 1 * sortDirection;
+        return 0;
+    });
+
+    currentPage = 1;
+    renderSimpleTable(); // Relance l'affichage
+}
+
 // ============================================================================
 // CONTRÔLES DE PAGINATION (VERSION AMÉLIORÉE)
 // ============================================================================
@@ -420,7 +437,7 @@ async function loadEleves() {
 function applyInitialFilters(criteria) {
     // Sauvegarde du filtre dans le localStorage
     localStorage.setItem('lastInitialFilter', JSON.stringify(criteria));
-    
+
     isInitialLoad = false;
 
     // On définit le périmètre de base (baseFilteredData)
@@ -470,7 +487,7 @@ function renderSimpleTable() {
             <td>${getMatriculeBadge(eleve.MATRICULE)}</td>
             <td>${eleve.ANNEE_TEXTE || '-'}</td>
             <td>${getNomBadge(eleve.NOM)}</td>
-            <td>${eleve.CLASSE_NOM || '-'}</td>
+            <td>${getClasseBadge(eleve.CLASSE_NOM || '-')}</td>
             <td>${eleve.EMAIL || '-'}</td>
             <td>${eleve.TELEPHONE || '-'}</td>
             <td>${getStatutBadge(eleve.STATUT)}</td>
@@ -507,6 +524,16 @@ function getStatutBadge(statut) {
     if (s === 'actif') return `<span class="badge" style="background: #28a745; ${style}">✓ Actif</span>`;
     if (s === 'suspendu') return `<span class="badge" style="background: #ffc107; ${style}">⚠ Suspendu</span>`;
     return `<span class="badge" style="background: #dc3545; ${style}">✗ Inactif</span>`;
+}
+
+function getClasseBadge(classeNom) {
+    const nom = classeNom || '-';
+    return `
+        <span style="background-color: #ffffff; color: #007bff; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; border: 1px solid #007bff; white-space: nowrap;">
+            <i class="fas fa-folder" style="margin-right: 6px; font-size: 10px;"></i>
+            ${nom}
+        </span>
+    `;
 }
 
 // ============================================================================

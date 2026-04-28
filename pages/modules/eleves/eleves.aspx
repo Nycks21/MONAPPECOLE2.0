@@ -261,14 +261,21 @@
                                     <table class="dash-table">
                                         <thead>
                                             <tr>
-                                                <th>Matricule</th>
-                                                <th>Année scolaire</th>
-                                                <th>Nom</th>
-                                                <th>Classe</th>
-                                                <th>Email</th>
-                                                <th>Téléphone</th>
-                                                <th>Statut</th>
-                                                <th>Actions</th>
+                                                <th onclick="sortData('MATRICULE')" style="cursor:pointer;">MATRICULE <i
+                                                        class="fas fa-sort ml-1"></i></th>
+                                                <th onclick="sortData('ANNEE_TEXTE')" style="cursor:pointer;">ANNÉE <i
+                                                        class="fas fa-sort ml-1"></i></th>
+                                                <th onclick="sortData('NOM')" style="cursor:pointer;">NOM <i
+                                                        class="fas fa-sort ml-1"></i></th>
+                                                <th onclick="sortData('CLASSE_NOM')" style="cursor:pointer;">CLASSE <i
+                                                        class="fas fa-sort ml-1"></i></th>
+                                                <th onclick="sortData('EMAIL')" style="cursor:pointer;">EMAIL <i
+                                                        class="fas fa-sort ml-1"></i></th>
+                                                <th onclick="sortData('TELEPHONE')" style="cursor:pointer;">TÉLÉPHONE <i
+                                                        class="fas fa-sort ml-1"></i></th>
+                                                <th onclick="sortData('STATUT')" style="cursor:pointer;">STATUT <i
+                                                        class="fas fa-sort ml-1"></i></th>
+                                                <th>ACTIONS</th>
                                             </tr>
                                         </thead>
                                         <tbody id="elevesTableBody"></tbody>
