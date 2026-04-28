@@ -246,6 +246,12 @@
                                     <button class="btn btn-primary btn-sm" onclick="exportEleves()">
                                         <i class="fas fa-download"></i> Exporter
                                     </button>
+                                    <input type="file" id="importExcelInput" style="display:none;" accept=".xlsx, .xls"
+                                        onchange="handleImport(this)">
+                                    <button type="button" class="btn btn-warning btn-sm"
+                                        onclick="document.getElementById('importExcelInput').click()">
+                                        <i class="fas fa-file-upload"></i> Importer Excel
+                                    </button>
                                     <button class="btn btn-success btn-sm" onclick="exportElevesToExcelOnly()">
                                         <i class="fas fa-file-excel"></i> Excel
                                     </button>
@@ -377,6 +383,92 @@
                         <button class="btn btn-danger" onclick="closeEleveModal()">
                             <i class="fas fa-times"></i> Annuler
                         </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODAL IMPORTATION -->
+            <div id="modalImport" class="modal">
+                <div class="modal-content" style="max-width: 600px;">
+                    <div class="modal-header">
+                        <h3>Importations élèves</h3>
+                        <span class="close" onclick="closeModal('modalImport')">&times;</span>
+                    </div>
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label>Modèle N°</label>
+                            <select id="importModele" class="form-control">
+                                <option value="01">01 - IMPORTATIONS ÉLÈVES</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Source</label>
+                            <div style="display: flex; gap: 10px;">
+                                <input type="text" id="fileNameDisplay" class="form-control" readonly
+                                    placeholder="Aucun fichier choisi">
+                                <input type="file" id="excelFile" style="display:none" accept=".xlsx, .xls" onchange="updateFileName()">
+                                <button type="button" class="btn btn-light border"
+                                    onclick="document.getElementById('excelFile').click()">
+                                    <i class="fas fa-folder-open"></i> Parcourir
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="modal-body">
+                            <div class="row">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer" style="background: #f4f4f4; justify-content: space-between;">
+                        <button class="btn btn-light border" onclick="openModal('modalMapping')">
+                            <i class="fas fa-cog"></i> Voir paramétrage
+                        </button>
+                        <div style="display: flex; gap: 10px;">
+                            <button class="btn btn-success" id="btnLaunchImport" onclick="launchImport()" disabled>
+                                <i class="fas fa-check"></i> Lancer l'import
+                            </button>
+                            <button class="btn btn-light border" onclick="closeModal('modalImport')">
+                                <i class="fas fa-history"></i> Historique
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODAL MAPPAGE -->
+            <div id="modalMapping" class="modal" style="z-index: 1100;">
+                <div class="modal-content" style="max-width: 500px;">
+                    <div class="modal-header">
+                        <h3>Paramétrage des colonnes</h3>
+                        <span class="close" onclick="closeModal('modalMapping')">&times;</span>
+                    </div>
+                    <div class="modal-body">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Champ Logiciel</th>
+                                    <th>Colonne Excel</th>
+                                </tr>
+                            </thead>
+                            <tbody id="mappingTableBody">
+                                <tr>
+                                    <td>Matricule</td>
+                                    <td><input type="text" class="form-control sm" data-field="MATRICULE" value="A">
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td>Nom Complet</td>
+                                    <td><input type="text" class="form-control sm" data-field="NOM" value="B"></td>
+                                </tr>
+                                <tr>
+                                    <td>Classe</td>
+                                    <td><input type="text" class="form-control sm" data-field="CLASSE" value="C"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn btn-primary" onclick="saveMapping()">Enregistrer le modèle</button>
                     </div>
                 </div>
             </div>
