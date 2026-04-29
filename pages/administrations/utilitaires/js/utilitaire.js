@@ -201,16 +201,16 @@ function processFile(file) {
 function autoMapColumns() {
     // Tentative de détection automatique par nom de colonne
     var aliases = {
-        'MATRICULE'  : ['matricule', 'mat', 'num', 'numero', 'id élève'],
-        'ANNEE_SCO'  : ['annee', 'annee_sco', 'an', 'numero'],
-        'NOM'        : ['nom', 'nom complet', 'nom et prénom', 'eleve', 'élève', 'name'],
-        'CLASSE'     : ['classe', 'class', 'groupe'],
-        'EMAIL'      : ['email', 'mail', 'courriel', 'e-mail'],
-        'TELEPHONE'  : ['telephone', 'tel', 'tél', 'phone', 'mobile'],
+        'MATRICULE'  : ['matricule', 'Matricule', 'num', 'numero', 'id élève'],
+        'ANNEE_SCO'  : ['annee', 'annee_sco', 'Année Scolaire', 'numero'],
+        'NOM'        : ['nom', 'Nom complet', 'nom et prénom', 'eleve', 'élève', 'name'],
+        'CLASSE'     : ['Classe', 'class', 'groupe'],
+        'EMAIL'      : ['Email', 'mail', 'courriel', 'e-mail'],
+        'TELEPHONE'  : ['Téléphone', 'tel', 'tél', 'phone', 'mobile'],
         'DATE_NAISS' : ['date de naissance', 'datenaissance', 'ddn', 'naissance', 'birthdate'],
-        'GENRE'      : ['genre', 'sexe', 'sex', 'gender'],
-        'ADRESSE'    : ['adresse', 'address'],
-        'PARENT'     : ['parent', 'tuteur', 'père', 'mère', 'responsable']
+        'GENRE'      : ['genre', 'sexe', 'sex', 'gender', 'Genre (M/F)'],
+        'ADRESSE'    : ['Adresse', 'address'],
+        'PARENT'     : ['parent', 'tuteur', 'père', 'mère', 'responsable', 'Parent / Tuteur']
     };
 
     IMP.mapping = {};
@@ -625,8 +625,8 @@ function resetImport() {
 // ─────────────────────────────────────────────
 function downloadTemplate() {
     var headers = CHAMPS.map(function (c) { return c.label + (c.required ? ' *' : ''); });
-    var example = ['2024001', 'RAKOTO Jean', '6ème A', 'rakoto@mail.com',
-                   '034 12 345 67', '2010-05-15', 'M', 'Lot II A Antananarivo', 'RAKOTO Pierre'];
+    var example = ['2024001', '1', 'RAKOTO Jean', '6ème A', 'rakoto@mail.com',
+                   '0341234567', '01/05/2010', 'M', 'Lot II A Antananarivo', 'RAKOTO Pierre'];
 
     var ws   = XLSX.utils.aoa_to_sheet([headers, example]);
     var wb   = XLSX.utils.book_new();
