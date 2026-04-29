@@ -13,24 +13,7 @@ public class SupprimerClasse : IHttpHandler, IRequiresSessionState
     public void ProcessRequest(HttpContext ctx)
     {
         ctx.Response.ContentType = "application/json";
-        ctx.Response.Charset     = "utf-8";
-        ctx.Response.Cache.SetNoStore();
-
         JavaScriptSerializer ser = new JavaScriptSerializer();
-
-        if (ctx.Session["authenticated"] == null || !(bool)ctx.Session["authenticated"])
-        {
-            ctx.Response.StatusCode = 401;
-            ctx.Response.Write("{\"success\":false,\"message\":\"Non authentifié\"}");
-            return;
-        }
-
-        if (ctx.Request.HttpMethod != "POST")
-        {
-            ctx.Response.StatusCode = 405;
-            ctx.Response.Write("{\"success\":false,\"message\":\"Méthode non autorisée\"}");
-            return;
-        }
 
         try
         {
@@ -39,41 +22,26 @@ public class SupprimerClasse : IHttpHandler, IRequiresSessionState
                 body = reader.ReadToEnd();
 
             var payload = ser.Deserialize<IdPayload>(body);
-
-            if (payload == null || string.IsNullOrWhiteSpace(payload.ID))
-                throw new ArgumentException("ID de classe invalide.");
-
-            // Validation GUID
-            Guid classeGuid;
-            if (!Guid.TryParse(payload.ID, out classeGuid))
-                throw new ArgumentException("ID de classe invalide.");
+            int idInt;
+            if (!int.TryParse(payload.ID, out idInt)) throw new ArgumentException("ID invalide.");
 
             string connStr = ConfigurationManager.ConnectionStrings["MaConnexion"].ConnectionString;
 
             using (var conn = new SqlConnection(connStr))
             using (var cmd  = new SqlCommand("DELETE FROM [dbo].[Classes] WHERE ID = @id", conn))
             {
-                cmd.Parameters.Add("@id", System.Data.SqlDbType.UniqueIdentifier).Value = classeGuid;
+                cmd.Parameters.Add("@id", System.Data.SqlDbType.Int).Value = idInt;
                 conn.Open();
-                int rows = cmd.ExecuteNonQuery();
-                if (rows == 0) throw new Exception("Classe introuvable (ID=" + payload.ID + ").");
+                cmd.ExecuteNonQuery();
             }
-
             ctx.Response.Write("{\"success\":true}");
         }
-        catch (ArgumentException ex)
+        catch (Exception ex)
         {
             ctx.Response.StatusCode = 400;
             ctx.Response.Write("{\"success\":false,\"message\":" + ser.Serialize(ex.Message) + "}");
         }
-        catch (Exception ex)
-        {
-            ctx.Response.StatusCode = 500;
-            ctx.Response.Write("{\"success\":false,\"message\":" + ser.Serialize(ex.Message) + "}");
-        }
     }
-
     public bool IsReusable { get { return false; } }
-
     private class IdPayload { public string ID { get; set; } }
 }

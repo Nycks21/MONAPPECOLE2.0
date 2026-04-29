@@ -53,7 +53,7 @@ public class GetClasse : IHttpHandler, IRequiresSessionState
                     {
                         list.Add(new
                         {
-                            ID           = reader.IsDBNull(0) ? "" : reader.GetGuid(0).ToString(),
+                            ID           = reader.IsDBNull(0) ? "" : reader.GetInt32(0).ToString(),
                             NOM          = reader.IsDBNull(1) ? "" : reader.GetString(1),
 
                             // GUID brut — pour pré-remplir le select Niveau en mode édition
