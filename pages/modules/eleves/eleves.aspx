@@ -166,39 +166,51 @@
                                 <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin()) { %>
                                     <li class="nav-item">
                                         <div class="nav-section">Administrations</div>
-                                        <a href="../../administrations/annee/annee.aspx" class="nav-link">
+                                        <a href="../../administrations/utilitaires/utilitaires.aspx" class="nav-link">
                                             <div style="width:30px; text-align:center; margin-right:10px;">
-                                                <i class="fas fa-calendar-alt"></i>
+                                                <i class="fas fa-cogs"></i>
                                             </div>
-                                            <span>Années</span>
+                                            <span>Utilitaires</span>
                                         </a>
                                     </li>
                                     <% } %>
 
                                         <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin()) { %>
                                             <li class="nav-item">
-                                                <a href="../../administrations/utilisateur/utilisateur.aspx"
-                                                    class="nav-link">
+                                                <a href="../../administrations/annee/annee.aspx" class="nav-link">
                                                     <div style="width:30px; text-align:center; margin-right:10px;">
-                                                        <i class="fas fa-user"></i>
+                                                        <i class="fas fa-calendar-alt"></i>
                                                     </div>
-                                                    <span>Utilisateur</span>
+                                                    <span>Années</span>
                                                 </a>
                                             </li>
                                             <% } %>
-                                                <% if (AuthHelper.IsSuperAdmin()) { %>
+
+                                                <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin()) { %>
                                                     <li class="nav-item">
-                                                        <a href="../../administrations/requete/requetes.aspx"
-                                                            class="nav-link"
-                                                            style="display: flex; align-items: center;">
+                                                        <a href="../../administrations/utilisateur/utilisateur.aspx"
+                                                            class="nav-link">
                                                             <div
                                                                 style="width:30px; text-align:center; margin-right:10px;">
-                                                                <i class="fas fa-database"></i>
+                                                                <i class="fas fa-user"></i>
                                                             </div>
-                                                            <span>Requetes SQL</span>
+                                                            <span>Utilisateur</span>
                                                         </a>
                                                     </li>
                                                     <% } %>
+                                                        <% if (AuthHelper.IsSuperAdmin()) { %>
+                                                            <li class="nav-item">
+                                                                <a href="../../administrations/requete/requetes.aspx"
+                                                                    class="nav-link"
+                                                                    style="display: flex; align-items: center;">
+                                                                    <div
+                                                                        style="width:30px; text-align:center; margin-right:10px;">
+                                                                        <i class="fas fa-database"></i>
+                                                                    </div>
+                                                                    <span>Requetes SQL</span>
+                                                                </a>
+                                                            </li>
+                                                            <% } %>
 
 
                             </ul>
@@ -245,12 +257,6 @@
                                     </button>
                                     <button class="btn btn-primary btn-sm" onclick="exportEleves()">
                                         <i class="fas fa-download"></i> Exporter
-                                    </button>
-                                    <input type="file" id="importExcelInput" style="display:none;" accept=".xlsx, .xls"
-                                        onchange="handleImport(this)">
-                                    <button type="button" class="btn btn-warning btn-sm"
-                                        onclick="document.getElementById('importExcelInput').click()">
-                                        <i class="fas fa-file-upload"></i> Importer Excel
                                     </button>
                                     <button class="btn btn-success btn-sm" onclick="exportElevesToExcelOnly()">
                                         <i class="fas fa-file-excel"></i> Excel
@@ -406,7 +412,8 @@
                             <div style="display: flex; gap: 10px;">
                                 <input type="text" id="fileNameDisplay" class="form-control" readonly
                                     placeholder="Aucun fichier choisi">
-                                <input type="file" id="excelFile" style="display:none" accept=".xlsx, .xls" onchange="updateFileName()">
+                                <input type="file" id="excelFile" style="display:none" accept=".xlsx, .xls"
+                                    onchange="updateFileName()">
                                 <button type="button" class="btn btn-light border"
                                     onclick="document.getElementById('excelFile').click()">
                                     <i class="fas fa-folder-open"></i> Parcourir

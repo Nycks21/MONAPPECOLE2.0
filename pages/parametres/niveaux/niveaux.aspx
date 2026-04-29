@@ -147,6 +147,16 @@
                                 <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin()) { %>
                                     <li class="nav-item">
                                         <div class="nav-section">Administrations</div>
+                                        <a href="../../administrations/utilitaires/utilitaires.aspx" class="nav-link">
+                                            <div style="width:30px; text-align:center; margin-right:10px;">
+                                                <i class="fas fa-cogs"></i>
+                                            </div>
+                                            <span>Utilitaires</span>
+                                        </a>
+                                    </li>
+                                <% } %>
+                                <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin()) { %>
+                                    <li class="nav-item">
                                         <a href="../../administrations/annee/annee.aspx" class="nav-link">
                                             <div style="width:30px; text-align:center; margin-right:10px;">
                                                 <i class="fas fa-calendar-alt"></i>
