@@ -183,7 +183,7 @@ public class ImportEleves : IHttpHandler {
                             response.duplicates.Add(new EleveDoublon {
                                 MATRICULE = matricule,
                                 NOM       = nom,
-                                raison    = "Matricule déjà existant en base"
+                                raison    = "Matricule déjà existant"
                             });
                         }
                     }

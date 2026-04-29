@@ -267,7 +267,7 @@
                             </div>
                             <div class="imp-step" id="imp-step-3">
                                 <div class="imp-step-circle">3</div>
-                                <div class="imp-step-label">Aperçu<br>& validation</div>
+                                <div class="imp-step-label">Aperçu<br>& vérification</div>
                             </div>
                             <div class="imp-step" id="imp-step-4">
                                 <div class="imp-step-circle">4</div>
@@ -288,7 +288,7 @@
                                 </p>
                                 <button type="button" class="btn-imp btn-imp-next"
                                         style="pointer-events:none;">
-                                    <i class="fas fa-folder-open"></i> Parcourir
+                                    <i class="fas fa-file-excel"></i> Parcourir
                                 </button>
                                 <input type="file" id="imp-file-input"
                                        accept=".xlsx,.xls" style="display:none;">
@@ -339,7 +339,7 @@
                                 <button type="button" id="imp-btn-definitif"
                                         class="btn-imp btn-imp-launch" disabled
                                         onclick="confirmerIntegrationDefinitive()">
-                                    <i class="fas fa-check-double"></i> Intégration définitive confirmée
+                                    <i class="fas fa-check-double"></i> Redirection vers la page Elèves
                                 </button>
                                 <button type="button" class="btn-imp btn-imp-reset" onclick="resetImport()">
                                     <i class="fas fa-redo"></i> Nouvel import
@@ -361,7 +361,7 @@
                                 </button>
                                 <button type="button" id="imp-btn-launch"
                                         class="btn-imp btn-imp-launch" onclick="launchImport()" style="display:none;">
-                                    <i class="fas fa-database"></i> Lancer l'importation
+                                    <i class="fas fa-database"></i> Lancer importation
                                 </button>
                             </div>
                         </div>

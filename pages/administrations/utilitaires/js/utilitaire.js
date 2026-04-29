@@ -25,32 +25,32 @@
 // ÉTAT GLOBAL
 // ═══════════════════════════════════════════════════════════════
 var IMP = {
-    step       : 0,
-    workbook   : null,
-    sheetData  : [],     // toutes les lignes brutes
-    headers    : [],     // en-têtes détectées
-    mapping    : {},     // { champSQL: indexColonne (0-based) }
-    validRows  : [],
-    errorRows  : [],
+    step: 0,
+    workbook: null,
+    sheetData: [],     // toutes les lignes brutes
+    headers: [],     // en-têtes détectées
+    mapping: {},     // { champSQL: indexColonne (0-based) }
+    validRows: [],
+    errorRows: [],
     classesList: [],
-    fileName   : '',
-    totalRows  : 0,
-    skipFirst  : true
+    fileName: '',
+    totalRows: 0,
+    skipFirst: true
 };
 
 // Champs SQL avec règles de validation
 var CHAMPS = [
-    { key:'MATRICULE',  label:'Matricule',        required:true,  type:'text',   hint:'Ex: 2024001'       },
-    { key:'ANNEE_SCO',  label:'Année Scolaire',   required:true,  type:'text',   hint:'Ex: 1'             },
-    { key:'NOM',        label:'Nom complet',       required:true,  type:'text',   hint:'Ex: RAKOTO Jean'   },
-    { key:'CLASSE',     label:'Classe (nom)',       required:true,  type:'int',    hint:'Ex: 6ème A'        },
-    { key:'EMAIL',      label:'Email',             required:false, type:'email',  hint:'Ex: nom@mail.com'  },
-    { key:'TELEPHONE',  label:'Téléphone',         required:false, type:'text',   hint:'Ex: 034 12 345 67' },
-    { key:'DATE_NAISS', label:'Date de naissance', required:false, type:'date',   hint:'Ex: 2010-05-15'    },
-    { key:'GENRE',      label:'Genre (M/F)',        required:false, type:'genre',  hint:'M ou F'            },
-    { key:'ADRESSE',    label:'Adresse',           required:false, type:'text',   hint:''                  },
-    { key:'PARENT',     label:'Parent / Tuteur',   required:false, type:'text',   hint:''                  },
-    { key:'STATUS',     label:'Status',            required:false, type:'text',   hint:'Ex: actif'         }
+    { key: 'MATRICULE', label: 'Matricule', required: true, type: 'text', hint: 'Ex: 2024001' },
+    { key: 'ANNEE_SCO', label: 'Année Scolaire', required: true, type: 'text', hint: 'Ex: 1' },
+    { key: 'NOM', label: 'Nom complet', required: true, type: 'text', hint: 'Ex: RAKOTO Jean' },
+    { key: 'CLASSE', label: 'Classe (nom)', required: true, type: 'int', hint: 'Ex: 6ème A' },
+    { key: 'EMAIL', label: 'Email', required: false, type: 'email', hint: 'Ex: nom@mail.com' },
+    { key: 'TELEPHONE', label: 'Téléphone', required: false, type: 'text', hint: 'Ex: 034 12 345 67' },
+    { key: 'DATE_NAISS', label: 'Date de naissance', required: false, type: 'date', hint: 'Ex: 2010-05-15' },
+    { key: 'GENRE', label: 'Genre (M/F)', required: false, type: 'genre', hint: 'M ou F' },
+    { key: 'ADRESSE', label: 'Adresse', required: false, type: 'text', hint: '' },
+    { key: 'PARENT', label: 'Parent / Tuteur', required: false, type: 'text', hint: '' },
+    { key: 'STATUS', label: 'Status', required: false, type: 'text', hint: 'Ex: actif' }
 ];
 
 // ═══════════════════════════════════════════════════════════════
@@ -69,7 +69,7 @@ function goStep(n) {
     IMP.step = n;
 
     for (var i = 1; i <= 4; i++) {
-        var stepEl  = document.getElementById('imp-step-' + i);
+        var stepEl = document.getElementById('imp-step-' + i);
         var panelEl = document.getElementById('imp-panel-' + i);
 
         if (stepEl) {
@@ -81,16 +81,17 @@ function goStep(n) {
         }
     }
 
-    var btnPrev   = document.getElementById('imp-btn-prev');
-    var btnNext   = document.getElementById('imp-btn-next');
+    var btnPrev = document.getElementById('imp-btn-prev');
+    var btnNext = document.getElementById('imp-btn-next');
     var btnLaunch = document.getElementById('imp-btn-launch');
 
-    if (btnPrev)   btnPrev.style.display   = (n > 1 && n < 4) ? 'inline-flex' : 'none';
-    if (btnNext)   btnNext.style.display   = (n < 3) ? 'inline-flex' : 'none';
-    if (btnLaunch) btnLaunch.style.display = (n === 3) ? 'inline-flex' : 'none';
+    if (btnPrev) btnPrev.style.display = (n > 1 && n < 4) ? 'inline-flex' : 'none';
+    if (btnNext) btnNext.style.display = (n < 4) ? 'inline-flex' : 'none';
+    if (btnLaunch) btnLaunch.style.display = 'none'; // Bouton intégrer est dans le panel étape 4
 
     if (n === 2 && IMP.headers.length) renderMappingTable();
     if (n === 3) renderPreview();
+    if (n === 4) renderConfirmationStep();
 }
 
 function nextStep() {
@@ -99,7 +100,11 @@ function nextStep() {
         return;
     }
     if (IMP.step === 2 && !validateMapping()) return;
-    if (IMP.step < 3) goStep(IMP.step + 1);
+    if (IMP.step === 3 && !IMP.validRows.length) {
+        Swal.fire('Aucune ligne valide', 'Toutes les lignes contiennent des anomalies. Corrigez le fichier et recommencez.', 'error');
+        return;
+    }
+    if (IMP.step < 4) goStep(IMP.step + 1);
 }
 
 function prevStep() {
@@ -142,10 +147,10 @@ function processFile(file) {
         return;
     }
 
-    IMP.fileName  = file.name;
-    IMP.workbook  = null;
+    IMP.fileName = file.name;
+    IMP.workbook = null;
     IMP.sheetData = [];
-    IMP.headers   = [];
+    IMP.headers = [];
 
     var nameEl = document.getElementById('imp-file-name');
     if (nameEl) nameEl.textContent = file.name;
@@ -159,19 +164,19 @@ function processFile(file) {
     var reader = new FileReader();
     reader.onload = function (e) {
         try {
-            var data     = new Uint8Array(e.target.result);
-            var wb       = XLSX.read(data, { type: 'array', cellDates: true });
+            var data = new Uint8Array(e.target.result);
+            var wb = XLSX.read(data, { type: 'array', cellDates: true });
             IMP.workbook = wb;
 
             var sheetName = wb.SheetNames[0];
-            var ws        = wb.Sheets[sheetName];
-            var json      = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+            var ws = wb.Sheets[sheetName];
+            var json = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
 
             if (!json || json.length < 2) {
                 throw new Error('Le fichier semble vide ou ne contient pas de données.');
             }
 
-            IMP.headers   = json[0].map(function (h) { return String(h || '').trim(); });
+            IMP.headers = json[0].map(function (h) { return String(h || '').trim(); });
             IMP.sheetData = json.slice(1);
             IMP.totalRows = IMP.sheetData.filter(function (r) {
                 return r.some(function (c) { return String(c).trim() !== ''; });
@@ -201,17 +206,17 @@ function processFile(file) {
 function autoMapColumns() {
     // FIX: 'STATUS' était 'STATU' (typo corrigée)
     var aliases = {
-        'MATRICULE'  : ['matricule', 'num', 'numero', 'id élève', 'num élève'],
-        'ANNEE_SCO'  : ['annee', 'annee_sco', 'année scolaire', 'annee scolaire'],
-        'NOM'        : ['nom', 'nom complet', 'nom et prénom', 'eleve', 'élève', 'name'],
-        'CLASSE'     : ['classe', 'class', 'groupe', 'classe (nom)'],
-        'EMAIL'      : ['email', 'mail', 'courriel', 'e-mail'],
-        'TELEPHONE'  : ['téléphone', 'telephone', 'tel', 'tél', 'phone', 'mobile'],
-        'DATE_NAISS' : ['date de naissance', 'datenaissance', 'ddn', 'naissance', 'birthdate'],
-        'GENRE'      : ['genre', 'sexe', 'sex', 'gender', 'genre (m/f)'],
-        'ADRESSE'    : ['adresse', 'address'],
-        'PARENT'     : ['parent', 'tuteur', 'père', 'mère', 'responsable', 'parent / tuteur'],
-        'STATUS'     : ['statut', 'stat', 'status']  // FIX: clé était 'STATU'
+        'MATRICULE': ['matricule', 'num', 'numero', 'id élève', 'num élève'],
+        'ANNEE_SCO': ['annee', 'annee_sco', 'année scolaire', 'annee scolaire'],
+        'NOM': ['nom', 'nom complet', 'nom et prénom', 'eleve', 'élève', 'name'],
+        'CLASSE': ['classe', 'class', 'groupe', 'classe (nom)'],
+        'EMAIL': ['email', 'mail', 'courriel', 'e-mail'],
+        'TELEPHONE': ['téléphone', 'telephone', 'tel', 'tél', 'phone', 'mobile'],
+        'DATE_NAISS': ['date de naissance', 'datenaissance', 'ddn', 'naissance', 'birthdate'],
+        'GENRE': ['genre', 'sexe', 'sex', 'gender', 'genre (m/f)'],
+        'ADRESSE': ['adresse', 'address'],
+        'PARENT': ['parent', 'tuteur', 'père', 'mère', 'responsable', 'parent / tuteur'],
+        'STATUS': ['statut', 'stat', 'status']  // FIX: clé était 'STATU'
     };
 
     IMP.mapping = {};
@@ -256,7 +261,7 @@ function renderMappingTable() {
         var td1 = document.createElement('td');
         td1.innerHTML =
             '<span class="champ-label' + (c.required ? ' required' : '') + '">' +
-                escHtml(c.label) +
+            escHtml(c.label) +
             '</span>' +
             '<small class="champ-hint">' + escHtml(c.hint) + '</small>';
 
@@ -302,7 +307,7 @@ function renderMappingTable() {
 }
 
 function onMappingChange(selectEl) {
-    var field    = selectEl.getAttribute('data-field');
+    var field = selectEl.getAttribute('data-field');
     var colIndex = selectEl.value !== '' ? parseInt(selectEl.value, 10) : undefined;
 
     IMP.mapping[field] = colIndex;
@@ -360,7 +365,7 @@ function validateAllRows() {
         // Ignorer lignes vides
         if (!row.some(function (c) { return String(c).trim() !== ''; })) return;
 
-        var obj    = extractRow(row);
+        var obj = extractRow(row);
         var errors = [];
 
         // 1. Champs obligatoires
@@ -392,10 +397,10 @@ function validateAllRows() {
         // FIX: comparaison insensible à la casse, fallback sur ID/Id/id
         if (obj.CLASSE && obj.CLASSE.trim() !== '') {
             var classeMatch = null;
-            var classeNom   = obj.CLASSE.trim().toLowerCase();
+            var classeNom = obj.CLASSE.trim().toLowerCase();
 
             for (var ci = 0; ci < IMP.classesList.length; ci++) {
-                var cl  = IMP.classesList[ci];
+                var cl = IMP.classesList[ci];
                 var nom = String(cl.NOM || cl.Nom || cl.nom || '').trim().toLowerCase();
                 if (nom === classeNom) { classeMatch = cl; break; }
             }
@@ -404,17 +409,17 @@ function validateAllRows() {
                 errors.push('Classe introuvable : "' + obj.CLASSE + '"');
             } else {
                 // FIX: CLASSE_ID est un INT — on cherche ID/Id/id selon ce que le serveur retourne
-                var rawId  = cl.ID !== undefined ? cl.ID
-                           : cl.Id !== undefined ? cl.Id
-                           : cl.id !== undefined ? cl.id : null;
-                var idNum  = parseInt(rawId, 10);
+                var rawId = cl.ID !== undefined ? cl.ID
+                    : cl.Id !== undefined ? cl.Id
+                        : cl.id !== undefined ? cl.id : null;
+                var idNum = parseInt(rawId, 10);
                 if (isNaN(idNum)) {
                     errors.push('ID de classe non numérique pour : "' + obj.CLASSE + '"');
                 } else {
                     obj.CLASSE_ID = idNum; // INT, prêt pour le payload
                 }
             }
-        } else if (CHAMPS.find(function(c){ return c.key === 'CLASSE'; }).required) {
+        } else if (CHAMPS.find(function (c) { return c.key === 'CLASSE'; }).required) {
             // Déjà signalé dans les champs obligatoires
         }
 
@@ -427,7 +432,7 @@ function validateAllRows() {
             }
         }
 
-        obj._ligne  = idx + (IMP.skipFirst ? 2 : 1);
+        obj._ligne = idx + (IMP.skipFirst ? 2 : 1);
         obj._errors = errors;
 
         // FIX: STATUT dans le payload = valeur texte propre (pas du HTML)
@@ -450,8 +455,8 @@ function extractRow(row) {
             // Conversion Date (SheetJS avec cellDates:true)
             if (val instanceof Date) {
                 val = val.getFullYear() + '-' +
-                      String(val.getMonth() + 1).padStart(2, '0') + '-' +
-                      String(val.getDate()).padStart(2, '0');
+                    String(val.getMonth() + 1).padStart(2, '0') + '-' +
+                    String(val.getDate()).padStart(2, '0');
             }
             obj[c.key] = String(val == null ? '' : val).trim();
         }
@@ -464,7 +469,7 @@ function renderPreviewTable() {
     if (!container) return;
 
     var allRows = IMP.validRows.concat(IMP.errorRows)
-                    .sort(function (a, b) { return a._ligne - b._ligne; });
+        .sort(function (a, b) { return a._ligne - b._ligne; });
 
     if (!allRows.length) {
         container.innerHTML = '<p style="text-align:center;color:#888;padding:20px;">Aucune donnée à afficher.</p>';
@@ -472,12 +477,12 @@ function renderPreviewTable() {
     }
 
     // Performance : construction via fragment
-    var table  = document.createElement('table');
+    var table = document.createElement('table');
     table.className = 'imp-table';
 
     // En-tête
     var thead = document.createElement('thead');
-    var trH   = document.createElement('tr');
+    var trH = document.createElement('tr');
     var thLigne = document.createElement('th');
     thLigne.textContent = '#';
     trH.appendChild(thLigne);
@@ -490,7 +495,7 @@ function renderPreviewTable() {
 
     // FIX: colonne Statut affiche TOUTES les erreurs en détail
     var thStat = document.createElement('th');
-    thStat.textContent = 'Statut / Erreurs';
+    thStat.textContent = 'Vérification';
     trH.appendChild(thStat);
     thead.appendChild(trH);
     table.appendChild(thead);
@@ -499,7 +504,7 @@ function renderPreviewTable() {
     var tbody = document.createElement('tbody');
     allRows.forEach(function (row) {
         var isValid = row._errors.length === 0;
-        var tr      = document.createElement('tr');
+        var tr = document.createElement('tr');
         tr.className = isValid ? 'row-valid' : 'row-error';
 
         // Numéro de ligne
@@ -509,8 +514,8 @@ function renderPreviewTable() {
 
         // Données
         CHAMPS.forEach(function (c) {
-            var td   = document.createElement('td');
-            var val  = row[c.key] || '';
+            var td = document.createElement('td');
+            var val = row[c.key] || '';
 
             // Pour CLASSE, on affiche le nom saisi + l'ID résolu si disponible
             if (c.key === 'CLASSE' && row.CLASSE_ID !== undefined) {
@@ -534,15 +539,15 @@ function renderPreviewTable() {
             // Liste HTML de toutes les erreurs (une par ligne)
             var errList = row._errors.map(function (e) {
                 return '<li style="margin:2px 0; font-size:0.85em;">' +
-                       '<i class="fas fa-exclamation-circle" style="color:#dc3545;margin-right:4px;"></i>' +
-                       escHtml(e) + '</li>';
+                    '<i class="fas fa-exclamation-circle" style="color:#dc3545;margin-right:4px;"></i>' +
+                    escHtml(e) + '</li>';
             }).join('');
 
             tdStat.innerHTML =
                 '<span class="badge-err" style="display:block;text-align:left;">' +
-                    '<strong><i class="fas fa-times-circle"></i> ' +
-                    row._errors.length + ' erreur(s) :</strong>' +
-                    '<ul style="margin:4px 0 0 8px;padding:0;list-style:none;">' + errList + '</ul>' +
+                '<strong><i class="fas fa-times-circle"></i> ' +
+                row._errors.length + ' erreur(s) :</strong>' +
+                '<ul style="margin:4px 0 0 8px;padding:0;list-style:none;">' + errList + '</ul>' +
                 '</span>';
         }
         tr.appendChild(tdStat);
@@ -560,31 +565,93 @@ function renderPreviewTable() {
 }
 
 // ═══════════════════════════════════════════════════════════════
+// ÉTAPE 4 — CONFIRMATION AVANT INJECTION
+// ═══════════════════════════════════════════════════════════════
+function renderConfirmationStep() {
+    var container = document.getElementById('imp-result-body');
+    if (!container) return;
+
+    // Affichage du résumé de validation avant injection
+    var html = '<div class="imp-result-summary">' +
+        '<div class="res-stat ok">' +
+        '<i class="fas fa-check-circle"></i>' +
+        '<strong>' + IMP.validRows.length + '</strong>' +
+        '<span>Prêts à intégrer</span>' +
+        '</div>' +
+        '<div class="res-stat warn">' +
+        '<i class="fas fa-exclamation-triangle"></i>' +
+        '<strong>' + IMP.errorRows.length + '</strong>' +
+        '<span>Seront ignorés</span>' +
+        '</div>' +
+        '</div>';
+
+    if (IMP.errorRows.length > 0) {
+        html += '<div class="imp-section">' +
+            '<h5><i class="fas fa-exclamation-circle" style="color:#dc3545;"></i> ' +
+            IMP.errorRows.length + ' ligne(s) avec anomalies (ignorées lors de l\'import)</h5>' +
+            '<div style="overflow-x:auto;max-height:200px;overflow-y:auto;">' +
+            '<table class="imp-table"><thead><tr>' +
+            '<th>#</th><th>Matricule</th><th>Nom</th><th>Erreurs</th>' +
+            '</tr></thead><tbody>' +
+            IMP.errorRows.map(function (r) {
+                return '<tr class="row-error">' +
+                    '<td>' + r._ligne + '</td>' +
+                    '<td>' + escHtml(r.MATRICULE || '—') + '</td>' +
+                    '<td>' + escHtml(r.NOM || '—') + '</td>' +
+                    '<td style="font-size:0.85em;color:#dc3545;">' +
+                    r._errors.map(function (e) { return escHtml(e); }).join('<br>') +
+                    '</td>' +
+                    '</tr>';
+            }).join('') +
+            '</tbody></table></div></div>';
+    }
+
+    if (IMP.validRows.length === 0) {
+        html += '<div style="text-align:center;padding:20px;color:#dc3545;">' +
+            '<i class="fas fa-times-circle fa-2x"></i><br><br>' +
+            '<strong>Aucune ligne valide à importer.</strong><br>' +
+            'Corrigez les erreurs et recommencez.' +
+            '</div>';
+    } else {
+        html += '<div class="imp-success-msg" style="margin-top:16px;">' +
+            '<i class="fas fa-info-circle"></i> ' +
+            '<strong>' + IMP.validRows.length + '</strong> élève(s) seront intégrés.' +
+            ' Cliquez sur <strong>Lancer importation</strong> pour confirmer.' +
+            '</div>';
+    }
+
+    container.innerHTML = html;
+
+    // Activer/désactiver le bouton d'intégration selon les lignes valides
+    var btnLaunch = document.getElementById('imp-btn-launch');
+    if (btnLaunch) {
+        btnLaunch.style.display = IMP.validRows.length > 0 ? 'inline-flex' : 'none';
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════
 // ÉTAPE 4 — LANCEMENT + MODAL RÉSULTAT
 // ═══════════════════════════════════════════════════════════════
 function launchImport() {
+    // 1. On récupère le bouton
+    var btnLaunch = document.getElementById('imp-btn-launch'); // Vérifie bien que l'ID est le bon
+
     if (!IMP.validRows.length) {
-        Swal.fire('Impossible d\'importer',
+        Swal.fire('Aucune ligne valide',
             'Toutes les lignes contiennent des anomalies. Corrigez le fichier et recommencez.',
             'error');
         return;
     }
 
-    Swal.fire({
-        title  : 'Confirmer l\'import',
-        html   : '<p><strong>' + IMP.validRows.length + '</strong> élève(s) seront intégrés.</p>' +
-                 (IMP.errorRows.length
-                    ? '<p style="color:#dc3545;"><i class="fas fa-exclamation-triangle"></i> ' +
-                      IMP.errorRows.length + ' ligne(s) seront ignorées (anomalies).</p>'
-                    : ''),
-        icon   : 'question',
-        showCancelButton  : true,
-        confirmButtonText : '<i class="fas fa-database"></i> Intégrer définitivement',
-        cancelButtonText  : 'Annuler',
-        confirmButtonColor: '#28a745'
-    }).then(function (result) {
-        if (result.isConfirmed) doIntegration();
-    });
+    // 2. On grise le bouton et on change l'apparence
+    if (btnLaunch) {
+        btnLaunch.disabled = true;
+        btnLaunch.innerHTML = '<i class="fas fa-exclamation-triangle fa-beat"></i> Importation échoué';
+        btnLaunch.style.opacity = '0.7';
+        btnLaunch.style.cursor = 'not-allowed';
+    }
+
+    doIntegration();
 }
 
 function doIntegration() {
@@ -593,48 +660,93 @@ function doIntegration() {
     // FIX: payload propre — CLASSE_ID en INT, STATUT en texte (pas de HTML)
     var payload = IMP.validRows.map(function (r) {
         return {
-            MATRICULE  : r.MATRICULE       || '',
-            ANNEE_SCO  : r.ANNEE_SCO       || '',
-            NOM        : r.NOM             || '',
-            CLASSE_ID  : r.CLASSE_ID       || 0,   // INT (résolu à l'étape validation)
-            EMAIL      : r.EMAIL           || '',
-            TELEPHONE  : r.TELEPHONE       || '',
-            DATE_NAISS : r.DATE_NAISS      || null,
-            GENRE      : r.GENRE           || '',
-            ADRESSE    : r.ADRESSE         || '',
-            PARENT     : r.PARENT          || '',
-            STATUT     : r._statutTexte    || 'actif'  // FIX: texte propre, pas de HTML
+            MATRICULE: r.MATRICULE || '',
+            ANNEE_SCO: r.ANNEE_SCO || '',
+            NOM: r.NOM || '',
+            CLASSE_ID: r.CLASSE_ID || 0,   // INT (résolu à l'étape validation)
+            EMAIL: r.EMAIL || '',
+            TELEPHONE: r.TELEPHONE || '',
+            DATE_NAISS: r.DATE_NAISS || null,
+            GENRE: r.GENRE || '',
+            ADRESSE: r.ADRESSE || '',
+            PARENT: r.PARENT || '',
+            STATUT: r._statutTexte || 'actif'  // FIX: texte propre, pas de HTML
         };
     });
 
     fetch('handlers/ImportEleves.ashx', {
-        method : 'POST',
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body   : JSON.stringify({ eleves: payload })
+        body: JSON.stringify({ eleves: payload })
     })
-    .then(function (r) {
-        if (!r.ok) throw new Error('Erreur HTTP ' + r.status);
-        return r.json();
-    })
-    .then(function (data) {
-        hideSpinner();
-        goStep(4);
-        renderResultModal(data);
-    })
-    .catch(function (err) {
-        hideSpinner();
-        Swal.fire('Erreur', 'L\'importation a échoué : ' + err.message, 'error');
-    });
+
+        .then(function (r) {
+            if (!r.ok) throw new Error('Erreur HTTP ' + r.status);
+            return r.json();
+        })
+
+        .then(function (data) {
+            hideSpinner();
+
+            if (data.success && data.inserted > 0) {
+                // 1. CHANGER L'ÉTAPE 4 EN VERT
+                var step4 = document.getElementById('imp-step-4'); // Vérifie que l'ID est bien celui-là
+                if (step4) {
+                    step4.classList.remove('active');
+                    step4.classList.add('done');
+                }
+                
+                // 2. DISPARITION DU BOUTON
+                var btnLaunch = document.getElementById('imp-btn-launch');
+                if (btnLaunch) {
+                    btnLaunch.style.display = 'none';
+                }
+
+                // 3. TON TOAST ACTUEL
+                const Toast = Swal.mixin({
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 5000,
+                    timerProgressBar: true,
+                    didOpen: (toast) => {
+                        toast.addEventListener('mouseenter', Swal.stopTimer)
+                        toast.addEventListener('mouseleave', Swal.resumeTimer)
+                    }
+                });
+
+                Toast.fire({
+                    icon: 'success',
+                    title: data.inserted + ' élève(s) importés avec succès !'
+                });
+            }
+
+            renderResultModal(data);
+        })
+
+        .catch(function (err) {
+            hideSpinner();
+
+            // 3. RÉACTIVATION SI ERREUR
+            var btnLaunch = document.getElementById('imp-btn-launch');
+            if (btnLaunch) {
+                btnLaunch.disabled = false;
+                btnLaunch.innerHTML = '<i class="fas fa-rocket"></i> Lancer importation';
+                btnLaunch.style.opacity = '1';
+                btnLaunch.style.cursor = 'pointer';
+            }
+            Swal.fire('Erreur', 'L\'importation a échoué : ' + err.message, 'error');
+        });
 }
 
 function renderResultModal(data) {
     var container = document.getElementById('imp-result-body');
     if (!container) return;
 
-    var inserts  = data.inserted   || 0;
-    var skipped  = data.skipped    || 0;
-    var dups     = data.duplicates || [];
-    var errsSrv  = data.errors     || [];
+    var inserts = data.inserted || 0;
+    var skipped = data.skipped || 0;
+    var dups = data.duplicates || [];
+    var errsSrv = data.errors || [];
     var hasProblems = (skipped > 0 || errsSrv.length > 0);
 
     var html = '<div class="imp-result-summary">' +
@@ -673,7 +785,7 @@ function renderResultModal(data) {
     if (btnDefinitif) {
         btnDefinitif.disabled = (inserts === 0);
         if (inserts > 0) {
-            btnDefinitif.textContent = '✓ ' + inserts + ' élève(s) intégré(s) avec succès';
+            btnDefinitif.textContent = '✓ ' + inserts + ' ok Redirection vers la page Eleves';
         }
     }
 
@@ -683,51 +795,32 @@ function renderResultModal(data) {
 function confirmerIntegrationDefinitive() {
     Swal.fire({
         icon: 'success',
-        title: 'Intégration confirmée',
+        title: 'Redirection vers la page Eleves',
         text: IMP.validRows.length + ' élève(s) ont été intégrés dans la base de données.',
-        
-        // --- MODIFICATIONS ICI ---
-        timer: null,                        // Suppression du timer
-        showConfirmButton: true,            // Obligation de cliquer sur le bouton vert
-        showCloseButton: true,              // Affiche le bouton "X" en haut à droite
-        allowOutsideClick: false,           // Empêche de fermer en cliquant à côté (optionnel mais recommandé)
-        // --------------------------
-
+        timer: null,
+        showCloseButton: true,
+        allowOutsideClick: false,
+        showConfirmButton: true,
         confirmButtonText: 'Aller à la liste des élèves',
         confirmButtonColor: '#28a745'
     }).then(function (r) {
-        // Si on clique sur le bouton "Aller à la liste"
         if (r.isConfirmed) {
             window.location.href = '../../modules/eleves/eleves.aspx';
         }
-        // Si on clique sur le "X", l'alerte se ferme simplement sans redirection
     });
 }
 
 function resetImport() {
-    IMP.step       = 0;
-    IMP.workbook   = null;
-    IMP.sheetData  = [];
-    IMP.headers    = [];
-    IMP.mapping    = {};
-    IMP.validRows  = [];
-    IMP.errorRows  = [];
-    IMP.fileName   = '';
-    IMP.totalRows  = 0;
+    // On affiche d'abord le spinner pour montrer que l'action est prise en compte
+    showSpinner();
 
-    var fileInput = document.getElementById('imp-file-input');
-    if (fileInput) fileInput.value = '';
+    // Optionnel : Un petit message Swall avant de recharger 
+    // ou rechargement direct pour plus de rapidité
 
-    var nameEl = document.getElementById('imp-file-name');
-    if (nameEl) nameEl.textContent = 'Aucun fichier sélectionné';
-
-    var statusEl = document.getElementById('imp-file-status');
-    if (statusEl) statusEl.textContent = '';
-
-    var colPrev = document.getElementById('imp-columns-preview');
-    if (colPrev) { colPrev.innerHTML = ''; colPrev.style.display = 'none'; }
-
-    goStep(1);
+    setTimeout(function () {
+        // Recharge la page complète
+        window.location.reload();
+    }, 1000); // Un léger délai pour laisser le temps au spinner d'apparaître
 }
 
 // ─────────────────────────────────────────────
@@ -736,7 +829,7 @@ function resetImport() {
 function downloadTemplate() {
     var headers = CHAMPS.map(function (c) { return c.label + (c.required ? ' *' : ''); });
     var example = ['2024001', '1', 'RAKOTO Jean', '6ème A', 'rakoto@mail.com',
-                   '0341234567', '2010-05-01', 'M', 'Lot II A Antananarivo', 'RAKOTO Pierre', 'actif'];
+        '0341234567', '2010-05-01', 'M', 'Lot II A Antananarivo', 'RAKOTO Pierre', 'actif'];
 
     var ws = XLSX.utils.aoa_to_sheet([headers, example]);
     ws['!cols'] = headers.map(function () { return { wch: 22 }; });
@@ -771,7 +864,7 @@ function chargerClassesPourImport() {
             Swal.fire({
                 title: 'Connexion interrompue',
                 html: 'Impossible de charger la liste des classes.<br>' +
-                      '<small class="text-muted">' + escHtml(err.message) + '</small>',
+                    '<small class="text-muted">' + escHtml(err.message) + '</small>',
                 icon: 'error',
                 footer: 'Vérifiez votre connexion ou contactez l\'administrateur.'
             });
@@ -795,6 +888,6 @@ function hideSpinner() {
 // ─────────────────────────────────────────────
 function escHtml(s) {
     return String(s == null ? '' : s)
-        .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-        .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
