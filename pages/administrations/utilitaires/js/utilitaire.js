@@ -682,17 +682,25 @@ function renderResultModal(data) {
 
 function confirmerIntegrationDefinitive() {
     Swal.fire({
-        icon : 'success',
+        icon: 'success',
         title: 'Intégration confirmée',
-        text : IMP.validRows.length + ' élève(s) ont été intégrés dans la base de données.',
-        timer: 3000,
-        showConfirmButton: true,
+        text: IMP.validRows.length + ' élève(s) ont été intégrés dans la base de données.',
+        
+        // --- MODIFICATIONS ICI ---
+        timer: null,                        // Suppression du timer
+        showConfirmButton: true,            // Obligation de cliquer sur le bouton vert
+        showCloseButton: true,              // Affiche le bouton "X" en haut à droite
+        allowOutsideClick: false,           // Empêche de fermer en cliquant à côté (optionnel mais recommandé)
+        // --------------------------
+
         confirmButtonText: 'Aller à la liste des élèves',
         confirmButtonColor: '#28a745'
     }).then(function (r) {
+        // Si on clique sur le bouton "Aller à la liste"
         if (r.isConfirmed) {
             window.location.href = '../../modules/eleves/eleves.aspx';
         }
+        // Si on clique sur le "X", l'alerte se ferme simplement sans redirection
     });
 }
 
