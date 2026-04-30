@@ -11,9 +11,47 @@ GO
 USE MONAPPECOLE2;
 GO
 
--- ─────────────────────────────────────────────────
--- TABLE ANNEE
--- ─────────────────────────────────────────────────
+-- =====================================================
+-- TABLE USERROLE
+-- =====================================================
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'USERROLE')
+BEGIN
+    CREATE TABLE USERROLE (
+        ROLEID INT PRIMARY KEY,
+        ROLENAME VARCHAR(50) NOT NULL UNIQUE
+    );
+END
+GO
+
+-- =====================================================
+-- TABLE USERS
+-- =====================================================
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'USERS')
+BEGIN
+    CREATE TABLE USERS (
+        IDUSER INT IDENTITY(1,1) PRIMARY KEY,
+        USERNAME NVARCHAR(100) NOT NULL UNIQUE,
+        NOM NVARCHAR(100) NOT NULL,
+        EMAIL NVARCHAR(100) UNIQUE NOT NULL,
+        PWD NVARCHAR(255) NOT NULL,
+        ROLEID INT NOT NULL,
+        TELEPHONE NVARCHAR(20),
+        ACTIVE BIT NOT NULL DEFAULT 1,
+        DERNIERE_CONNEXION DATETIME,
+        CREATED_AT DATETIME DEFAULT GETDATE(),
+        UPDATED_AT DATETIME DEFAULT GETDATE(),
+        SESSION_TOKEN NVARCHAR(100),
+        LAST_LOGIN DATETIME DEFAULT GETDATE(),
+        LAST_PC NVARCHAR(100),
+
+        CONSTRAINT FK_USER_ROLE FOREIGN KEY (ROLEID) REFERENCES USERROLE(ROLEID)
+    );
+END
+GO
+
+-- =====================================================
+-- TABLE RANNEE
+-- =====================================================
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'RANNEE')
 BEGIN
     CREATE TABLE [dbo].[RANNEE] (
@@ -28,9 +66,9 @@ BEGIN
 END
 GO
 
--- ─────────────────────────────────────────────────
--- TABLE NIVEAUX (Doit être créée avant CLASSES)
--- ─────────────────────────────────────────────────
+-- =====================================================
+-- TABLE NIVEAUX
+-- =====================================================
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'NIVEAUX')
 BEGIN
     CREATE TABLE NIVEAUX (
@@ -43,9 +81,9 @@ BEGIN
 END
 GO
 
--- ─────────────────────────────────────────────────
+-- =====================================================
 -- TABLE SALLES
--- ─────────────────────────────────────────────────
+-- =====================================================
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'SALLES')
 BEGIN
     CREATE TABLE SALLES (
@@ -150,44 +188,6 @@ END
 GO
 
 -- =====================================================
--- TABLE USERROLE
--- =====================================================
-IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'USERROLE')
-BEGIN
-    CREATE TABLE USERROLE (
-        ROLEID INT PRIMARY KEY,
-        ROLENAME VARCHAR(50) NOT NULL UNIQUE
-    );
-END
-GO
-
--- =====================================================
--- TABLE USERS
--- =====================================================
-IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'USERS')
-BEGIN
-    CREATE TABLE USERS (
-        IDUSER INT IDENTITY(1,1) PRIMARY KEY,
-        USERNAME NVARCHAR(100) NOT NULL UNIQUE,
-        NOM NVARCHAR(100) NOT NULL,
-        EMAIL NVARCHAR(100) UNIQUE NOT NULL,
-        PWD NVARCHAR(255) NOT NULL,
-        ROLEID INT NOT NULL,
-        TELEPHONE NVARCHAR(20),
-        ACTIVE BIT NOT NULL DEFAULT 1,
-        DERNIERE_CONNEXION DATETIME,
-        CREATED_AT DATETIME DEFAULT GETDATE(),
-        UPDATED_AT DATETIME DEFAULT GETDATE(),
-        SESSION_TOKEN NVARCHAR(100),
-        LAST_LOGIN DATETIME DEFAULT GETDATE(),
-        LAST_PC NVARCHAR(100),
-
-        CONSTRAINT FK_USER_ROLE FOREIGN KEY (ROLEID) REFERENCES USERROLE(ROLEID)
-    );
-END
-GO
-
--- =====================================================
 -- TABLE BULLETINS
 -- =====================================================
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'BULLETINS')
@@ -212,7 +212,9 @@ BEGIN
 END
 GO
 
+-- =====================================================
 -- Table pour stocker les logs d'erreurs
+-- =====================================================
 IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'ErrorLogs')
 BEGIN
     CREATE TABLE ErrorLogs (
@@ -291,6 +293,3 @@ VALUES
     ('MAT-2024-023', '1', 'RAOUL Julien', '2', 'actif', 'julien.r@email.com', '0348880022', '2013-04-12', 'M', 'Mahamasina', 'Mme Raoul'),
     ('MAT-2024-024', '1', 'KOLOINA Sarah', '2', 'actif', 'sarah.k@email.com', '0321113355', '2009-05-20', 'F', 'Ankadifotsy', 'Koloina Felix');
 END
-
--- Vérification
-SELECT * FROM ELEVES;

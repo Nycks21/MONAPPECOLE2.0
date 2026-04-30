@@ -18,7 +18,6 @@ public class AjouterEleve : IHttpHandler, IRequiresSessionState
 
         JavaScriptSerializer ser = new JavaScriptSerializer();
 
-        // 1. Vérification de l'authentification
         if (ctx.Session["authenticated"] == null || !(bool)ctx.Session["authenticated"])
         {
             ctx.Response.StatusCode = 401;
@@ -26,97 +25,89 @@ public class AjouterEleve : IHttpHandler, IRequiresSessionState
             return;
         }
 
-        // 2. Vérification de la méthode POST
-        if (ctx.Request.HttpMethod != "POST")
-        {
-            ctx.Response.StatusCode = 405;
-            ctx.Response.Write("{\"success\":false,\"message\":\"Méthode non autorisée\"}");
-            return;
-        }
-
         try
         {
-            // 3. Lecture du corps de la requête JSON
             string body;
             using (var reader = new StreamReader(ctx.Request.InputStream))
                 body = reader.ReadToEnd();
 
             var payload = ser.Deserialize<ElevePayload>(body);
-
-            // 4. Validations de base
             if (payload == null) throw new ArgumentException("Données invalides.");
-            if (string.IsNullOrWhiteSpace(payload.NOM)) throw new ArgumentException("Le nom est obligatoire.");
-            if (string.IsNullOrWhiteSpace(payload.MATRICULE)) throw new ArgumentException("Le matricule est obligatoire.");
 
-            // Conversion des identifiants (GUID et INT)
-            Guid classeGuid;
-            if (!Guid.TryParse(payload.CLASSE, out classeGuid))
-                throw new ArgumentException("La classe sélectionnée est invalide.");
+            if (string.IsNullOrEmpty(payload.NOM)) throw new ArgumentException("Le nom est obligatoire.");
+            if (string.IsNullOrEmpty(payload.MATRICULE)) throw new ArgumentException("Le matricule est obligatoire.");
 
             int anneeId;
-            if (!int.TryParse(payload.ANNEE_ID, out anneeId))
+            if (payload.ANNEE_ID == null || !int.TryParse(payload.ANNEE_ID.ToString(), out anneeId))
                 throw new ArgumentException("L'année scolaire est invalide.");
 
-            // 5. Connexion à la base de données
-            string connStr = ConfigurationManager.ConnectionStrings["MaConnexion"].ConnectionString;
+            int classeId;
+            if (payload.CLASSE == null || !int.TryParse(payload.CLASSE.ToString(), out classeId))
+                throw new ArgumentException("La classe sélectionnée est invalide.");
 
+            DateTime? dateNaiss = null;
+            if (!string.IsNullOrEmpty(payload.DATE_NAISSANCE))
+            {
+                DateTime d;
+                if (!DateTime.TryParse(payload.DATE_NAISSANCE, out d))
+                    throw new ArgumentException("La date de naissance est invalide.");
+                dateNaiss = d;
+            }
+
+            string connStr = ConfigurationManager.ConnectionStrings["MaConnexion"].ConnectionString;
             using (var conn = new SqlConnection(connStr))
             using (var cmd = new SqlCommand(
-                @"INSERT INTO [dbo].[ELEVES]
-                    (ID, ANNEE_ID, MATRICULE, NOM, CLASSE_ID, EMAIL, TELEPHONE, STATUT, CREATED_AT, UPDATED_AT)
-                  VALUES
-                    (NEWID(), @anneeId, @matricule, @nom, @classeId, @email, @tel, @statut, GETDATE(), GETDATE())", conn))
+                @"INSERT INTO [dbo].[ELEVES] 
+                  (ANNEE_ID, MATRICULE, NOM, CLASSE, EMAIL, TELEPHONE, STATUT, GENRE, DATE_NAISSANCE, ADRESSE, PARENT) 
+                  VALUES (@anneeId, @matricule, @nom, @classe, @email, @tel, @statut, @genre, @dateNaiss, @adresse, @parent)", conn))
             {
-                // Paramètres
-                cmd.Parameters.Add("@anneeId",   System.Data.SqlDbType.Int).Value = anneeId;
-                cmd.Parameters.Add("@matricule", System.Data.SqlDbType.NVarChar).Value = payload.MATRICULE.Trim();
-                cmd.Parameters.Add("@nom",       System.Data.SqlDbType.NVarChar).Value = payload.NOM.Trim();
-                cmd.Parameters.Add("@classeId",  System.Data.SqlDbType.UniqueIdentifier).Value = classeGuid;
+                cmd.Parameters.Add("@anneeId", System.Data.SqlDbType.Int).Value = anneeId;
+                cmd.Parameters.Add("@matricule", System.Data.SqlDbType.NVarChar, 50).Value = payload.MATRICULE.Trim();
+                cmd.Parameters.Add("@nom", System.Data.SqlDbType.NVarChar, 255).Value = payload.NOM.Trim();
+                cmd.Parameters.Add("@classe", System.Data.SqlDbType.Int).Value = classeId;
                 
-                // Gestion des valeurs optionnelles (NULL)
-                cmd.Parameters.Add("@email",     System.Data.SqlDbType.NVarChar).Value = (object)payload.EMAIL ?? DBNull.Value;
-                cmd.Parameters.Add("@tel",       System.Data.SqlDbType.NVarChar).Value = (object)payload.TELEPHONE ?? DBNull.Value;
+                cmd.Parameters.Add("@email", System.Data.SqlDbType.NVarChar, 255).Value = 
+                    (payload.EMAIL != null) ? (object)payload.EMAIL.Trim() : DBNull.Value;
                 
-                // Statut par défaut 'Actif' si non précisé ou vide
-                string finalStatut = string.IsNullOrWhiteSpace(payload.STATUT) ? "Actif" : payload.STATUT;
-                cmd.Parameters.Add("@statut",    System.Data.SqlDbType.NVarChar).Value = finalStatut;
+                cmd.Parameters.Add("@tel", System.Data.SqlDbType.NVarChar, 50).Value = 
+                    (payload.TELEPHONE != null) ? (object)payload.TELEPHONE.Trim() : DBNull.Value;
+
+                string statut = (string.IsNullOrEmpty(payload.STATUT)) ? "actif" : payload.STATUT.Trim().ToLower();
+                cmd.Parameters.Add("@statut", System.Data.SqlDbType.NVarChar, 20).Value = statut;
+
+                string genre = (string.IsNullOrEmpty(payload.GENRE)) ? "M" : payload.GENRE.Trim().ToUpper().Substring(0, 1);
+                cmd.Parameters.Add("@genre", System.Data.SqlDbType.NChar, 1).Value = genre;
+
+                cmd.Parameters.Add("@dateNaiss", System.Data.SqlDbType.Date).Value = (dateNaiss.HasValue) ? (object)dateNaiss.Value : DBNull.Value;
+                
+                cmd.Parameters.Add("@adresse", System.Data.SqlDbType.NVarChar, 500).Value = (payload.ADRESSE != null) ? (object)payload.ADRESSE.Trim() : DBNull.Value;
+                cmd.Parameters.Add("@parent", System.Data.SqlDbType.NVarChar, 255).Value = (payload.PARENT != null) ? (object)payload.PARENT.Trim() : DBNull.Value;
 
                 conn.Open();
                 cmd.ExecuteNonQuery();
             }
 
-            // Réponse de succès
-            ctx.Response.Write("{\"success\":true, \"message\":\"Élève ajouté avec succès\"}");
-        }
-        catch (ArgumentException ex)
-        {
-            ctx.Response.StatusCode = 400;
-            ctx.Response.Write("{\"success\":false,\"message\":" + ser.Serialize(ex.Message) + "}");
+            ctx.Response.Write("{\"success\":true,\"message\":\"Élève ajouté avec succès.\"}");
         }
         catch (Exception ex)
         {
-            ctx.Response.StatusCode = 500;
-            string msg = ex.Message;
-            
-            // Gestion propre des doublons de matricule (Contrainte UNIQUE dans SQL)
-            if (msg.Contains("UNIQUE") || msg.Contains("PRIMARY"))
-                msg = "Erreur : Ce matricule est déjà utilisé par un autre élève.";
-            
-            ctx.Response.Write("{\"success\":false,\"message\":" + ser.Serialize(msg) + "}");
+            ctx.Response.StatusCode = (ex is ArgumentException) ? 400 : 500;
+            ctx.Response.Write("{\"success\":false,\"message\":" + ser.Serialize(ex.Message) + "}");
         }
     }
 
     public bool IsReusable { get { return false; } }
-
-    // Structure des données reçues du JavaScript (eleves.js)
-    private class ElevePayload
-    {
+    private class ElevePayload {
         public string ANNEE_ID { get; set; }
         public string MATRICULE { get; set; }
-        public string NOM       { get; set; }
-        public string CLASSE    { get; set; } // Reçu comme string GUID
-        public string EMAIL     { get; set; }
+        public string NOM { get; set; }
+        public string CLASSE { get; set; }
+        public string EMAIL { get; set; }
         public string TELEPHONE { get; set; }
-        public string STATUT    { get; set; }
+        public string STATUT { get; set; }
+        public string GENRE { get; set; }
+        public string DATE_NAISSANCE { get; set; }
+        public string ADRESSE { get; set; }
+        public string PARENT { get; set; }
     }
 }

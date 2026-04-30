@@ -1,199 +1,266 @@
-﻿// ============================================================================
-// GESTION COMPLÈTE DES ÉLÈVES
-// ============================================================================
+'use strict';
 
-let currentMode = null;
-let currentEleveId = null;
-let elevesData = [];
-let baseFilteredData = [];  // Données après validation du MODAL (Le périmètre)
-let filteredEleves = [];
-let currentPage = 1;
-let rowsPerPage = 10;
-let isInitialLoad = true;
-let classesData = [];
-let anneesData = [];
-let sortDirection = 1; // 1 pour ASC, -1 pour DESC // Pour savoir si on doit afficher le modal de démarrage
+// ─────────────────────────────────────────────────────────────────────────────
+// URLS DES HANDLERS — chemins relatifs depuis la page eleves.aspx
+// ─────────────────────────────────────────────────────────────────────────────
+var API = {
+    getEleves:   'handlers/GetEleve.ashx',
+    getClasses:  '../../parametres/classes/handlers/GetClasse.ashx',
+    getAnnees:   '../../administrations/annee/handlers/GetAnnee.ashx',
+    ajouter:     'handlers/AjouterEleve.ashx',
+    modifier:    'handlers/ModifierEleve.ashx',
+    supprimer:   'handlers/SupprimerEleve.ashx'
+};
 
-// ============================================================================
+// ─────────────────────────────────────────────────────────────────────────────
+// ÉTAT GLOBAL
+// ─────────────────────────────────────────────────────────────────────────────
+var currentMode      = null;     // "ajout" | "modification"
+var currentEleveId   = null;     // GUID string
+var elevesData       = [];       // toutes les données chargées
+var baseFilteredData = [];       // périmètre validé par le filtre initial
+var filteredEleves   = [];       // données affichées (après filtre rapide)
+var classesData      = [];
+var anneesData       = [];
+var currentPage      = 1;
+var rowsPerPage      = 10;
+var sortDirection    = 1;        // 1 ASC, -1 DESC
+var isInitialLoad    = true;
+
+// ─────────────────────────────────────────────────────────────────────────────
 // INITIALISATION
-// ============================================================================
+// ─────────────────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function () {
-    console.log("🔵 Page Élèves chargée - Initialisation");
     forceHideSpinner();
     preventFormAutoSubmit();
     ensureButtonsHaveTypeButton();
+    initUIControls();
     loadEleves();
-    bindButtonEvents();
 });
 
-async function loadClasses() {
-    const res = await fetch("/pages/parametres/classes/handlers/GetClasse.ashx");
-    const data = await safeJson(res);
-    if (data.success) {
-        classesData = data.Classes || [];
-    }
-}
-
-async function loadAnnees() {
-    const res = await fetch("/pages/administrations/annee/handlers/GetAnnee.ashx");
-    const data = await safeJson(res);
-    if (data.success) {
-        anneesData = data.Annees || [];
-    }
-}
-
-// ============================================================================
-// GESTION DU PRELOADER & SPINNER
-// ============================================================================
-function hidePreloader() {
-    const preloader = document.getElementById('preloader');
-    if (preloader) {
-        preloader.classList.add('hide');
-        setTimeout(() => { preloader.style.display = 'none'; }, 500);
-    }
-}
-
-function showPreloader() {
-    const preloader = document.getElementById('preloader');
-    if (preloader) {
-        preloader.style.display = 'flex';
-        preloader.classList.remove('hide');
-    }
-}
-
-function forceHideSpinner() {
-    const s = document.getElementById('spinnerOverlay');
-    if (!s) return;
-    s.style.display = 'none';
-    s.style.opacity = '0';
-}
-
-function showSpinner() {
-    const s = document.getElementById('spinnerOverlay');
-    if (!s) return;
-    s.style.display = 'flex';
-    s.style.opacity = '1';
-}
-
-function hideSpinner() { forceHideSpinner(); }
-
-// ============================================================================
-// SECURITÉ FORMULAIRE
-// ============================================================================
+// ─────────────────────────────────────────────────────────────────────────────
+// SÉCURITÉ FORMULAIRE
+// ─────────────────────────────────────────────────────────────────────────────
 function preventFormAutoSubmit() {
-    const form = document.getElementById('eleveForm');
-    if (form) {
-        form.onsubmit = (e) => e.preventDefault();
-        form.setAttribute('novalidate', 'novalidate');
-    }
+    var form = document.getElementById('eleveForm');
+    if (!form) return;
+    form.setAttribute('novalidate', 'novalidate');
+    form.addEventListener('submit', function (e) { e.preventDefault(); });
 }
 
 function ensureButtonsHaveTypeButton() {
-    document.querySelectorAll('button').forEach(btn => {
+    document.querySelectorAll('button').forEach(function (btn) {
         if (!btn.getAttribute('type')) btn.setAttribute('type', 'button');
     });
 }
 
-// ============================================================================
-// FILTRE INITIAL
-// ============================================================================
-function showInitialFilterModal() {
-    // 1. Récupérer l'ancien filtre ou créer un objet vide par défaut
-    const savedFilter = JSON.parse(localStorage.getItem('lastInitialFilter')) || {};
-    // Utilise l'opérateur || pour tester plusieurs noms de colonnes probables
-    const anneeOptions = anneesData.map(a =>
-        `<option value="${a.NOM || a.LIBELLE || a.ANNEE}">${a.NOM || a.LIBELLE || a.ANNEE}</option>`
-    ).join('');
+// ─────────────────────────────────────────────────────────────────────────────
+// SPINNER
+// ─────────────────────────────────────────────────────────────────────────────
+function forceHideSpinner() {
+    var s = document.getElementById('spinnerOverlay');
+    if (!s) return;
+    s.style.display    = 'none';
+    s.style.visibility = 'hidden';
+    s.style.opacity    = '0';
+    s.setAttribute('aria-hidden', 'true');
+}
 
-    const classeOptions = classesData.map(c =>
-        `<option value="${c.ID}">${c.NOM}</option>`
-    ).join('');
+function showSpinner() {
+    var s = document.getElementById('spinnerOverlay');
+    if (!s) return;
+    s.style.display    = 'flex';
+    s.style.visibility = 'visible';
+    s.style.opacity    = '1';
+    s.removeAttribute('aria-hidden');
+}
+
+function hideSpinner() { forceHideSpinner(); }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CHARGEMENT DONNÉES
+// ─────────────────────────────────────────────────────────────────────────────
+async function loadEleves() {
+    showSpinner();
+    try {
+        // Chargement en parallèle des trois sources
+        const [dataEleves, dataClasses, dataAnnees] = await Promise.all([
+            fetchJson(API.getEleves),
+            fetchJson(API.getClasses),
+            fetchJson(API.getAnnees)
+        ]);
+
+        // Classes
+        if (dataClasses.success) {
+            classesData = dataClasses.Classes || dataClasses.niveaux || [];
+            peuplerSelectClasses();
+        }
+
+        // Années
+        if (dataAnnees.success) {
+            anneesData = dataAnnees.Annees || [];
+            peuplerSelectAnnees();
+        }
+
+        // Élèves
+        if (dataEleves.success) {
+            elevesData = dataEleves.Eleves || [];
+            if (isInitialLoad) {
+                hideSpinner();
+                showInitialFilterModal();
+            } else {
+                applyFilters();
+            }
+        } else {
+            Swal.fire('Erreur', dataEleves.message || 'Impossible de charger les élèves.', 'error');
+        }
+
+    } catch (err) {
+        console.error('loadEleves:', err);
+        Swal.fire('Erreur réseau', err.message || 'Connexion au serveur échouée.', 'error');
+    } finally {
+        hideSpinner();
+    }
+}
+
+// Peupler le select Classe dans la modal
+function peuplerSelectClasses() {
+    var sel = document.getElementById('EleveClasse');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">-- Sélectionner une classe --</option>';
+    classesData.forEach(function (c) {
+        var opt = document.createElement('option');
+        opt.value = c.ID;
+        opt.textContent = c.NOM;
+        sel.appendChild(opt);
+    });
+}
+
+// Peupler le select Année dans la modal
+function peuplerSelectAnnees() {
+    var sel = document.getElementById('eleveAnnee');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">-- Sélectionner une année --</option>';
+    anneesData.forEach(function (a) {
+        var opt = document.createElement('option');
+        opt.value = a.ID;
+        opt.textContent = a.ANNEE;
+        sel.appendChild(opt);
+    });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MODAL FILTRE INITIAL
+// ─────────────────────────────────────────────────────────────────────────────
+function showInitialFilterModal() {
+    var savedFilter = {};
+    try { savedFilter = JSON.parse(localStorage.getItem('lastInitialFilter')) || {}; } catch (e) {}
+
+    var anneeOptions = anneesData.map(function (a) {
+        return '<option value="' + escHtml(a.ANNEE) + '">' + escHtml(a.ANNEE) + '</option>';
+    }).join('');
+
+    var classeOptions = classesData.map(function (c) {
+        return '<option value="' + escHtml(String(c.ID)) + '">' + escHtml(c.NOM) + '</option>';
+    }).join('');
 
     Swal.fire({
         title: '<i class="fas fa-filter"></i> Filtrer les élèves',
         html: `
-            <div style="text-align: left;">
-                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #495057;">Année Scolaire</label>
-                <select id="init-annee" class="form-control mb-2">
+            <div style="text-align:left;">
+                <label style="display:block;margin-bottom:6px;font-weight:600;">Année Scolaire</label>
+                <select id="init-annee" class="form-control" style="margin-bottom:12px;">
                     <option value="">-- Toutes --</option>
                     ${anneeOptions}
                 </select>
 
-                <label class="form-label" style="font-weight:600;">Classe</label>
-                <select id="init-classe" class="form-control mb-3">
+                <label style="display:block;margin-bottom:6px;font-weight:600;">Classe</label>
+                <select id="init-classe" class="form-control" style="margin-bottom:12px;">
                     <option value="">-- Toutes les classes --</option>
                     ${classeOptions}
                 </select>
-                
-                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #495057;">Matricule</label>
-                <input type="text" id="init-matricule" class="form-control mb-2"
-                    value="${savedFilter.matricule || ''}" placeholder="Ex: MAT-2024..." placeholder="Ex: MAT-2024...">
-                
-                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #495057;">Nom de l'élève</label>
-                <input type="text" id="init-nom" class="form-control mb-2" 
-                       value="${savedFilter.nom || ''}" placeholder="Nom...">
-                
-                <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #495057;">Statut</label>
+
+                <label style="display:block;margin-bottom:6px;font-weight:600;">Matricule</label>
+                <input type="text" id="init-matricule" class="form-control" style="margin-bottom:12px;"
+                    value="${escHtml(savedFilter.matricule || '')}" placeholder="Ex: MAT-2024...">
+
+                <label style="display:block;margin-bottom:6px;font-weight:600;">Nom de l'élève</label>
+                <input type="text" id="init-nom" class="form-control" style="margin-bottom:12px;"
+                    value="${escHtml(savedFilter.nom || '')}" placeholder="Nom...">
+
+                <label style="display:block;margin-bottom:6px;font-weight:600;">Statut</label>
                 <select id="init-status" class="form-control">
                     <option value="">-- Tous --</option>
                     <option value="actif">Actif</option>
                     <option value="inactif">Inactif</option>
                     <option value="suspendu">Suspendu</option>
                 </select>
-            </div>
-        `,
-        confirmButtonText: '<i class="fas fa-check"></i> Appliquer le filtre',
+            </div>`,
+        confirmButtonText: '<i class="fas fa-check"></i> Appliquer',
         confirmButtonColor: '#007bff',
         showCancelButton: true,
         cancelButtonText: 'Annuler',
-        preConfirm: () => {
+        preConfirm: function () {
             return {
-                annee: document.getElementById('init-annee').value,
-                classe: document.getElementById('init-classe').value, // Nouveau
+                annee:     document.getElementById('init-annee').value,
+                classe:    document.getElementById('init-classe').value,
                 matricule: document.getElementById('init-matricule').value.trim(),
-                nom: document.getElementById('init-nom').value.trim(),
-                status: document.getElementById('init-status').value
-            }
+                nom:       document.getElementById('init-nom').value.trim(),
+                status:    document.getElementById('init-status').value
+            };
         }
-    }).then((result) => {
+    }).then(function (result) {
         if (result.isConfirmed) {
             applyInitialFilters(result.value);
         }
+        // Annuler : ferme simplement le modal, rien ne change
     });
 }
 
-// ============================================================================
-// FILTRES & RECHERCHE
-// ============================================================================
+function applyInitialFilters(criteria) {
+    try { localStorage.setItem('lastInitialFilter', JSON.stringify(criteria)); } catch (e) {}
+    isInitialLoad = false;
+
+    baseFilteredData = elevesData.filter(function (eleve) {
+        var matchAnnee     = criteria.annee     ? (eleve.ANNEE_TEXTE === criteria.annee)                                      : true;
+        var matchClasse    = criteria.classe    ? (String(eleve.ID_CLASSE) === String(criteria.classe))                       : true;
+        var matchMatricule = criteria.matricule ? (eleve.MATRICULE?.toLowerCase().includes(criteria.matricule.toLowerCase())) : true;
+        var matchNom       = criteria.nom       ? (eleve.NOM?.toLowerCase().includes(criteria.nom.toLowerCase()))             : true;
+        var matchStatus    = criteria.status    ? (eleve.STATUT?.toLowerCase() === criteria.status.toLowerCase())             : true;
+        return matchAnnee && matchClasse && matchMatricule && matchNom && matchStatus;
+    });
+
+    filteredEleves = [...baseFilteredData];
+    currentPage = 1;
+    createFilterControls();
+    renderSimpleTable();
+
+    var count = filteredEleves.length;
+    Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 2500 })
+        .fire({ icon: 'success', title: count + ' élève(s) trouvé(s)' });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BARRE DE FILTRES RAPIDE (recherche + statut + pagination)
+// ─────────────────────────────────────────────────────────────────────────────
 function createFilterControls() {
     if (document.getElementById('filter-container')) return;
 
-    const filterContainer = document.createElement('div');
-    filterContainer.id = 'filter-container';
-    filterContainer.style.cssText = `
-        margin: 0 0 20px 0;
-        padding: 15px 20px;
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        border-radius: 10px;
-        display: flex;
-        gap: 15px;
-        flex-wrap: wrap;
-        align-items: flex-end;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        border: 1px solid #dee2e6;
-    `;
-
-    filterContainer.innerHTML = `
-        <div style="flex: 2; min-width: 200px;">
-            <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #495057;">
-                <i class="fas fa-search"></i> Recherche :
+    var fc = document.createElement('div');
+    fc.id = 'filter-container';
+    fc.style.cssText = 'margin:0 0 20px;padding:14px 18px;background:linear-gradient(135deg,#f8f9fa,#e9ecef);border-radius:10px;display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;box-shadow:0 2px 8px rgba(0,0,0,.08);border:1px solid #dee2e6;';
+    fc.innerHTML = `
+        <div style="flex:2;min-width:200px;">
+            <label style="display:block;margin-bottom:6px;font-weight:600;color:#495057;font-size:13px;">
+                <i class="fas fa-search"></i> Recherche
             </label>
-            <input type="text" id="search-filter" placeholder="Nom, matricule..." 
-                style="width: 100%; padding: 10px 12px; border: 1px solid #ced4da; border-radius: 6px; font-size: 14px;">
+            <input type="text" id="search-filter" placeholder="Nom, matricule, email..."
+                style="width:100%;padding:9px 12px;border:1px solid #ced4da;border-radius:6px;font-size:13px;">
         </div>
-        <div style="min-width: 160px;">
-            <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #495057;">
-                <i class="fas fa-filter"></i> Statut :</label>
+        <div style="min-width:150px;">
+            <label style="display:block;margin-bottom:6px;font-weight:600;color:#495057;font-size:13px;">
+                <i class="fas fa-filter"></i> Statut
+            </label>
             <select id="status-filter" class="form-control">
                 <option value="">Tous</option>
                 <option value="actif">Actif</option>
@@ -201,9 +268,10 @@ function createFilterControls() {
                 <option value="suspendu">Suspendu</option>
             </select>
         </div>
-        <div style="min-width: 140px;">
-            <label style="display: block; margin-bottom: 8px; font-weight: 600; color: #495057;">
-            <i class="fas fa-list"></i> Afficher :</label>
+        <div style="min-width:130px;">
+            <label style="display:block;margin-bottom:6px;font-weight:600;color:#495057;font-size:13px;">
+                <i class="fas fa-list"></i> Afficher
+            </label>
             <select id="rows-per-page-top" class="form-control">
                 <option value="5">5 lignes</option>
                 <option value="10" selected>10 lignes</option>
@@ -212,18 +280,17 @@ function createFilterControls() {
                 <option value="100">100 lignes</option>
             </select>
         </div>
-        <button id="btn-reset-filters" style="padding: 10px 24px; background: #6c757d; color: white; 
-                    border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 500;">
+        <button id="btn-reset-filters" type="button"
+            style="padding:9px 20px;background:#6c757d;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px;">
             <i class="fas fa-undo"></i> Réinitialiser
-        </button>
-    `;
+        </button>`;
 
-    const container = document.querySelector('.dash-card-body') || document.body;
-    container.prepend(filterContainer);
+    var container = document.querySelector('.dash-card-body') || document.body;
+    container.prepend(fc);
 
     document.getElementById('search-filter').addEventListener('input', applyFilters);
     document.getElementById('status-filter').addEventListener('change', applyFilters);
-    document.getElementById('rows-per-page-top').addEventListener('change', (e) => {
+    document.getElementById('rows-per-page-top').addEventListener('change', function (e) {
         rowsPerPage = parseInt(e.target.value);
         currentPage = 1;
         renderSimpleTable();
@@ -232,23 +299,16 @@ function createFilterControls() {
 }
 
 function applyFilters() {
-    const searchTerm = document.getElementById('search-filter')?.value.toLowerCase().trim() || '';
-    const statusFilter = document.getElementById('status-filter')?.value || '';
+    var search = (document.getElementById('search-filter')?.value || '').toLowerCase().trim();
+    var status = document.getElementById('status-filter')?.value || '';
 
-    // On filtre UNIQUEMENT sur les résultats déjà validés par le modal
-    filteredEleves = baseFilteredData.filter(eleve => {
-        let matchSearch = true;
-        if (searchTerm) {
-            matchSearch = (eleve.NOM?.toLowerCase().includes(searchTerm)) ||
-                (eleve.MATRICULE?.toLowerCase().includes(searchTerm)) ||
-                (eleve.EMAIL?.toLowerCase().includes(searchTerm));
-        }
-
-        let matchStatus = true;
-        if (statusFilter) {
-            matchStatus = (eleve.STATUT?.toLowerCase() === statusFilter.toLowerCase());
-        }
-
+    filteredEleves = baseFilteredData.filter(function (eleve) {
+        var matchSearch = !search || (
+            eleve.NOM?.toLowerCase().includes(search) ||
+            eleve.MATRICULE?.toLowerCase().includes(search) ||
+            eleve.EMAIL?.toLowerCase().includes(search)
+        );
+        var matchStatus = !status || (eleve.STATUT?.toLowerCase() === status);
         return matchSearch && matchStatus;
     });
 
@@ -257,379 +317,173 @@ function applyFilters() {
 }
 
 function resetFilters() {
-    document.getElementById('search-filter').value = '';
-    document.getElementById('status-filter').value = '';
-    document.getElementById('rows-per-page-top').value = '10';
+    var sf = document.getElementById('search-filter');
+    var stf = document.getElementById('status-filter');
+    var rp = document.getElementById('rows-per-page-top');
+    if (sf)  sf.value  = '';
+    if (stf) stf.value = '';
+    if (rp)  rp.value  = '10';
     rowsPerPage = 10;
     applyFilters();
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// TRI
+// ─────────────────────────────────────────────────────────────────────────────
 function sortData(column) {
-    sortDirection *= -1; // Alterne la direction à chaque clic
-
-    filteredEleves.sort((a, b) => {
-        let valA = (a[column] || "").toString().toLowerCase();
-        let valB = (b[column] || "").toString().toLowerCase();
-
-        if (valA < valB) return -1 * sortDirection;
-        if (valA > valB) return 1 * sortDirection;
-        return 0;
+    sortDirection *= -1;
+    filteredEleves.sort(function (a, b) {
+        var va = (a[column] || '').toString().toLowerCase();
+        var vb = (b[column] || '').toString().toLowerCase();
+        return va < vb ? -sortDirection : va > vb ? sortDirection : 0;
     });
-
-    currentPage = 1;
-    renderSimpleTable(); // Relance l'affichage
-}
-
-// ============================================================================
-// CONTRÔLES DE PAGINATION (VERSION AMÉLIORÉE)
-// ============================================================================
-function createPaginationControls(totalPages) {
-    const oldPagination = document.getElementById('pagination-container');
-    if (oldPagination) oldPagination.remove();
-    if (totalPages <= 1) return;
-
-    const paginationContainer = document.createElement('div');
-    paginationContainer.id = 'pagination-container';
-    paginationContainer.style.cssText = `
-        margin: 20px 0;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        gap: 5px;
-        flex-wrap: wrap;
-    `;
-
-    paginationContainer.appendChild(createPaginationButton('«', () => goToPage(1), currentPage === 1));
-    paginationContainer.appendChild(createPaginationButton('‹', () => {
-        if (currentPage > 1) goToPage(currentPage - 1);
-    }, currentPage === 1));
-
-    const maxVisiblePages = 5;
-    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
-    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
-
-    if (endPage - startPage + 1 < maxVisiblePages) {
-        startPage = Math.max(1, endPage - maxVisiblePages + 1);
-    }
-
-    if (startPage > 1) {
-        paginationContainer.appendChild(createPaginationButton('1', () => goToPage(1)));
-        if (startPage > 2) paginationContainer.appendChild(createPaginationButton('...', null, true, true));
-    }
-
-    for (let i = startPage; i <= endPage; i++) {
-        paginationContainer.appendChild(createPaginationButton(i, () => goToPage(i), i === currentPage));
-    }
-
-    if (endPage < totalPages) {
-        if (endPage < totalPages - 1) paginationContainer.appendChild(createPaginationButton('...', null, true, true));
-        paginationContainer.appendChild(createPaginationButton(totalPages, () => goToPage(totalPages)));
-    }
-
-    paginationContainer.appendChild(createPaginationButton('›', () => {
-        if (currentPage < totalPages) goToPage(currentPage + 1);
-    }, currentPage === totalPages));
-    paginationContainer.appendChild(createPaginationButton('»', () => goToPage(totalPages), currentPage === totalPages));
-
-    const table = document.querySelector('.dash-table') || document.getElementById('elevesTableBody').closest('table');
-    if (table) table.after(paginationContainer);
-}
-
-function createPaginationButton(text, onClick, isDisabled = false, isDots = false) {
-    const button = document.createElement('button');
-    button.textContent = text;
-
-    // Détecter si c'est la page actuelle (active)
-    const isActive = (text == currentPage && !isNaN(text));
-
-    if (isDots) {
-        button.style.cssText = `padding: 8px 12px; margin: 0 2px; border: none; background: transparent; color: #6c757d; cursor: default; font-size: 14px;`;
-        return button;
-    }
-
-    // Style de base + condition pour le bleu si actif
-    button.style.cssText = `
-        padding: 8px 14px;
-        border: 1px solid ${isActive || !isDisabled ? '#007bff' : '#dee2e6'};
-        background: ${isActive ? '#007bff' : (isDisabled ? '#e9ecef' : 'white')};
-        color: ${isActive ? 'white' : (isDisabled ? '#6c757d' : '#007bff')};
-        cursor: ${isDisabled || isActive ? 'default' : 'pointer'};
-        border-radius: 6px;
-        font-weight: ${isActive ? '700' : '500'};
-        transition: all 0.2s;
-        min-width: 40px;
-    `;
-
-    if (onClick && !isDisabled && !isActive) {
-        button.onclick = onClick;
-
-        // Effets de survol uniquement pour les boutons cliquables
-        button.onmouseover = () => {
-            button.style.background = '#007bff';
-            button.style.color = 'white';
-            button.style.transform = 'translateY(-1px)';
-            button.style.boxShadow = '0 2px 5px rgba(0,123,255,0.3)';
-        };
-        button.onmouseout = () => {
-            button.style.background = 'white';
-            button.style.color = '#007bff';
-            button.style.transform = 'translateY(0)';
-            button.style.boxShadow = 'none';
-        };
-    } else if (isDisabled) {
-        button.disabled = true;
-        button.style.opacity = '0.6';
-    }
-
-    return button;
-}
-
-// ============================================================================
-// CHARGEMENT & TABLEAU
-// ============================================================================
-async function loadEleves() {
-    showSpinner();
-    showPreloader();
-    try {
-        // Charger les pré-requis en parallèle pour gagner du temps
-        await Promise.all([loadAnnees(), loadClasses()]);
-
-        const resClasses = await fetch("/pages/parametres/classes/handlers/GetClasse.ashx");
-        if (!resClasses.ok) throw new Error("Handler Classes introuvable (404)");
-
-        const dataClasses = await safeJson(resClasses);
-        if (dataClasses.success) {
-            classesData = dataClasses.Classes || [];
-        }
-
-        // 2. Charger les ÉLÈVES (Chemin absolu depuis la racine /)
-        const resEleves = await fetch("/pages/modules/eleves/handlers/GetEleve.ashx");
-        if (!resEleves.ok) throw new Error("Handler Eleves introuvable (404)");
-
-        const dataEleves = await safeJson(resEleves); // Utilisation d'un nom clair pour éviter les erreurs
-
-        if (dataEleves.success) {
-            elevesData = dataEleves.Eleves || [];
-
-            if (isInitialLoad) {
-                hideSpinner();
-                hidePreloader();
-                showInitialFilterModal();
-            } else {
-                applyFilters();
-            }
-        } else {
-            Swal.fire('Erreur', dataEleves.message, 'error');
-        }
-
-    } catch (err) {
-        console.error("Erreur chargement:", err);
-        // Si le handler n'est pas trouvé, on affiche une alerte claire
-        if (err.message.includes("404")) {
-            Swal.fire('Erreur 404', "Le fichier au chemin /handlers/GetClasse.ashx est introuvable.", 'error');
-        }
-    } finally {
-        hideSpinner();
-        hidePreloader();
-    }
-}
-
-function applyInitialFilters(criteria) {
-    // Sauvegarde du filtre dans le localStorage
-    localStorage.setItem('lastInitialFilter', JSON.stringify(criteria));
-
-    isInitialLoad = false;
-
-    // On définit le périmètre de base (baseFilteredData)
-    baseFilteredData = elevesData.filter(eleve => {
-        const matchAnnee = criteria.annee ? (eleve.ANNEE_TEXTE === criteria.annee) : true;
-
-        // Filtrage par Classe (vérifie l'ID de la classe)
-        const matchClasse = criteria.classe ? (eleve.ID_CLASSE === criteria.classe) : true;
-
-        const matchMatricule = criteria.matricule ? (eleve.MATRICULE?.toLowerCase().includes(criteria.matricule.toLowerCase())) : true;
-        const matchNom = criteria.nom ? (eleve.NOM?.toLowerCase().includes(criteria.nom.toLowerCase())) : true;
-        const matchStatus = criteria.status ? (eleve.STATUT?.toLowerCase() === criteria.status.toLowerCase()) : true;
-
-        return matchAnnee && matchClasse && matchMatricule && matchNom && matchStatus;
-    });
-
-    // Synchronisation pour l'affichage
-    filteredEleves = [...baseFilteredData];
-
-    createFilterControls();
-
-    // Reset du champ de recherche rapide en haut
-    if (document.getElementById('search-filter')) document.getElementById('search-filter').value = '';
-
     currentPage = 1;
     renderSimpleTable();
-
-    // Notification optionnelle
-    const count = filteredEleves.length;
-    const Toast = Swal.mixin({ toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 });
-    Toast.fire({ icon: 'success', title: `${count} élève(s) trouvé(s)` });
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// RENDU TABLEAU
+// ─────────────────────────────────────────────────────────────────────────────
 function renderSimpleTable() {
-    const tbody = document.getElementById('elevesTableBody');
+    var tbody = document.getElementById('elevesTableBody');
     if (!tbody) return;
 
-    const start = (currentPage - 1) * rowsPerPage;
-    const pageData = filteredEleves.slice(start, start + rowsPerPage);
-    const totalPages = Math.ceil(filteredEleves.length / rowsPerPage);
+    var start     = (currentPage - 1) * rowsPerPage;
+    var pageData  = filteredEleves.slice(start, start + rowsPerPage);
+    var totalPages = Math.ceil(filteredEleves.length / rowsPerPage);
 
-    tbody.innerHTML = pageData.length ? '' : '<tr><td colspan="8" class="text-center">Aucun résultat</td></tr>';
-
-    pageData.forEach(eleve => {
-        const row = tbody.insertRow();
-        row.innerHTML = `
-            <td>${getMatriculeBadge(eleve.MATRICULE)}</td>
-            <td>${eleve.ANNEE_TEXTE || '-'}</td>
-            <td>${getNomBadge(eleve.NOM)}</td>
-            <td>${getClasseBadge(eleve.CLASSE_NOM || '-')}</td>
-            <td>${eleve.EMAIL || '-'}</td>
-            <td>${eleve.TELEPHONE || '-'}</td>
-            <td>${getStatutBadge(eleve.STATUT)}</td>
-            <td>
-                <button class="btn btn-sm btn-primary" onclick="openEditEleveModal('${eleve.ID}')">
-                    <i class="fas fa-edit"></i>
-                </button>
-                <button class="btn btn-sm btn-danger" onclick="supprimerEleve('${eleve.ID}')">
-                    <i class="fas fa-trash"></i>
-                </button>
-            </td>
-        `;
-    });
+    if (!pageData.length) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:50px;">' +
+            '<i class="fas fa-search" style="font-size:40px;color:#ccc;display:block;margin-bottom:12px;"></i>' +
+            'Aucun élève trouvé</td></tr>';
+    } else {
+        tbody.innerHTML = '';
+        pageData.forEach(function (eleve) {
+            var row = tbody.insertRow();
+            row.innerHTML =
+                '<td>' + getMatriculeBadge(eleve.MATRICULE) + '</td>' +
+                '<td>' + escHtml(eleve.ANNEE_TEXTE || '-') + '</td>' +
+                '<td>' + getNomBadge(eleve.NOM) + '</td>' +
+                '<td>' + getClasseBadge(eleve.CLASSE_NOM || '-') + '</td>' +
+                '<td>' + escHtml(eleve.EMAIL || '-') + '</td>' +
+                '<td>' + escHtml(eleve.TELEPHONE || '-') + '</td>' +
+                '<td>' + getStatutBadge(eleve.STATUT) + '</td>' +
+                '<td>' +
+                    '<button type="button" class="btn btn-sm btn-primary" style="margin:0 2px;" onclick="openEditEleveModal(\'' + eleve.ID + '\')">' +
+                        '<i class="fas fa-edit"></i>' +
+                    '</button>' +
+                    '<button type="button" class="btn btn-sm btn-danger" style="margin:0 2px;" onclick="supprimerEleve(\'' + eleve.ID + '\')">' +
+                        '<i class="fas fa-trash"></i>' +
+                    '</button>' +
+                '</td>';
+        });
+    }
 
     updateCounter();
     createPaginationControls(totalPages);
 }
 
-// ============================================================================
-// BADGES & STYLES
-// ============================================================================
+// ─────────────────────────────────────────────────────────────────────────────
+// BADGES
+// ─────────────────────────────────────────────────────────────────────────────
 function getNomBadge(nom) {
-    return `<span style="color: #212529; font-weight: 700;">${nom || '-'}</span>`;
+    return '<span style="color:#212529;font-weight:700;">' + escHtml(nom || '-') + '</span>';
 }
 
 function getMatriculeBadge(matricule) {
-    const style = "background: #f1f3f5; color: #212529; padding: 4px 12px; border-radius: 6px; font-size: 13px; font-weight: 700; border: 1px solid #dee2e6; display: inline-block;";
-    return `<span style="${style}">${matricule || '-'}</span>`;
+    return '<span style="background:#f1f3f5;color:#212529;padding:4px 12px;border-radius:6px;font-size:12px;font-weight:700;border:1px solid #dee2e6;display:inline-block;">' + escHtml(matricule || '-') + '</span>';
 }
 
 function getStatutBadge(statut) {
-    const s = String(statut || '').toLowerCase();
-    let style = "padding: 4px 10px; border-radius: 20px; color: white; font-size: 12px; font-weight: 500;";
-    if (s === 'actif') return `<span class="badge" style="background: #28a745; ${style}">✓ Actif</span>`;
-    if (s === 'suspendu') return `<span class="badge" style="background: #6c757d; ${style}">⚠ Suspendu</span>`;
-    return `<span class="badge" style="background: #dc3545; ${style}">✗ Inactif</span>`;
+    var s = (statut || '').toLowerCase();
+    var style = 'padding:4px 10px;border-radius:20px;color:white;font-size:12px;font-weight:500;';
+    if (s === 'actif')    return '<span style="background:#28a745;' + style + '">✓ Actif</span>';
+    if (s === 'suspendu') return '<span style="background:#6c757d;' + style + '">⚠ Suspendu</span>';
+    return '<span style="background:#dc3545;' + style + '">✗ Inactif</span>';
 }
 
 function getClasseBadge(classeNom) {
-    const nom = classeNom || '-';
-    return `
-        <span style="background-color: #ffffff; color: #007bff; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; border: 1px solid #007bff; white-space: nowrap;">
-            <i class="fas fa-folder" style="margin-right: 6px; font-size: 10px;"></i>
-            ${nom}
-        </span>
-    `;
+    return '<span style="background:#fff;color:#007bff;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;border:1px solid #007bff;white-space:nowrap;">' +
+        '<i class="fas fa-folder" style="margin-right:5px;font-size:10px;"></i>' + escHtml(classeNom) +
+        '</span>';
 }
 
-// ============================================================================
-// MODAL ACTIONS
-// ============================================================================
-function openAddEleveModal() {
-    currentMode = "ajout";
-    currentEleveId = null;
-    document.getElementById('eleveForm').reset();
-    const title = document.getElementById('eleveModalTitle');
-    if (title) title.innerHTML = '<i class="fas fa-plus"></i> Nouvel Élève';
-    showModal();
-}
-
-function openEditEleveModal(id) {
-    const eleve = elevesData.find(e => e.ID == id);
-    if (!eleve) return;
-    currentMode = "modification";
-    currentEleveId = id;
-    document.getElementById('eleveMatricule').value = eleve.MATRICULE || '';
-    document.getElementById('eleveNom').value = eleve.NOM || '';
-    document.getElementById('eleveClasse').value = eleve.ID_CLASSE || '';
-    document.getElementById('eleveEmail').value = eleve.EMAIL || '';
-    document.getElementById('eleveTelephone').value = eleve.TELEPHONE || '';
-    document.getElementById('eleveStatut').value = eleve.STATUT?.toLowerCase() || 'actif';
-    const title = document.getElementById('eleveModalTitle');
-    if (title) title.innerHTML = '<i class="fas fa-edit"></i> Modifier Élève';
-    showModal();
-}
-
-async function saveEleve() {
-    const body = {
-        ID: currentEleveId,
-        ANNEE_ID: document.getElementById('eleveAnnee')?.value || 1,
-        MATRICULE: document.getElementById('eleveMatricule').value.trim(),
-        NOM: document.getElementById('eleveNom').value.trim(),
-        CLASSE: document.getElementById('eleveClasse').value,
-        EMAIL: document.getElementById('eleveEmail').value.trim(),
-        TELEPHONE: document.getElementById('eleveTelephone').value.trim(),
-        STATUT: document.getElementById('eleveStatut').value
-    };
-    if (!body.NOM || !body.MATRICULE || !body.CLASSE) {
-        return Swal.fire('Attention', 'Veuillez remplir les champs obligatoires', 'warning');
-    }
-    const url = currentMode === "ajout" ? "handlers/AjouterEleve.ashx" : "handlers/ModifierEleve.ashx";
-    showSpinner();
-    try {
-        const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-        const data = await safeJson(res);
-        if (data.success) {
-            Swal.fire('Succès', 'Opération réussie', 'success');
-            closeEleveModal();
-            loadEleves();
-        } else {
-            Swal.fire('Erreur', data.message, 'error');
-        }
-    } catch (err) {
-        Swal.fire('Erreur', 'Lien serveur interrompu', 'error');
-    } finally {
-        hideSpinner();
-    }
-}
-
-async function supprimerEleve(id) {
-    const confirm = await Swal.fire({ title: 'Supprimer ?', text: "Action irréversible.", icon: 'warning', showCancelButton: true, confirmButtonColor: '#d33', confirmButtonText: 'Oui, supprimer' });
-    if (confirm.isConfirmed) {
-        showSpinner();
-        try {
-            const res = await fetch("handlers/SupprimerEleve.ashx", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ID: id }) });
-            const data = await safeJson(res);
-            if (data.success) {
-                Swal.fire('Supprimé', '', 'success');
-                loadEleves();
-            }
-        } catch (e) {
-            Swal.fire('Erreur', 'Erreur lors de la suppression', 'error');
-        } finally {
-            hideSpinner();
-        }
-    }
-}
-
-// ============================================================================
-// UTILITAIRES
-// ============================================================================
+// ─────────────────────────────────────────────────────────────────────────────
+// COMPTEUR
+// ─────────────────────────────────────────────────────────────────────────────
 function updateCounter() {
-    let counter = document.getElementById('record-counter');
+    var counter = document.getElementById('record-counter');
     if (!counter) {
         counter = document.createElement('div');
         counter.id = 'record-counter';
         counter.className = 'text-muted small mt-2 text-center';
-        const table = document.querySelector('.dash-table');
+        var table = document.querySelector('.dash-table');
         if (table) table.after(counter);
     }
-    const count = filteredEleves.length;
-    if (counter) counter.innerHTML = `Affichage de <b>${count}</b> élève(s) ${count !== elevesData.length ? '(filtrés)' : ''}`;
+    var count = filteredEleves.length;
+    counter.innerHTML = 'Affichage de <b>' + count + '</b> élève(s)' + (count !== elevesData.length ? ' (filtrés sur ' + elevesData.length + ')' : '');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PAGINATION
+// ─────────────────────────────────────────────────────────────────────────────
+function createPaginationControls(totalPages) {
+    var old = document.getElementById('pagination-container');
+    if (old) old.remove();
+    if (totalPages <= 1) return;
+
+    var pc = document.createElement('div');
+    pc.id = 'pagination-container';
+    pc.style.cssText = 'margin:16px 0;display:flex;justify-content:center;align-items:center;gap:5px;flex-wrap:wrap;';
+
+    pc.appendChild(mkPageBtn('«', function () { goToPage(1); }, currentPage === 1));
+    pc.appendChild(mkPageBtn('‹', function () { if (currentPage > 1) goToPage(currentPage - 1); }, currentPage === 1));
+
+    var maxV = 5, startP = Math.max(1, currentPage - 2), endP = Math.min(totalPages, startP + maxV - 1);
+    if (endP - startP + 1 < maxV) startP = Math.max(1, endP - maxV + 1);
+
+    if (startP > 1) {
+        pc.appendChild(mkPageBtn('1', function () { goToPage(1); }));
+        if (startP > 2) pc.appendChild(mkDots());
+    }
+    for (var i = startP; i <= endP; i++) {
+        (function (page) { pc.appendChild(mkPageBtn(page, function () { goToPage(page); }, page === currentPage)); })(i);
+    }
+    if (endP < totalPages) {
+        if (endP < totalPages - 1) pc.appendChild(mkDots());
+        (function (tp) { pc.appendChild(mkPageBtn(tp, function () { goToPage(tp); })); })(totalPages);
+    }
+
+    pc.appendChild(mkPageBtn('›', function () { if (currentPage < totalPages) goToPage(currentPage + 1); }, currentPage === totalPages));
+    pc.appendChild(mkPageBtn('»', function () { goToPage(totalPages); }, currentPage === totalPages));
+
+    var table = document.querySelector('.dash-table');
+    if (table) table.after(pc);
+}
+
+function mkPageBtn(text, onClick, isDisabled) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = text;
+    var isActive = (text == currentPage && !isNaN(text));
+    btn.style.cssText = 'padding:7px 13px;border:1px solid ' + (isActive || !isDisabled ? '#007bff' : '#dee2e6') + ';' +
+        'background:' + (isActive ? '#007bff' : isDisabled ? '#e9ecef' : 'white') + ';' +
+        'color:' + (isActive ? 'white' : isDisabled ? '#6c757d' : '#007bff') + ';' +
+        'cursor:' + (isDisabled || isActive ? 'default' : 'pointer') + ';border-radius:6px;font-weight:' + (isActive ? '700' : '500') + ';min-width:38px;transition:all .15s;';
+    if (onClick && !isDisabled && !isActive) {
+        btn.addEventListener('click', onClick);
+        btn.addEventListener('mouseover', function () { btn.style.background = '#007bff'; btn.style.color = 'white'; });
+        btn.addEventListener('mouseout',  function () { btn.style.background = 'white';   btn.style.color = '#007bff'; });
+    }
+    if (isDisabled) btn.disabled = true;
+    return btn;
+}
+
+function mkDots() {
+    var s = document.createElement('span');
+    s.textContent = '…';
+    s.style.cssText = 'padding:7px 4px;color:#6c757d;';
+    return s;
 }
 
 function goToPage(page) {
@@ -637,30 +491,432 @@ function goToPage(page) {
     renderSimpleTable();
 }
 
-function showModal() {
-    const m = document.getElementById('eleveModal');
-    if (m) m.style.display = 'flex';
+// ─────────────────────────────────────────────────────────────────────────────
+// MODAL — OUVRIR AJOUT
+// ─────────────────────────────────────────────────────────────────────────────
+function openAddEleveModal(event) {
+    if (event) { event.preventDefault(); event.stopPropagation(); }
+
+    currentMode    = 'ajout';
+    currentEleveId = null;
+    resetEleveForm();
+
+    // Rétablir les champs pour l'ajout
+    var inputAnnee = document.getElementById('eleveAnnee');
+    var inputMatricule = document.getElementById('eleveMatricule');
+    
+    if (inputAnnee) {
+        inputAnnee.disabled = false;
+        inputAnnee.style.backgroundColor = '#fff'; // Fond blanc
+    }
+    if (inputMatricule) {
+        inputMatricule.disabled = false;
+        inputMatricule.style.backgroundColor = '#fff';
+    }
+
+    var title = document.getElementById('modalTitle');
+    if (title) title.innerHTML = '<i class="fas fa-plus"></i> Nouvel élève';
+
+    showModal('eleveModal');
+    return false;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MODAL — OUVRIR MODIFICATION
+// ─────────────────────────────────────────────────────────────────────────────
+function openEditEleveModal(id) {
+    var eleve = elevesData.find(function (e) { return e.ID == id; });
+    if (!eleve) {
+        Swal.fire('Erreur', 'Élève introuvable.', 'error');
+        return;
+    }
+
+    currentMode    = 'modification';
+    currentEleveId = id;
+
+    // --- CORRECTION DU REMPLISSAGE DE L'ANNÉE ---
+var selectAnnee = document.getElementById('eleveAnnee');
+if (selectAnnee) {
+    // On cherche l'ID. Si ANNEE_ID est vide, on essaie de trouver l'ID 
+    // en cherchant dans anneesData celui qui correspond au texte (ex: "2023-2024")
+    var idAnnee = eleve.ANNEE_ID;
+
+    if (!idAnnee && eleve.ANNEE_TEXTE) {
+        var found = anneesData.find(function(a) { return a.ANNEE === eleve.ANNEE_TEXTE; });
+        if (found) idAnnee = found.ID;
+    }
+
+    // On force la valeur (en string pour le select)
+    selectAnnee.value = idAnnee ? idAnnee.toString() : "";
+    
+    // Verrouillage visuel
+    selectAnnee.disabled = true;
+    selectAnnee.style.backgroundColor = '#e9ecef';
+    selectAnnee.style.cursor = 'not-allowed';
+}
+
+    // --- SELECTION DU MATRICULE ---
+    var inputMatricule = document.getElementById('eleveMatricule');
+    if (inputMatricule) {
+        inputMatricule.value = eleve.MATRICULE || '';
+        inputMatricule.disabled = true;
+        inputMatricule.style.backgroundColor = '#e9ecef'; // Gris figé
+        inputMatricule.style.cursor = 'not-allowed';
+    }
+
+    // Remplissage des autres champs modifiables
+    setVal('eleveNom',         eleve.NOM           || '');
+    setVal('EleveClasse',      String(eleve.ID_CLASSE || '')); // Utilise .CLASSE selon votre SQL
+    setVal('eleveEmail',       eleve.EMAIL         || '');
+    setVal('eleveTelephone',   eleve.TELEPHONE     || '');
+    setVal('eleveDateNaiss',   eleve.DATE_NAISSANCE || '');
+    setVal('eleveGenre',       eleve.GENRE         || 'M');
+    setVal('eleveAdresse',     eleve.ADRESSE       || '');
+    setVal('eleveParent',      eleve.PARENT        || '');
+    setVal('eleveStatut',      (eleve.STATUT || 'actif').toLowerCase());
+
+    var title = document.getElementById('modalTitle');
+    if (title) title.innerHTML = '<i class="fas fa-edit"></i> Modifier l\'élève';
+
+    showModal('eleveModal');
+}
+
+function resetEleveForm() {
+    ['eleveAnnee','eleveMatricule','eleveNom','EleveClasse','eleveEmail',
+     'eleveTelephone','eleveDateNaiss','eleveAdresse','eleveParent'].forEach(function (id) {
+        setVal(id, '');
+    });
+    setVal('eleveGenre',  'M');
+    setVal('eleveStatut', 'actif');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SAUVEGARDE (Ajouter ou Modifier)
+// ─────────────────────────────────────────────────────────────────────────────
+async function saveEleve(event) {
+    if (event) { event.preventDefault(); event.stopPropagation(); }
+
+    var body = {
+        ID:             currentEleveId,
+        ANNEE_ID:       getVal('eleveAnnee'),
+        MATRICULE:      getVal('eleveMatricule'),
+        NOM:            getVal('eleveNom'),
+        CLASSE:         getVal('EleveClasse'),
+        EMAIL:          getVal('eleveEmail'),
+        TELEPHONE:      getVal('eleveTelephone'),
+        STATUT:         getVal('eleveStatut'),
+        GENRE:          getVal('eleveGenre'),
+        DATE_NAISSANCE: getVal('eleveDateNaiss'),
+        ADRESSE:        getVal('eleveAdresse'),
+        PARENT:         getVal('eleveParent')
+    };
+
+    // Validation côté client
+    if (!body.NOM.trim()) {
+        Swal.fire('Attention', 'Le nom complet est obligatoire.', 'warning'); return false;
+    }
+    if (!body.MATRICULE.trim()) {
+        Swal.fire('Attention', 'Le matricule est obligatoire.', 'warning'); return false;
+    }
+    if (!body.CLASSE) {
+        Swal.fire('Attention', 'Veuillez sélectionner une classe.', 'warning'); return false;
+    }
+    if (!body.ANNEE_ID) {
+        Swal.fire('Attention', 'Veuillez sélectionner une année scolaire.', 'warning'); return false;
+    }
+
+    var url = currentMode === 'ajout' ? API.ajouter : API.modifier;
+
+    showSpinner();
+    try {
+        var res  = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        var data = await safeJson(res);
+
+        if (data.success) {
+            Swal.fire({ icon: 'success', title: data.message || 'Opération réussie', timer: 1500, showConfirmButton: false });
+            setTimeout(function () { closeEleveModal(); loadEleves(); }, 1500);
+        } else {
+            Swal.fire('Erreur', data.message || 'Erreur inconnue.', 'error');
+        }
+    } catch (err) {
+        console.error('saveEleve:', err);
+        Swal.fire('Erreur réseau', err.message, 'error');
+    } finally {
+        hideSpinner();
+    }
+    return false;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SUPPRESSION
+// ─────────────────────────────────────────────────────────────────────────────
+async function supprimerEleve(id) {
+    var result = await Swal.fire({
+        title: 'Supprimer cet élève ?',
+        text: 'Cette action est irréversible.',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#d33',
+        confirmButtonText: 'Oui, supprimer',
+        cancelButtonText: 'Annuler'
+    });
+
+    if (!result.isConfirmed) return;
+
+    showSpinner();
+    try {
+        var res = await fetch(API.supprimer, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ID: id })
+        });
+        var data = await safeJson(res);
+
+        if (data.success) {
+            // --- MISE À JOUR VISUELLE SANS RECHARGEMENT ---
+            
+            // 1. Retirer l'élément de la source de données principale
+            elevesData = elevesData.filter(function(e) { return e.ID !== id; });
+            
+            // 2. Retirer l'élément du périmètre filtré actuel
+            baseFilteredData = baseFilteredData.filter(function(e) { return e.ID !== id; });
+            
+            // 3. Mettre à jour la liste affichée
+            filteredEleves = filteredEleves.filter(function(e) { return e.ID !== id; });
+
+            // 4. Redessiner le tableau immédiatement
+            renderSimpleTable();
+
+            Swal.fire({ 
+                icon: 'success', 
+                title: data.message || 'Élève supprimé.', 
+                timer: 1000, 
+                showConfirmButton: false 
+            });
+        } else {
+            Swal.fire('Erreur', data.message || 'Erreur lors de la suppression.', 'error');
+        }
+    } catch (err) {
+        console.error('supprimerEleve:', err);
+        Swal.fire('Erreur réseau', err.message, 'error');
+    } finally {
+        hideSpinner();
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EXPORT
+// ─────────────────────────────────────────────────────────────────────────────
+function exportEleves() {
+    exportElevesToExcelOnly();
+    exportElevesToCsvOnly();
+}
+
+function exportElevesToExcelOnly() {
+    if (!filteredEleves.length) { Swal.fire('Info', 'Aucune donnée à exporter.', 'info'); return; }
+    var rows = [['MATRICULE','ANNÉE','NOM','CLASSE','EMAIL','TÉLÉPHONE','STATUT']];
+    filteredEleves.forEach(function (e) {
+        rows.push([e.MATRICULE||'',e.ANNEE_TEXTE||'',e.NOM||'',e.CLASSE_NOM||'',e.EMAIL||'',e.TELEPHONE||'',e.STATUT||'']);
+    });
+    var ws = XLSX.utils.aoa_to_sheet(rows);
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Eleves');
+    XLSX.writeFile(wb, 'eleves_' + new Date().toISOString().slice(0,10) + '.xlsx');
+}
+
+function exportElevesToCsvOnly() {
+    if (!filteredEleves.length) { Swal.fire('Info', 'Aucune donnée à exporter.', 'info'); return; }
+    var header = 'MATRICULE;ANNEE;NOM;CLASSE;EMAIL;TELEPHONE;STATUT\n';
+    var rows = filteredEleves.map(function (e) {
+        return [e.MATRICULE||'',e.ANNEE_TEXTE||'',e.NOM||'',e.CLASSE_NOM||'',e.EMAIL||'',e.TELEPHONE||'',e.STATUT||''].join(';');
+    }).join('\n');
+    var blob = new Blob(['\uFEFF' + header + rows], { type: 'text/csv;charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'eleves_' + new Date().toISOString().slice(0,10) + '.csv';
+    a.click();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EXPORTER EN EXCEL
+// ─────────────────────────────────────────────────────────────────────────────
+function exportElevesToExcelOnly() {
+    if (!filteredEleves.length) { 
+        Swal.fire('Info', 'Aucune donnée à exporter.', 'info'); 
+        return; 
+    }
+
+    // Préparation des colonnes pour Excel
+    var rows = [['MATRICULE', 'ANNÉE', 'NOM', 'CLASSE', 'EMAIL', 'TÉLÉPHONE', 'STATUT']];
+    
+    filteredEleves.forEach(function (e) {
+        rows.push([
+            e.MATRICULE || '',
+            e.ANNEE_TEXTE || '',
+            e.NOM || '',
+            e.CLASSE_NOM || '',
+            e.EMAIL || '',
+            e.TELEPHONE || '',
+            e.STATUT || ''
+        ]);
+    });
+
+    // Création du classeur Excel
+    var ws = XLSX.utils.aoa_to_sheet(rows);
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Liste_Eleves');
+    
+    // Téléchargement
+    XLSX.writeFile(wb, 'Export_Eleves_' + new Date().toISOString().slice(0,10) + '.xlsx');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// IMPRIMER EN PDF
+// ─────────────────────────────────────────────────────────────────────────────
+window.exportEleves = function () {
+    if (!filteredEleves || filteredEleves.length === 0) {
+        Swal.fire('Info', 'Aucune donnée à imprimer.', 'info');
+        return;
+    }
+
+    try {
+        // Initialisation correcte pour la version UMD
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF('l', 'mm', 'a4');
+
+        // Préparation des données
+        const head = [['MATRICULE', 'ANNÉE', 'NOM COMPLET', 'CLASSE', 'EMAIL', 'STATUT']];
+        const body = filteredEleves.map(function (e) {
+            return [
+                e.MATRICULE || '',
+                e.ANNEE_TEXTE || '',
+                e.NOM || '',
+                e.CLASSE_NOM || '',
+                e.EMAIL || '',
+                e.STATUT || ''
+            ];
+        });
+
+        // Utilisation de la syntaxe recommandée pour éviter "deprecated autoTable initiation"
+        doc.autoTable({
+            head: head,
+            body: body,
+            startY: 20,
+            theme: 'grid',
+            headStyles: { fillColor: [0, 123, 255] }, // Bleu primaire
+            styles: { fontSize: 8, cellPadding: 2 },
+            didDrawPage: function (data) {
+                // Pied de page simple
+                doc.setFontSize(8);
+                doc.text("Page " + data.pageNumber, data.settings.margin.left, doc.internal.pageSize.height - 10);
+            }
+        });
+
+        doc.save('Liste_Eleves.pdf');
+
+    } catch (err) {
+        console.error("Erreur PDF détaillée:", err);
+        Swal.fire('Erreur', 'Erreur lors de la génération : ' + err.message, 'error');
+    }
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MODAL HELPERS
+// ─────────────────────────────────────────────────────────────────────────────
+function showModal(id) {
+    var m = document.getElementById(id || 'eleveModal');
+    if (m) {
+        m.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+    }
 }
 
 function closeEleveModal() {
-    const m = document.getElementById('eleveModal');
-    if (m) m.style.display = 'none';
+    var m = document.getElementById('eleveModal');
+    if (m) {
+        m.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+    currentMode    = null;
+    currentEleveId = null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CONTRÔLES UI (Échap)
+// ─────────────────────────────────────────────────────────────────────────────
+function initUIControls() {
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+            closeEleveModal();
+            closeModal('modalImport');
+            closeModal('modalMapping');
+        }
+    });
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UTILITAIRES
+// ─────────────────────────────────────────────────────────────────────────────
+async function fetchJson(url) {
+    var res = await fetch(url);
+    return safeJson(res);
 }
 
 async function safeJson(res) {
     try {
-        const text = await res.text();
-        return text ? JSON.parse(text) : { success: false, message: "Réponse vide" };
-    } catch (e) { return { success: false, message: "Erreur JSON" }; }
+        var text = await res.text();
+        if (!text?.trim()) return { success: false, message: 'Réponse vide du serveur.' };
+        return JSON.parse(text);
+    } catch (e) {
+        return { success: false, message: 'Erreur de parsing JSON.' };
+    }
 }
 
-function bindButtonEvents() {
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeEleveModal(); });
-    const modal = document.getElementById('eleveModal');
-    if (modal) { modal.onclick = (e) => { if (e.target === modal) closeEleveModal(); }; }
+function getVal(id) {
+    var el = document.getElementById(id);
+    return el ? el.value.trim() : '';
 }
 
-window.openAddEleveModal = openAddEleveModal;
-window.saveEleve = saveEleve;
-window.closeEleveModal = closeEleveModal;
-window.goToPage = goToPage;
+function setVal(id, val) {
+    var el = document.getElementById(id);
+    if (el) el.value = val;
+}
+
+function escHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+
+// Fonction pour mettre à jour le nom du fichier sélectionné
+function updateFileName() {
+    var file = document.getElementById('excelFile');
+    var display = document.getElementById('fileNameDisplay');
+    var btn = document.getElementById('btnLaunchImport');
+    if (!file || !display) return;
+    
+    var name = file.files[0] ? file.files[0].name : '';
+    display.value = name;
+    if (btn) btn.disabled = !name;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// EXPOSITION GLOBALE (onclick= dans le HTML)
+// ─────────────────────────────────────────────────────────────────────────────
+window.openAddEleveModal      = openAddEleveModal;
+window.openEditEleveModal     = openEditEleveModal;
+window.closeEleveModal        = closeEleveModal;
+window.saveEleve              = saveEleve;
+window.supprimerEleve         = supprimerEleve;
+window.sortData               = sortData;
+window.goToPage               = goToPage;
+window.exportEleves           = exportEleves;
+window.exportElevesToExcelOnly = exportElevesToExcelOnly;
+window.exportElevesToCsvOnly  = exportElevesToCsvOnly;
+window.showInitialFilterModal = showInitialFilterModal;
+window.updateFileName         = updateFileName;
+

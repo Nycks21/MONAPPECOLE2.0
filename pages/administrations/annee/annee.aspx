@@ -246,7 +246,7 @@
                             <div class="dash-card-head">
                                 <span class="dash-card-title"><i class="fas fa-users-cog"></i> Paramétrages des années</span>
                                 <div class="action-buttons">
-                                    <button class="btn btn-success btn-sm" onclick="openAddUserModal()">
+                                    <button class="btn btn-success btn-sm" onclick="openAddAnneeModal()">
                                         <i class="fas fa-plus"></i> Ajouter
                                     </button>
                                 </div>
@@ -279,7 +279,7 @@
             <div id="addAnneeModal" class="modal">
                 <div class="modal-content" style="max-width:550px;">
                     <div class="modal-header">
-                        <h3 id="anneeModalTitle"><i class="fas fa-user-plus"></i> Ajouter un utilisateur</h3>
+                        <h3 id="anneeModalTitle"><i class="fas fa-user-plus"></i> Ajouter année</h3>
                     </div>
                     <div class="modal-body">
                         <input type="hidden" id="anneeEditEmail">

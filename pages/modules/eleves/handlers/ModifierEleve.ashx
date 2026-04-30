@@ -1,4 +1,4 @@
-<%@ WebHandler Language="C#" Class="ModifierClasse" %>
+<%@ WebHandler Language="C#" Class="ModifierEleve" %>
 
 using System;
 using System.Configuration;
@@ -8,12 +8,12 @@ using System.Web;
 using System.Web.Script.Serialization;
 using System.Web.SessionState;
 
-public class ModifierClasse : IHttpHandler, IRequiresSessionState
+public class ModifierEleve : IHttpHandler, IRequiresSessionState
 {
     public void ProcessRequest(HttpContext ctx)
     {
         ctx.Response.ContentType = "application/json";
-        ctx.Response.Charset     = "utf-8";
+        ctx.Response.Charset = "utf-8";
         ctx.Response.Cache.SetNoStore();
 
         JavaScriptSerializer ser = new JavaScriptSerializer();
@@ -25,96 +25,93 @@ public class ModifierClasse : IHttpHandler, IRequiresSessionState
             return;
         }
 
-        if (ctx.Request.HttpMethod != "POST")
-        {
-            ctx.Response.StatusCode = 405;
-            ctx.Response.Write("{\"success\":false,\"message\":\"Méthode non autorisée\"}");
-            return;
-        }
-
         try
         {
             string body;
             using (var reader = new StreamReader(ctx.Request.InputStream))
                 body = reader.ReadToEnd();
 
-            var payload = ser.Deserialize<ClassePayload>(body);
+            var payload = ser.Deserialize<ElevePayload>(body);
+            if (payload == null) throw new ArgumentException("Données invalides.");
 
-            if (payload == null)
-                throw new ArgumentException("Données invalides.");
+            // ID unique de l'élève (GUID)
+            Guid eleveGuid;
+            if (string.IsNullOrEmpty(payload.ID) || !Guid.TryParse(payload.ID, out eleveGuid))
+                throw new ArgumentException("ID d'élève invalide.");
 
-            // Validation ID classe (GUID)
-            Guid classeGuid;
-            if (!Guid.TryParse(payload.ID, out classeGuid))
-                throw new ArgumentException("ID de classe invalide.");
+            // Validation de la classe (INT)
+            int classeId;
+            if (payload.CLASSE == null || !int.TryParse(payload.CLASSE.ToString(), out classeId)) 
+                throw new ArgumentException("Classe invalide.");
 
-            if (string.IsNullOrWhiteSpace(payload.NOM))
-                throw new ArgumentException("Le nom de la classe est obligatoire.");
-
-            // Validation TITULAIRE_ID (int > 0)
-            if (payload.TITULAIRE_ID <= 0)
-                throw new ArgumentException("Veuillez sélectionner un titulaire valide.");
-
-            // Validation des GUIDs Niveau et Salle
-            Guid niveauGuid, salleGuid;
-            if (!Guid.TryParse(payload.NIVEAU_ID, out niveauGuid))
-                throw new ArgumentException("Le niveau sélectionné est invalide.");
-            if (!Guid.TryParse(payload.SALLE_ID, out salleGuid))
-                throw new ArgumentException("La salle sélectionnée est invalide.");
-
-            string connStr = ConfigurationManager.ConnectionStrings["MaConnexion"].ConnectionString;
-
-            using (var conn = new SqlConnection(connStr))
-            using (var cmd  = new SqlCommand(
-                @"UPDATE [dbo].[Classes]
-                  SET    NOM          = @nom,
-                         NIVEAU_ID    = @niveauId,
-                         TITULAIRE_ID = @titulaireId,
-                         SALLE_ID     = @salleId,
-                         EFFECTIF     = @effectif,
-                         STATUT       = @statut
-                  WHERE  ID = @id", conn))
+            // DATE_NAISSANCE
+            DateTime? dateNaiss = null;
+            if (!string.IsNullOrEmpty(payload.DATE_NAISSANCE))
             {
-                cmd.Parameters.Add("@id",          System.Data.SqlDbType.UniqueIdentifier).Value = classeGuid;
-                cmd.Parameters.Add("@nom",         System.Data.SqlDbType.NVarChar).Value         = payload.NOM.Trim();
-                cmd.Parameters.Add("@niveauId",    System.Data.SqlDbType.UniqueIdentifier).Value = niveauGuid;
-                cmd.Parameters.Add("@titulaireId", System.Data.SqlDbType.Int).Value             = payload.TITULAIRE_ID;
-                cmd.Parameters.Add("@salleId",     System.Data.SqlDbType.UniqueIdentifier).Value = salleGuid;
-                cmd.Parameters.Add("@effectif",    System.Data.SqlDbType.Int).Value             = payload.EFFECTIF;
-
-                bool isActif = (payload.STATUT == "1" || payload.STATUT == "true" || payload.STATUT == "Actif");
-                cmd.Parameters.Add("@statut",      System.Data.SqlDbType.Bit).Value             = isActif;
-
-                conn.Open();
-                int rows = cmd.ExecuteNonQuery();
-                if (rows == 0) throw new Exception("Classe introuvable (ID=" + payload.ID + ").");
+                DateTime d;
+                if (DateTime.TryParse(payload.DATE_NAISSANCE, out d)) dateNaiss = d;
             }
 
-            ctx.Response.Write("{\"success\":true}");
-        }
-        catch (ArgumentException ex)
-        {
-            ctx.Response.StatusCode = 400;
-            ctx.Response.Write("{\"success\":false,\"message\":" + ser.Serialize(ex.Message) + "}");
+            string connStr = ConfigurationManager.ConnectionStrings["MaConnexion"].ConnectionString;
+            using (var conn = new SqlConnection(connStr))
+            using (var cmd = new SqlCommand(
+                @"UPDATE [dbo].[ELEVES] SET 
+                    NOM=@nom, 
+                    CLASSE=@classe, 
+                    EMAIL=@email, 
+                    TELEPHONE=@tel, 
+                    STATUT=@statut, 
+                    GENRE=@genre, 
+                    DATE_NAISSANCE=@dateNaiss, 
+                    ADRESSE=@adresse, 
+                    PARENT=@parent, 
+                    UPDATED_AT=GETDATE() 
+                  WHERE ID=@id", conn))
+            {
+                // Note : ANNEE_ID et MATRICULE sont retirés du UPDATE car ils sont grisés (non modifiables)
+                
+                cmd.Parameters.Add("@id", System.Data.SqlDbType.UniqueIdentifier).Value = eleveGuid;
+                cmd.Parameters.Add("@nom", System.Data.SqlDbType.NVarChar, 255).Value = payload.NOM.Trim();
+                cmd.Parameters.Add("@classe", System.Data.SqlDbType.Int).Value = classeId;
+                
+                cmd.Parameters.Add("@email", System.Data.SqlDbType.NVarChar, 255).Value = (payload.EMAIL != null) ? (object)payload.EMAIL.Trim() : DBNull.Value;
+                cmd.Parameters.Add("@tel", System.Data.SqlDbType.NVarChar, 50).Value = (payload.TELEPHONE != null) ? (object)payload.TELEPHONE.Trim() : DBNull.Value;
+                
+                string statut = (string.IsNullOrEmpty(payload.STATUT)) ? "actif" : payload.STATUT.Trim().ToLower();
+                cmd.Parameters.Add("@statut", System.Data.SqlDbType.NVarChar, 20).Value = statut;
+
+                string genre = (string.IsNullOrEmpty(payload.GENRE)) ? "M" : payload.GENRE.Trim().ToUpper().Substring(0, 1);
+                cmd.Parameters.Add("@genre", System.Data.SqlDbType.NChar, 1).Value = genre;
+
+                cmd.Parameters.Add("@dateNaiss", System.Data.SqlDbType.Date).Value = (dateNaiss.HasValue) ? (object)dateNaiss.Value : DBNull.Value;
+                cmd.Parameters.Add("@adresse", System.Data.SqlDbType.NVarChar, 500).Value = (payload.ADRESSE != null) ? (object)payload.ADRESSE.Trim() : DBNull.Value;
+                cmd.Parameters.Add("@parent", System.Data.SqlDbType.NVarChar, 255).Value = (payload.PARENT != null) ? (object)payload.PARENT.Trim() : DBNull.Value;
+
+                conn.Open();
+                if (cmd.ExecuteNonQuery() == 0) throw new Exception("Élève introuvable ou aucune modification effectuée.");
+            }
+
+            ctx.Response.Write("{\"success\":true,\"message\":\"Profil élève mis à jour avec succès.\"}");
         }
         catch (Exception ex)
         {
             ctx.Response.StatusCode = 500;
-            string msg = ex.Message.Contains("UNIQUE") ? "Cette classe existe déjà." : ex.Message;
-            ctx.Response.Write("{\"success\":false,\"message\":" + ser.Serialize(msg) + "}");
+            ctx.Response.Write("{\"success\":false,\"message\":" + ser.Serialize(ex.Message) + "}");
         }
     }
 
     public bool IsReusable { get { return false; } }
-
-    private class ClassePayload
-    {
-        public string ID           { get; set; }
-        public string NOM          { get; set; }
-        public string NIVEAU_ID    { get; set; }
-        public int    TITULAIRE_ID { get; set; }
-        public string SALLE_ID     { get; set; }
-        public int    EFFECTIF     { get; set; }
-        public string STATUT       { get; set; }
+    
+    private class ElevePayload {
+        public string ID { get; set; }
+        public string NOM { get; set; }
+        public string CLASSE { get; set; }
+        public string EMAIL { get; set; }
+        public string TELEPHONE { get; set; }
+        public string STATUT { get; set; }
+        public string GENRE { get; set; }
+        public string DATE_NAISSANCE { get; set; }
+        public string ADRESSE { get; set; }
+        public string PARENT { get; set; }
     }
 }

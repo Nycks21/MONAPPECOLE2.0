@@ -620,13 +620,6 @@ function initUIControls() {
         if (e.key === 'Escape') closeAddMatiereModal();
     });
 
-    // Fermer modal en cliquant l'overlay
-    var modal = document.getElementById('addMatiereModal');
-    if (modal) {
-        modal.addEventListener('click', function (e) {
-            if (e.target === modal) closeAddMatiereModal();
-        });
-    }
 }
 
 // ─────────────────────────────────────────────

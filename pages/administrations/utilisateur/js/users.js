@@ -20,8 +20,6 @@ $(document).ready(() => {
     preventFormAutoSubmit();
     ensureButtonsHaveTypeButton();
     loadUsers();
-    bindButtonEvents();
-    initModalCloseOnClickOutside();
 });
 
 // ============================================================================
@@ -562,18 +560,6 @@ function renderSimpleTable() {
 // ============================================================================
 // MODAL - AJOUT / MODIFICATION
 // ============================================================================
-function initModalCloseOnClickOutside() {
-    const modal = document.getElementById('addUserModal');
-    if (modal) {
-        modal.addEventListener('click', (event) => {
-            const modalContent = modal.querySelector('.modal-content');
-            if (event.target === modal && !modalContent.contains(event.target)) {
-                closeAddUserModal(event);
-            }
-        });
-    }
-}
-
 function openAddUserModal(event) {
     if (event) {
         event.preventDefault();
@@ -1013,23 +999,6 @@ function generateExcelHtml(headers, rows) {
 function escapeHtml(text) {
     if (!text) return '';
     return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-}
-
-// ============================================================================
-// BIND DES ÉVÉNEMENTS
-// ============================================================================
-function bindButtonEvents() {
-    const modalContent = document.querySelector('.modal-content');
-    if (modalContent) {
-        modalContent.addEventListener('click', (e) => e.stopPropagation());
-    }
-
-    document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape') {
-            const modal = document.getElementById('addUserModal');
-            if (modal && modal.style.display === 'flex') closeAddUserModal(event);
-        }
-    });
 }
 
 // ============================================================================

@@ -36,27 +36,6 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 
 // ─────────────────────────────────────────────
-// SPINNER
-// ─────────────────────────────────────────────
-function forceHideSpinner() {
-    var s = document.getElementById('spinnerOverlay');
-    if (!s) return;
-    s.style.display = 'none';
-    s.style.visibility = 'hidden';
-    s.style.opacity = '0';
-    s.setAttribute('aria-hidden', 'true');
-}
-function showSpinner() {
-    var s = document.getElementById('spinnerOverlay');
-    if (!s) return;
-    s.style.opacity = '1';
-    s.style.visibility = 'visible';
-    s.style.display = 'flex';
-    s.removeAttribute('aria-hidden');
-}
-function hideSpinner() { forceHideSpinner(); }
-
-// ─────────────────────────────────────────────
 // AJAX — helper générique
 // ─────────────────────────────────────────────
 function ajax(url, payload) {
@@ -439,16 +418,11 @@ function initUIControls() {
         });
     }
 
+    // Fermer modal avec Échap
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') closeAddNiveauModal();
     });
 
-    var modal = document.getElementById('addNiveauModal');
-    if (modal) {
-        modal.addEventListener('click', function (e) {
-            if (e.target === modal) closeAddNiveauModal();
-        });
-    }
 }
 
 // ─────────────────────────────────────────────
