@@ -4,28 +4,28 @@
 // URLS DES HANDLERS — chemins relatifs depuis la page eleves.aspx
 // ─────────────────────────────────────────────────────────────────────────────
 var API = {
-    getEleves:   'handlers/GetEleve.ashx',
-    getClasses:  '../../parametres/classes/handlers/GetClasse.ashx',
-    getAnnees:   '../../administrations/annee/handlers/GetAnnee.ashx',
-    ajouter:     'handlers/AjouterEleve.ashx',
-    modifier:    'handlers/ModifierEleve.ashx',
-    supprimer:   'handlers/SupprimerEleve.ashx'
+    getEleves: 'handlers/GetEleve.ashx',
+    getClasses: '../../parametres/classes/handlers/GetClasse.ashx',
+    getAnnees: '../../administrations/annee/handlers/GetAnnee.ashx',
+    ajouter: 'handlers/AjouterEleve.ashx',
+    modifier: 'handlers/ModifierEleve.ashx',
+    supprimer: 'handlers/SupprimerEleve.ashx'
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ÉTAT GLOBAL
 // ─────────────────────────────────────────────────────────────────────────────
-var currentMode      = null;     // "ajout" | "modification"
-var currentEleveId   = null;     // GUID string
-var elevesData       = [];       // toutes les données chargées
+var currentMode = null;     // "ajout" | "modification"
+var currentEleveId = null;     // GUID string
+var elevesData = [];       // toutes les données chargées
 var baseFilteredData = [];       // périmètre validé par le filtre initial
-var filteredEleves   = [];       // données affichées (après filtre rapide)
-var classesData      = [];
-var anneesData       = [];
-var currentPage      = 1;
-var rowsPerPage      = 10;
-var sortDirection    = 1;        // 1 ASC, -1 DESC
-var isInitialLoad    = true;
+var filteredEleves = [];       // données affichées (après filtre rapide)
+var classesData = [];
+var anneesData = [];
+var currentPage = 1;
+var rowsPerPage = 10;
+var sortDirection = 1;        // 1 ASC, -1 DESC
+var isInitialLoad = true;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // INITIALISATION
@@ -60,18 +60,18 @@ function ensureButtonsHaveTypeButton() {
 function forceHideSpinner() {
     var s = document.getElementById('spinnerOverlay');
     if (!s) return;
-    s.style.display    = 'none';
+    s.style.display = 'none';
     s.style.visibility = 'hidden';
-    s.style.opacity    = '0';
+    s.style.opacity = '0';
     s.setAttribute('aria-hidden', 'true');
 }
 
 function showSpinner() {
     var s = document.getElementById('spinnerOverlay');
     if (!s) return;
-    s.style.display    = 'flex';
+    s.style.display = 'flex';
     s.style.visibility = 'visible';
-    s.style.opacity    = '1';
+    s.style.opacity = '1';
     s.removeAttribute('aria-hidden');
 }
 
@@ -137,14 +137,26 @@ function peuplerSelectClasses() {
 }
 
 // Peupler le select Année dans la modal
-function peuplerSelectAnnees() {
+/**
+ * Remplit le select des années
+ * @param {boolean} afficherTout - Si true, montre même les clôturées (pour la modif)
+ */
+function peuplerSelectAnnees(afficherTout) {
     var sel = document.getElementById('eleveAnnee');
     if (!sel) return;
+
     sel.innerHTML = '<option value="">-- Sélectionner une année --</option>';
+    
     anneesData.forEach(function (a) {
+        // Si on est en mode "Ajout", on ignore les années clôturées[cite: 9, 10]
+        if (!afficherTout && a.CLOTURE) {
+            return; 
+        }
+
         var opt = document.createElement('option');
         opt.value = a.ID;
-        opt.textContent = a.ANNEE;
+        // On ajoute une mention visuelle si l'année est clôturée (utile pour la modif)[cite: 9]
+        opt.textContent = a.ANNEE + (a.CLOTURE ? ' (Clôturée)' : '');
         sel.appendChild(opt);
     });
 }
@@ -154,7 +166,7 @@ function peuplerSelectAnnees() {
 // ─────────────────────────────────────────────────────────────────────────────
 function showInitialFilterModal() {
     var savedFilter = {};
-    try { savedFilter = JSON.parse(localStorage.getItem('lastInitialFilter')) || {}; } catch (e) {}
+    try { savedFilter = JSON.parse(localStorage.getItem('lastInitialFilter')) || {}; } catch (e) { }
 
     var anneeOptions = anneesData.map(function (a) {
         return '<option value="' + escHtml(a.ANNEE) + '">' + escHtml(a.ANNEE) + '</option>';
@@ -202,11 +214,11 @@ function showInitialFilterModal() {
         cancelButtonText: 'Annuler',
         preConfirm: function () {
             return {
-                annee:     document.getElementById('init-annee').value,
-                classe:    document.getElementById('init-classe').value,
+                annee: document.getElementById('init-annee').value,
+                classe: document.getElementById('init-classe').value,
                 matricule: document.getElementById('init-matricule').value.trim(),
-                nom:       document.getElementById('init-nom').value.trim(),
-                status:    document.getElementById('init-status').value
+                nom: document.getElementById('init-nom').value.trim(),
+                status: document.getElementById('init-status').value
             };
         }
     }).then(function (result) {
@@ -218,15 +230,15 @@ function showInitialFilterModal() {
 }
 
 function applyInitialFilters(criteria) {
-    try { localStorage.setItem('lastInitialFilter', JSON.stringify(criteria)); } catch (e) {}
+    try { localStorage.setItem('lastInitialFilter', JSON.stringify(criteria)); } catch (e) { }
     isInitialLoad = false;
 
     baseFilteredData = elevesData.filter(function (eleve) {
-        var matchAnnee     = criteria.annee     ? (eleve.ANNEE_TEXTE === criteria.annee)                                      : true;
-        var matchClasse    = criteria.classe    ? (String(eleve.ID_CLASSE) === String(criteria.classe))                       : true;
+        var matchAnnee = criteria.annee ? (eleve.ANNEE_TEXTE === criteria.annee) : true;
+        var matchClasse = criteria.classe ? (String(eleve.ID_CLASSE) === String(criteria.classe)) : true;
         var matchMatricule = criteria.matricule ? (eleve.MATRICULE?.toLowerCase().includes(criteria.matricule.toLowerCase())) : true;
-        var matchNom       = criteria.nom       ? (eleve.NOM?.toLowerCase().includes(criteria.nom.toLowerCase()))             : true;
-        var matchStatus    = criteria.status    ? (eleve.STATUT?.toLowerCase() === criteria.status.toLowerCase())             : true;
+        var matchNom = criteria.nom ? (eleve.NOM?.toLowerCase().includes(criteria.nom.toLowerCase())) : true;
+        var matchStatus = criteria.status ? (eleve.STATUT?.toLowerCase() === criteria.status.toLowerCase()) : true;
         return matchAnnee && matchClasse && matchMatricule && matchNom && matchStatus;
     });
 
@@ -320,9 +332,9 @@ function resetFilters() {
     var sf = document.getElementById('search-filter');
     var stf = document.getElementById('status-filter');
     var rp = document.getElementById('rows-per-page-top');
-    if (sf)  sf.value  = '';
+    if (sf) sf.value = '';
     if (stf) stf.value = '';
-    if (rp)  rp.value  = '10';
+    if (rp) rp.value = '10';
     rowsPerPage = 10;
     applyFilters();
 }
@@ -348,8 +360,8 @@ function renderSimpleTable() {
     var tbody = document.getElementById('elevesTableBody');
     if (!tbody) return;
 
-    var start     = (currentPage - 1) * rowsPerPage;
-    var pageData  = filteredEleves.slice(start, start + rowsPerPage);
+    var start = (currentPage - 1) * rowsPerPage;
+    var pageData = filteredEleves.slice(start, start + rowsPerPage);
     var totalPages = Math.ceil(filteredEleves.length / rowsPerPage);
 
     if (!pageData.length) {
@@ -359,6 +371,10 @@ function renderSimpleTable() {
     } else {
         tbody.innerHTML = '';
         pageData.forEach(function (eleve) {
+            // Vérification de la clôture via l'objet année rattaché
+            var anneeObj = anneesData.find(a => a.ID == eleve.ANNEE_ID || a.ANNEE === eleve.ANNEE_TEXTE);
+            var isCloture = anneeObj && anneeObj.CLOTURE === true;
+
             var row = tbody.insertRow();
             row.innerHTML =
                 '<td>' + getMatriculeBadge(eleve.MATRICULE) + '</td>' +
@@ -369,12 +385,12 @@ function renderSimpleTable() {
                 '<td>' + escHtml(eleve.TELEPHONE || '-') + '</td>' +
                 '<td>' + getStatutBadge(eleve.STATUT) + '</td>' +
                 '<td>' +
-                    '<button type="button" class="btn btn-sm btn-primary" style="margin:0 2px;" onclick="openEditEleveModal(\'' + eleve.ID + '\')">' +
-                        '<i class="fas fa-edit"></i>' +
-                    '</button>' +
-                    '<button type="button" class="btn btn-sm btn-danger" style="margin:0 2px;" onclick="supprimerEleve(\'' + eleve.ID + '\')">' +
-                        '<i class="fas fa-trash"></i>' +
-                    '</button>' +
+                (isCloture
+                    ? '<button type="button" class="btn btn-sm btn-secondary" style="margin:0 2px;cursor:not-allowed;" title="Année clôturée" disabled><i class="fas fa-lock"></i></button>'
+                    : '<button type="button" class="btn btn-sm btn-primary" style="margin:0 2px;" onclick="openEditEleveModal(\'' + eleve.ID + '\')"><i class="fas fa-edit"></i></button>') +
+                (isCloture
+                    ? '<button type="button" class="btn btn-sm btn-secondary" style="margin:0 2px;cursor:not-allowed;" disabled><i class="fas fa-trash"></i></button>'
+                    : '<button type="button" class="btn btn-sm btn-danger" style="margin:0 2px;" onclick="supprimerEleve(\'' + eleve.ID + '\', \'' + eleve.NOM + '\')"><i class="fas fa-trash"></i></button>') +
                 '</td>';
         });
     }
@@ -397,7 +413,7 @@ function getMatriculeBadge(matricule) {
 function getStatutBadge(statut) {
     var s = (statut || '').toLowerCase();
     var style = 'padding:4px 10px;border-radius:20px;color:white;font-size:12px;font-weight:500;';
-    if (s === 'actif')    return '<span style="background:#28a745;' + style + '">✓ Actif</span>';
+    if (s === 'actif') return '<span style="background:#28a745;' + style + '">✓ Actif</span>';
     if (s === 'suspendu') return '<span style="background:#6c757d;' + style + '">⚠ Suspendu</span>';
     return '<span style="background:#dc3545;' + style + '">✗ Inactif</span>';
 }
@@ -473,7 +489,7 @@ function mkPageBtn(text, onClick, isDisabled) {
     if (onClick && !isDisabled && !isActive) {
         btn.addEventListener('click', onClick);
         btn.addEventListener('mouseover', function () { btn.style.background = '#007bff'; btn.style.color = 'white'; });
-        btn.addEventListener('mouseout',  function () { btn.style.background = 'white';   btn.style.color = '#007bff'; });
+        btn.addEventListener('mouseout', function () { btn.style.background = 'white'; btn.style.color = '#007bff'; });
     }
     if (isDisabled) btn.disabled = true;
     return btn;
@@ -497,14 +513,14 @@ function goToPage(page) {
 function openAddEleveModal(event) {
     if (event) { event.preventDefault(); event.stopPropagation(); }
 
-    currentMode    = 'ajout';
+    currentMode = 'ajout';
     currentEleveId = null;
     resetEleveForm();
 
     // Rétablir les champs pour l'ajout
     var inputAnnee = document.getElementById('eleveAnnee');
     var inputMatricule = document.getElementById('eleveMatricule');
-    
+
     if (inputAnnee) {
         inputAnnee.disabled = false;
         inputAnnee.style.backgroundColor = '#fff'; // Fond blanc
@@ -525,35 +541,37 @@ function openAddEleveModal(event) {
 // MODAL — OUVRIR MODIFICATION
 // ─────────────────────────────────────────────────────────────────────────────
 function openEditEleveModal(id) {
-    var eleve = elevesData.find(function (e) { return e.ID == id; });
-    if (!eleve) {
-        Swal.fire('Erreur', 'Élève introuvable.', 'error');
+    var eleve = elevesData.find(e => e.ID == id);
+    var anneeObj = anneesData.find(a => a.ID == eleve.ANNEE_ID || a.ANNEE === eleve.ANNEE_TEXTE);
+
+    if (anneeObj && anneeObj.CLOTURE) {
+        Swal.fire('Action impossible', 'Cette année est clôturée. Aucune modification n’est autorisée.', 'warning');
         return;
     }
 
-    currentMode    = 'modification';
+    currentMode = 'modification';
     currentEleveId = id;
 
     // --- CORRECTION DU REMPLISSAGE DE L'ANNÉE ---
-var selectAnnee = document.getElementById('eleveAnnee');
-if (selectAnnee) {
-    // On cherche l'ID. Si ANNEE_ID est vide, on essaie de trouver l'ID 
-    // en cherchant dans anneesData celui qui correspond au texte (ex: "2023-2024")
-    var idAnnee = eleve.ANNEE_ID;
+    var selectAnnee = document.getElementById('eleveAnnee');
+    if (selectAnnee) {
+        // On cherche l'ID. Si ANNEE_ID est vide, on essaie de trouver l'ID 
+        // en cherchant dans anneesData celui qui correspond au texte (ex: "2023-2024")
+        var idAnnee = eleve.ANNEE_ID;
 
-    if (!idAnnee && eleve.ANNEE_TEXTE) {
-        var found = anneesData.find(function(a) { return a.ANNEE === eleve.ANNEE_TEXTE; });
-        if (found) idAnnee = found.ID;
+        if (!idAnnee && eleve.ANNEE_TEXTE) {
+            var found = anneesData.find(function (a) { return a.ANNEE === eleve.ANNEE_TEXTE; });
+            if (found) idAnnee = found.ID;
+        }
+
+        // On force la valeur (en string pour le select)
+        selectAnnee.value = idAnnee ? idAnnee.toString() : "";
+
+        // Verrouillage visuel
+        selectAnnee.disabled = true;
+        selectAnnee.style.backgroundColor = '#e9ecef';
+        selectAnnee.style.cursor = 'not-allowed';
     }
-
-    // On force la valeur (en string pour le select)
-    selectAnnee.value = idAnnee ? idAnnee.toString() : "";
-    
-    // Verrouillage visuel
-    selectAnnee.disabled = true;
-    selectAnnee.style.backgroundColor = '#e9ecef';
-    selectAnnee.style.cursor = 'not-allowed';
-}
 
     // --- SELECTION DU MATRICULE ---
     var inputMatricule = document.getElementById('eleveMatricule');
@@ -565,15 +583,15 @@ if (selectAnnee) {
     }
 
     // Remplissage des autres champs modifiables
-    setVal('eleveNom',         eleve.NOM           || '');
-    setVal('EleveClasse',      String(eleve.ID_CLASSE || '')); // Utilise .CLASSE selon votre SQL
-    setVal('eleveEmail',       eleve.EMAIL         || '');
-    setVal('eleveTelephone',   eleve.TELEPHONE     || '');
-    setVal('eleveDateNaiss',   eleve.DATE_NAISSANCE || '');
-    setVal('eleveGenre',       eleve.GENRE         || 'M');
-    setVal('eleveAdresse',     eleve.ADRESSE       || '');
-    setVal('eleveParent',      eleve.PARENT        || '');
-    setVal('eleveStatut',      (eleve.STATUT || 'actif').toLowerCase());
+    setVal('eleveNom', eleve.NOM || '');
+    setVal('EleveClasse', String(eleve.ID_CLASSE || '')); // Utilise .CLASSE selon votre SQL
+    setVal('eleveEmail', eleve.EMAIL || '');
+    setVal('eleveTelephone', eleve.TELEPHONE || '');
+    setVal('eleveDateNaiss', eleve.DATE_NAISSANCE || '');
+    setVal('eleveGenre', eleve.GENRE || 'M');
+    setVal('eleveAdresse', eleve.ADRESSE || '');
+    setVal('eleveParent', eleve.PARENT || '');
+    setVal('eleveStatut', (eleve.STATUT || 'actif').toLowerCase());
 
     var title = document.getElementById('modalTitle');
     if (title) title.innerHTML = '<i class="fas fa-edit"></i> Modifier l\'élève';
@@ -582,11 +600,11 @@ if (selectAnnee) {
 }
 
 function resetEleveForm() {
-    ['eleveAnnee','eleveMatricule','eleveNom','EleveClasse','eleveEmail',
-     'eleveTelephone','eleveDateNaiss','eleveAdresse','eleveParent'].forEach(function (id) {
-        setVal(id, '');
-    });
-    setVal('eleveGenre',  'M');
+    ['eleveAnnee', 'eleveMatricule', 'eleveNom', 'EleveClasse', 'eleveEmail',
+        'eleveTelephone', 'eleveDateNaiss', 'eleveAdresse', 'eleveParent'].forEach(function (id) {
+            setVal(id, '');
+        });
+    setVal('eleveGenre', 'M');
     setVal('eleveStatut', 'actif');
 }
 
@@ -597,21 +615,21 @@ async function saveEleve(event) {
     if (event) { event.preventDefault(); event.stopPropagation(); }
 
     var body = {
-        ID:             currentEleveId,
-        ANNEE_ID:       getVal('eleveAnnee'),
-        MATRICULE:      getVal('eleveMatricule'),
-        NOM:            getVal('eleveNom'),
-        CLASSE:         getVal('EleveClasse'),
-        EMAIL:          getVal('eleveEmail'),
-        TELEPHONE:      getVal('eleveTelephone'),
-        STATUT:         getVal('eleveStatut'),
-        GENRE:          getVal('eleveGenre'),
+        ID: currentEleveId,
+        ANNEE_ID: getVal('eleveAnnee'),
+        MATRICULE: getVal('eleveMatricule'),
+        NOM: getVal('eleveNom'),
+        CLASSE: getVal('EleveClasse'),
+        EMAIL: getVal('eleveEmail'),
+        TELEPHONE: getVal('eleveTelephone'),
+        STATUT: getVal('eleveStatut'),
+        GENRE: getVal('eleveGenre'),
         DATE_NAISSANCE: getVal('eleveDateNaiss'),
-        ADRESSE:        getVal('eleveAdresse'),
-        PARENT:         getVal('eleveParent')
+        ADRESSE: getVal('eleveAdresse'),
+        PARENT: getVal('eleveParent')
     };
 
-    // Validation côté client
+    // --- Validation côté client ---
     if (!body.NOM.trim()) {
         Swal.fire('Attention', 'Le nom complet est obligatoire.', 'warning'); return false;
     }
@@ -625,28 +643,57 @@ async function saveEleve(event) {
         Swal.fire('Attention', 'Veuillez sélectionner une année scolaire.', 'warning'); return false;
     }
 
+    // --- Sécurité : Vérifier si l'année sélectionnée est clôturée ---
+    var anneeSelectionnee = anneesData.find(a => a.ID == body.ANNEE_ID);
+    if (anneeSelectionnee && anneeSelectionnee.CLOTURE) {
+        Swal.fire('Action impossible', 'Vous ne pouvez pas ajouter ou modifier un élève dans une année clôturée.', 'error');
+        return false;
+    }
+
     var url = currentMode === 'ajout' ? API.ajouter : API.modifier;
 
-    showSpinner();
+    if (typeof showSpinner === "function") showSpinner();
+
     try {
-        var res  = await fetch(url, {
+        var res = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body)
         });
+
         var data = await safeJson(res);
 
         if (data.success) {
-            Swal.fire({ icon: 'success', title: data.message || 'Opération réussie', timer: 1500, showConfirmButton: false });
-            setTimeout(function () { closeEleveModal(); loadEleves(); }, 1500);
+            Swal.fire({ 
+                icon: 'success', 
+                title: data.message || 'Opération réussie', 
+                timer: 1500, 
+                showConfirmButton: false 
+            });
+            setTimeout(function () { 
+                closeEleveModal(); 
+                if (typeof loadEleves === "function") loadEleves(); 
+            }, 1500);
         } else {
-            Swal.fire('Erreur', data.message || 'Erreur inconnue.', 'error');
+            // --- GESTION DES MESSAGES D'ERREUR CLAIRS ---
+            var msg = data.message || 'Erreur inconnue.';
+
+            // Détection du doublon de matricule (Violation de clé unique SQL)
+            if (msg.includes("PRIMARY KEY") || msg.includes("UQ_") || msg.includes("duplicate key")) {
+                msg = "Ce matricule existe déjà. Veuillez attribuer un matricule unique à cet élève.";
+            }
+
+            Swal.fire({
+                icon: 'error',
+                title: 'Erreur d\'enregistrement',
+                text: msg
+            });
         }
     } catch (err) {
         console.error('saveEleve:', err);
-        Swal.fire('Erreur réseau', err.message, 'error');
+        Swal.fire('Erreur réseau', 'Impossible de contacter le serveur.', 'error');
     } finally {
-        hideSpinner();
+        if (typeof hideSpinner === "function") hideSpinner();
     }
     return false;
 }
@@ -676,6 +723,13 @@ async function safeJson(response) {
 // --- VOTRE FONCTION PRINCIPALE ---
 
 async function supprimerEleve(id, nom) {
+    var eleve = elevesData.find(e => e.ID == id);
+    var anneeObj = anneesData.find(a => a.ID == eleve.ANNEE_ID || a.ANNEE === eleve.ANNEE_TEXTE);
+
+    if (anneeObj && anneeObj.CLOTURE) {
+        Swal.fire('Blocage', 'Impossible de supprimer un élève rattaché à une année clôturée.', 'error');
+        return;
+    }
     // Note : escHtml(nom) fonctionnera maintenant car elle est définie plus haut
     var result = await Swal.fire({
         title: 'Supprimer cet élève ?',
@@ -703,18 +757,18 @@ async function supprimerEleve(id, nom) {
 
         if (data.success) {
             // Mise à jour des données locales
-            elevesData = elevesData.filter(function(e) { return e.ID !== id; });
-            baseFilteredData = baseFilteredData.filter(function(e) { return e.ID !== id; });
-            filteredEleves = filteredEleves.filter(function(e) { return e.ID !== id; });
+            elevesData = elevesData.filter(function (e) { return e.ID !== id; });
+            baseFilteredData = baseFilteredData.filter(function (e) { return e.ID !== id; });
+            filteredEleves = filteredEleves.filter(function (e) { return e.ID !== id; });
 
             // Redessiner le tableau
             if (typeof renderSimpleTable === "function") renderSimpleTable();
 
-            Swal.fire({ 
-                icon: 'success', 
-                title: data.message || 'Élève supprimé.', 
-                timer: 1000, 
-                showConfirmButton: false 
+            Swal.fire({
+                icon: 'success',
+                title: data.message || 'Élève supprimé.',
+                timer: 1000,
+                showConfirmButton: false
             });
         } else {
             Swal.fire('Erreur', data.message || 'Erreur lors de la suppression.', 'error');
@@ -737,26 +791,26 @@ function exportEleves() {
 
 function exportElevesToExcelOnly() {
     if (!filteredEleves.length) { Swal.fire('Info', 'Aucune donnée à exporter.', 'info'); return; }
-    var rows = [['MATRICULE','ANNÉE','NOM','CLASSE','EMAIL','TÉLÉPHONE','STATUT']];
+    var rows = [['MATRICULE', 'ANNÉE', 'NOM', 'CLASSE', 'EMAIL', 'TÉLÉPHONE', 'STATUT']];
     filteredEleves.forEach(function (e) {
-        rows.push([e.MATRICULE||'',e.ANNEE_TEXTE||'',e.NOM||'',e.CLASSE_NOM||'',e.EMAIL||'',e.TELEPHONE||'',e.STATUT||'']);
+        rows.push([e.MATRICULE || '', e.ANNEE_TEXTE || '', e.NOM || '', e.CLASSE_NOM || '', e.EMAIL || '', e.TELEPHONE || '', e.STATUT || '']);
     });
     var ws = XLSX.utils.aoa_to_sheet(rows);
     var wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Eleves');
-    XLSX.writeFile(wb, 'eleves_' + new Date().toISOString().slice(0,10) + '.xlsx');
+    XLSX.writeFile(wb, 'eleves_' + new Date().toISOString().slice(0, 10) + '.xlsx');
 }
 
 function exportElevesToCsvOnly() {
     if (!filteredEleves.length) { Swal.fire('Info', 'Aucune donnée à exporter.', 'info'); return; }
     var header = 'MATRICULE;ANNEE;NOM;CLASSE;EMAIL;TELEPHONE;STATUT\n';
     var rows = filteredEleves.map(function (e) {
-        return [e.MATRICULE||'',e.ANNEE_TEXTE||'',e.NOM||'',e.CLASSE_NOM||'',e.EMAIL||'',e.TELEPHONE||'',e.STATUT||''].join(';');
+        return [e.MATRICULE || '', e.ANNEE_TEXTE || '', e.NOM || '', e.CLASSE_NOM || '', e.EMAIL || '', e.TELEPHONE || '', e.STATUT || ''].join(';');
     }).join('\n');
     var blob = new Blob(['\uFEFF' + header + rows], { type: 'text/csv;charset=utf-8' });
     var a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'eleves_' + new Date().toISOString().slice(0,10) + '.csv';
+    a.download = 'eleves_' + new Date().toISOString().slice(0, 10) + '.csv';
     a.click();
 }
 
@@ -764,14 +818,14 @@ function exportElevesToCsvOnly() {
 // EXPORTER EN EXCEL
 // ─────────────────────────────────────────────────────────────────────────────
 function exportElevesToExcelOnly() {
-    if (!filteredEleves.length) { 
-        Swal.fire('Info', 'Aucune donnée à exporter.', 'info'); 
-        return; 
+    if (!filteredEleves.length) {
+        Swal.fire('Info', 'Aucune donnée à exporter.', 'info');
+        return;
     }
 
     // Préparation des colonnes pour Excel
     var rows = [['MATRICULE', 'ANNÉE', 'NOM', 'CLASSE', 'EMAIL', 'TÉLÉPHONE', 'STATUT']];
-    
+
     filteredEleves.forEach(function (e) {
         rows.push([
             e.MATRICULE || '',
@@ -788,9 +842,9 @@ function exportElevesToExcelOnly() {
     var ws = XLSX.utils.aoa_to_sheet(rows);
     var wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, 'Liste_Eleves');
-    
+
     // Téléchargement
-    XLSX.writeFile(wb, 'Export_Eleves_' + new Date().toISOString().slice(0,10) + '.xlsx');
+    XLSX.writeFile(wb, 'Export_Eleves_' + new Date().toISOString().slice(0, 10) + '.xlsx');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -860,7 +914,7 @@ function closeEleveModal() {
         m.style.display = 'none';
         document.body.style.overflow = '';
     }
-    currentMode    = null;
+    currentMode = null;
     currentEleveId = null;
 }
 
@@ -907,7 +961,7 @@ function setVal(id, val) {
 
 function escHtml(str) {
     if (!str) return '';
-    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
 
@@ -917,7 +971,7 @@ function updateFileName() {
     var display = document.getElementById('fileNameDisplay');
     var btn = document.getElementById('btnLaunchImport');
     if (!file || !display) return;
-    
+
     var name = file.files[0] ? file.files[0].name : '';
     display.value = name;
     if (btn) btn.disabled = !name;
@@ -926,16 +980,16 @@ function updateFileName() {
 // ─────────────────────────────────────────────────────────────────────────────
 // EXPOSITION GLOBALE (onclick= dans le HTML)
 // ─────────────────────────────────────────────────────────────────────────────
-window.openAddEleveModal      = openAddEleveModal;
-window.openEditEleveModal     = openEditEleveModal;
-window.closeEleveModal        = closeEleveModal;
-window.saveEleve              = saveEleve;
-window.supprimerEleve         = supprimerEleve;
-window.sortData               = sortData;
-window.goToPage               = goToPage;
-window.exportEleves           = exportEleves;
+window.openAddEleveModal = openAddEleveModal;
+window.openEditEleveModal = openEditEleveModal;
+window.closeEleveModal = closeEleveModal;
+window.saveEleve = saveEleve;
+window.supprimerEleve = supprimerEleve;
+window.sortData = sortData;
+window.goToPage = goToPage;
+window.exportEleves = exportEleves;
 window.exportElevesToExcelOnly = exportElevesToExcelOnly;
-window.exportElevesToCsvOnly  = exportElevesToCsvOnly;
+window.exportElevesToCsvOnly = exportElevesToCsvOnly;
 window.showInitialFilterModal = showInitialFilterModal;
-window.updateFileName         = updateFileName;
+window.updateFileName = updateFileName;
 

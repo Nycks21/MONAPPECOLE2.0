@@ -259,6 +259,19 @@ async function updateAnnee() {
     const dateD  = document.getElementById('DateD')?.value.trim()   || '';
     const dateF  = document.getElementById('DateF')?.value.trim()   || '';
     const statut = document.getElementById('anneeStatut')?.value    || 'Actif';
+    const anneeData = findAnneeById(currentAnneeId);
+    const nouveauStatut = document.getElementById('anneeStatut')?.value;
+
+    if (anneeData && anneeData.CLOTURE && nouveauStatut === 'Actif') {
+        const confirm = await Swal.fire({
+            title: 'Réouverture ?',
+            text: "Cette année est clôturée. Voulez-vous vraiment la réouvrir ?",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonText: 'Oui, réouvrir'
+        });
+        if (!confirm.isConfirmed) return;
+    }
 
     if (!annee || !dateD || !dateF) {
         Swal.fire({ icon: 'error', title: 'Champs manquants', text: 'Veuillez remplir tous les champs obligatoires.' });
@@ -302,6 +315,17 @@ async function updateAnnee() {
 async function supprimerAnnee(id, event) {
     if (event) { event.preventDefault(); event.stopPropagation(); }
 
+    const annee = findAnneeById(id);
+    // Simulation d'une vérification de dépendance (idéalement faite via le backend, mais sécurisée ici)
+    if (annee && annee.CLOTURE) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Action impossible',
+            text: 'Une année clôturée contient des archives et ne peut pas être supprimée.'
+        });
+        return false;
+    }
+
     const result = await Swal.fire({
         title: 'Confirmer la suppression',
         text: 'Voulez-vous vraiment supprimer cette année scolaire ?',
@@ -316,22 +340,40 @@ async function supprimerAnnee(id, event) {
 
     showSpinner();
     try {
-        const res  = await fetch('handlers/SupprimerAnnee.ashx', {
+        const res = await fetch('handlers/SupprimerAnnee.ashx', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ ID: id })
         });
+        
         const data = await safeJson(res);
 
         if (data.success) {
-            Swal.fire({ icon: 'success', title: data.message || 'Année supprimée !', showConfirmButton: false, timer: 1500 });
+            Swal.fire({ 
+                icon: 'success', 
+                title: data.message || 'Année supprimée !', 
+                showConfirmButton: false, 
+                timer: 1500 
+            });
             setTimeout(() => loadAnnees(), 1500);
         } else {
-            Swal.fire({ icon: 'error', title: 'Erreur', text: data.message || 'Erreur lors de la suppression.' });
+            // 4. TRADUCTION DE L'ERREUR SQL POUR L'UTILISATEUR[cite: 9]
+            let errorMessage = data.message || 'Erreur lors de la suppression.';
+            
+            // Si l'erreur contient la contrainte de référence SQL
+            if (errorMessage.includes("FK_ELEVES_RANNEE") || errorMessage.includes("REFERENCE constraint")) {
+                errorMessage = "Suppression impossible car des élèves sont rattachés à cette année.";
+            }
+
+            Swal.fire({ 
+                icon: 'error', 
+                title: 'Suppression impossible', 
+                text: errorMessage 
+            });
         }
     } catch (err) {
         console.error('supprimerAnnee:', err);
-        Swal.fire({ icon: 'error', title: 'Erreur réseau', text: err.message });
+        Swal.fire({ icon: 'error', title: 'Erreur réseau', text: 'Connexion au serveur perdue.' });
     } finally {
         hideSpinner();
     }
