@@ -1231,3 +1231,44 @@ input:disabled, select:disabled {
     vertical-align: middle !important;
 }
 
+/* Empêche le texte de revenir à la ligne de manière désordonnée */
+.dash-table th, .dash-table td {
+    white-space: nowrap;
+    padding: 12px 8px;
+}
+
+/* Permet à la colonne "Motifs" de prendre de la place tout en restant lisible */
+.dash-table td:nth-child(10) { 
+    white-space: normal; 
+    min-width: 150px;
+    max-width: 250px;
+}
+
+/* Personnalisation de la barre de défilement pour qu'elle soit discrète */
+.table-responsive::-webkit-scrollbar {
+    height: 6px;
+}
+.table-responsive::-webkit-scrollbar-thumb {
+    background: #dee2e6;
+    border-radius: 10px;
+}
+
+/* Style personnalisé pour l'ascenseur horizontal */
+div[style*="overflow-x: auto"]::-webkit-scrollbar {
+    height: 8px; /* Hauteur de la barre horizontale */
+}
+
+div[style*="overflow-x: auto"]::-webkit-scrollbar-track {
+    background: #f1f1f1; 
+    border-radius: 10px;
+}
+
+div[style*="overflow-x: auto"]::-webkit-scrollbar-thumb {
+    background: #ccc; 
+    border-radius: 10px;
+}
+
+div[style*="overflow-x: auto"]::-webkit-scrollbar-thumb:hover {
+    background: #007bff; /* Change de couleur au survol */
+}
+

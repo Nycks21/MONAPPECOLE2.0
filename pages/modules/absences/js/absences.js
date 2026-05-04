@@ -69,15 +69,15 @@ function renderAbsencesTable(data) {
 
     // 3. Construction de la ligne
     row.innerHTML =
-      '<td>' + escHtml(abs.ANNEE_TEXTE || '-') + '</td>' +
-      '<td>' + getMatriculeBadge(abs.MATRICULE) + '</td>' +
+      '<td class="text-center">' + escHtml(abs.ANNEE_TEXTE || '-') + '</td>' +
+      '<td class="text-center">' + getMatriculeBadge(abs.MATRICULE) + '</td>' +
       '<td>' + getNomBadge(abs.NOM) + '</td>' +
-      '<td>' + getClasseBadge(abs.CLASSE_NOM || '-') + '</td>' +
-      '<td>' + typeBadge + '</td>' +
-      '<td>' + escHtml(abs.DATE_DEBUT) + '</td>' +
-      '<td>' + escHtml(abs.DATE_FIN) + '</td>' +
+      '<td class="text-center">' + getClasseBadge(abs.CLASSE_NOM || '-') + '</td>' +
+      '<td class="text-center">' + typeBadge + '</td>' +
+      '<td class="text-center">' + escHtml(abs.DATE_DEBUT) + '</td>' +
+      '<td class="text-center">' + escHtml(abs.DATE_FIN) + '</td>' +
       '<td class="text-center"><strong style="color:#007bff;">' + escHtml(abs.DUREE || '-') + '</strong></td>' +
-      '<td style="text-align:center; vertical-align:middle">' + justifieBadge + '</td>' +
+      '<td class="text-center">' + justifieBadge + '</td>' +
       '<td title="' + escHtml(abs.COMMENTAIRES || '') + '"><small>' + escHtml(commentTronque) + '</small></td>' +
       '<td>' +
       '<div class="btn-group">' +

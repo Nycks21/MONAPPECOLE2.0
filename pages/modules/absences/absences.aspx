@@ -137,7 +137,7 @@
                                 </li>
 
                                 <!-- Paramètres -->
-                                 <li class="nav-item">
+                                <li class="nav-item">
                                     <div class="nav-section">Paramètres</div>
                                     <a href="../../parametres/niveaux/niveaux.aspx" class="nav-link">
                                         <div style="width:30px; text-align:center; margin-right:10px;">
@@ -182,40 +182,44 @@
                                             <span>Utilitaires</span>
                                         </a>
                                     </li>
-                                <% } %>
-                                <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin()) { %>
-                                    <li class="nav-item">
-                                        <a href="../../administrations/annee/annee.aspx" class="nav-link">
-                                            <div style="width:30px; text-align:center; margin-right:10px;">
-                                                <i class="fas fa-calendar-alt"></i>
-                                            </div>
-                                            <span>Années</span>
-                                        </a>
-                                    </li>
-                                <% } %>
+                                    <% } %>
+                                        <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin()) { %>
+                                            <li class="nav-item">
+                                                <a href="../../administrations/annee/annee.aspx" class="nav-link">
+                                                    <div style="width:30px; text-align:center; margin-right:10px;">
+                                                        <i class="fas fa-calendar-alt"></i>
+                                                    </div>
+                                                    <span>Années</span>
+                                                </a>
+                                            </li>
+                                            <% } %>
 
-                                <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin()) { %>
-                                <li class="nav-item">
-                                    <a href="../../administrations/utilisateur/utilisateur.aspx" class="nav-link">
-                                        <div style="width:30px; text-align:center; margin-right:10px;">
-                                            <i class="fas fa-user"></i>
-                                        </div>
-                                        <span>Utilisateur</span>
-                                    </a>
-                                </li>
-                                <% } %>
+                                                <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin()) { %>
+                                                    <li class="nav-item">
+                                                        <a href="../../administrations/utilisateur/utilisateur.aspx"
+                                                            class="nav-link">
+                                                            <div
+                                                                style="width:30px; text-align:center; margin-right:10px;">
+                                                                <i class="fas fa-user"></i>
+                                                            </div>
+                                                            <span>Utilisateur</span>
+                                                        </a>
+                                                    </li>
+                                                    <% } %>
 
-                                <% if (AuthHelper.IsSuperAdmin()) { %>
-                                    <li class="nav-item">
-                                        <a href="../../administrations/requete/requetes.aspx" class="nav-link"
-                                            style="display: flex; align-items: center;">
-                                            <div style="width:30px; text-align:center; margin-right:10px;">
-                                                <i class="fas fa-database"></i>
-                                            </div>
-                                            <span>Requetes SQL</span>
-                                        </a>
-                                    </li>
-                                <% } %>
+                                                        <% if (AuthHelper.IsSuperAdmin()) { %>
+                                                            <li class="nav-item">
+                                                                <a href="../../administrations/requete/requetes.aspx"
+                                                                    class="nav-link"
+                                                                    style="display: flex; align-items: center;">
+                                                                    <div
+                                                                        style="width:30px; text-align:center; margin-right:10px;">
+                                                                        <i class="fas fa-database"></i>
+                                                                    </div>
+                                                                    <span>Requetes SQL</span>
+                                                                </a>
+                                                            </li>
+                                                            <% } %>
                             </ul>
                         </nav>
                     </div>
@@ -280,22 +284,24 @@
                                     </div>
                                 </div>
 
-                                <!-- Tableau -->
-                                <div style="overflow-x:auto;">
-                                    <table class="dash-table">
+                                <!-- Le conteneur avec l'ascenseur horizontal -->
+                                <div
+                                    style="overflow-x: auto; width: 100%; border: 1px solid #dee2e6; border-radius: 8px;">
+                                    <table class="dash-table"
+                                        style="table-layout: fixed; width: 1200px; min-width: 100%; border-collapse: collapse;">
                                         <thead>
-                                            <tr style="text-align: center; vertical-align: middle;"></tr>
-                                                <th>Année</th>
-                                                <th>Matricule</th>
-                                                <th>Élève</th>
-                                                <th>Classe</th>
-                                                <th>Type</th>
-                                                <th>Date début</th>
-                                                <th>Date fin</th>
-                                                <th>Durée</th>
-                                                <th>Justifiée</th>
-                                                <th>Motifs</th>
-                                                <th>Actions</th>
+                                            <tr style="background-color: #f8f9fa; text-align: center;">
+                                                <th style="width: 80px;">Année</th>
+                                                <th style="width: 130px;">Matricule</th>
+                                                <th style="width: 180px;">Élève</th>
+                                                <th style="width: 120px;">Classe</th>
+                                                <th style="width: 100px;">Type</th>
+                                                <th style="width: 120px;">Date début</th>
+                                                <th style="width: 120px;">Date fin</th>
+                                                <th style="width: 80px;">Durée</th>
+                                                <th style="width: 100px;">Justifiée</th>
+                                                <th style="width: 200px;">Motifs</th>
+                                                <th style="width: 120px;">Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody id="absencesTableBody"></tbody>
@@ -422,7 +428,7 @@
             <!-- ═══ SCRIPTS ═══ -->
             <script src="../../_assets/js/sweetalert2@11.js?v=<%=AuthHelper.Version %>"></script>
             <script src="../../_assets/js/global.js?v=<%=AuthHelper.Version %>"></script>
-            <script src="js/absences.js?v=<%=AuthHelper.Version %>"></script>           
+            <script src="js/absences.js?v=<%=AuthHelper.Version %>"></script>
         </form>
     </body>
 

@@ -377,13 +377,13 @@ function renderSimpleTable() {
 
             var row = tbody.insertRow();
             row.innerHTML =
-                '<td>' + getMatriculeBadge(eleve.MATRICULE) + '</td>' +
-                '<td>' + escHtml(eleve.ANNEE_TEXTE || '-') + '</td>' +
+                '<td class="text-center">' + getMatriculeBadge(eleve.MATRICULE) + '</td>' +
+                '<td class="text-center">' + escHtml(eleve.ANNEE_TEXTE || '-') + '</td>' +
                 '<td>' + getNomBadge(eleve.NOM) + '</td>' +
-                '<td>' + getClasseBadge(eleve.CLASSE_NOM || '-') + '</td>' +
+                '<td class="text-center">' + getClasseBadge(eleve.CLASSE_NOM || '-') + '</td>' +
                 '<td>' + escHtml(eleve.EMAIL || '-') + '</td>' +
-                '<td>' + escHtml(eleve.TELEPHONE || '-') + '</td>' +
-                '<td>' + getStatutBadge(eleve.STATUT) + '</td>' +
+                '<td class="text-center">' + escHtml(eleve.TELEPHONE || '-') + '</td>' +
+                '<td class="text-center">' + getStatutBadge(eleve.STATUT) + '</td>' +
                 '<td>' +
                 (isCloture
                     ? '<button type="button" class="btn btn-sm btn-secondary" style="margin:0 2px;cursor:not-allowed;" title="Année clôturée" disabled><i class="fas fa-lock"></i></button>'

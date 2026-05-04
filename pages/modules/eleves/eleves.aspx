@@ -272,25 +272,27 @@
 
                             <div class="dash-card-body">
                                 <!-- Tableau -->
-                                <div style="overflow-x:auto;">
-                                    <table class="dash-table">
+                                <div
+                                    style="overflow-x: auto; width: 100%; border: 1px solid #dee2e6; border-radius: 8px;">
+                                    <table class="dash-table"
+                                        style="table-layout: fixed; width: 1200px; min-width: 100%; border-collapse: collapse;">
                                         <thead>
-                                            <tr>
-                                                <th onclick="sortData('MATRICULE')" style="cursor:pointer;">MATRICULE <i
+                                            <tr style="background-color: #f8f9fa; text-align: center;">
+                                                <th onclick="sortData('MATRICULE')" style="cursor:pointer; width: 100px;">MATRICULE <i
                                                         class="fas fa-sort ml-1"></i></th>
-                                                <th onclick="sortData('ANNEE_TEXTE')" style="cursor:pointer;">ANNÉE <i
+                                                <th onclick="sortData('ANNEE_TEXTE')" style="cursor:pointer; width: 80px;">ANNÉE <i
                                                         class="fas fa-sort ml-1"></i></th>
-                                                <th onclick="sortData('NOM')" style="cursor:pointer;">NOM <i
+                                                <th onclick="sortData('NOM')" style="cursor:pointer; width: 150px;">NOM <i
                                                         class="fas fa-sort ml-1"></i></th>
-                                                <th onclick="sortData('CLASSE_NOM')" style="cursor:pointer;">CLASSE <i
+                                                <th onclick="sortData('CLASSE_NOM')" style="cursor:pointer; width: 120px;">CLASSE <i
                                                         class="fas fa-sort ml-1"></i></th>
-                                                <th onclick="sortData('EMAIL')" style="cursor:pointer;">EMAIL <i
+                                                <th onclick="sortData('EMAIL')" style="cursor:pointer; width: 150px;">EMAIL <i
                                                         class="fas fa-sort ml-1"></i></th>
-                                                <th onclick="sortData('TELEPHONE')" style="cursor:pointer;">TÉLÉPHONE <i
+                                                <th onclick="sortData('TELEPHONE')" style="cursor:pointer; width: 100px;">TÉLÉPHONE <i
                                                         class="fas fa-sort ml-1"></i></th>
-                                                <th onclick="sortData('STATUT')" style="cursor:pointer;">STATUT <i
+                                                <th onclick="sortData('STATUT')" style="cursor:pointer; width: 80px;">STATUT <i
                                                         class="fas fa-sort ml-1"></i></th>
-                                                <th>ACTIONS</th>
+                                                <th style="width: 120px;">ACTIONS</th>
                                             </tr>
                                         </thead>
                                         <tbody id="elevesTableBody"></tbody>
