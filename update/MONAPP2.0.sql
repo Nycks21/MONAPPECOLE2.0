@@ -130,41 +130,6 @@ END
 GO
 
 -- =====================================================
--- TABLE ÉLÈVES
--- =====================================================
-IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'ELEVES')
-BEGIN
-    CREATE TABLE ELEVES (
-        ID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
-        MATRICULE NVARCHAR(20) UNIQUE NOT NULL,
-        ANNEE_ID INT NOT NULL, 
-        NOM NVARCHAR(100) NOT NULL,
-        CLASSE INT NOT NULL,
-        STATUT NVARCHAR(20) DEFAULT 'actif' 
-            CHECK (STATUT IN ('actif','inactif','suspendu')),
-        EMAIL NVARCHAR(100),
-        TELEPHONE NVARCHAR(20),
-        DATE_NAISSANCE DATE,
-        GENRE NCHAR(1) DEFAULT 'M' CHECK (GENRE IN ('M','F')),
-        ADRESSE NVARCHAR(MAX),
-        PARENT NVARCHAR(100),
-        
-        DATE_INSCRIPTION DATE DEFAULT GETDATE(),
-        CREATED_AT DATETIME DEFAULT GETDATE(),
-        UPDATED_AT DATETIME DEFAULT GETDATE(),
-
-        -- Clé étrangère vers la table CLASSES
-        CONSTRAINT FK_ELEVES_CLASSES FOREIGN KEY (CLASSE) 
-            REFERENCES CLASSES(ID),
-
-        -- CORRECTION ICI : Le nom de la colonne doit correspondre (ANNEE_ID)
-        CONSTRAINT FK_ELEVES_RANNEE FOREIGN KEY (ANNEE_ID) 
-            REFERENCES RANNEE(ID)
-    );
-END
-GO
-
--- =====================================================
 -- TABLE MATIÈRES
 -- =====================================================
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'MATIERES')
@@ -208,6 +173,74 @@ BEGIN
         FOREIGN KEY (ELEVE_MATRICULE) REFERENCES ELEVES(MATRICULE) ON DELETE CASCADE,
         FOREIGN KEY (MATIERE_NOM) REFERENCES MATIERES(NOM) ON DELETE CASCADE,
         CONSTRAINT UQ_BULLETIN UNIQUE (ELEVE_MATRICULE, MATIERE_NOM, PERIODE)
+    );
+END
+GO
+
+-- =====================================================
+-- TABLE ÉLÈVES
+-- =====================================================
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'ELEVES')
+BEGIN
+    CREATE TABLE ELEVES (
+        ID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+        MATRICULE NVARCHAR(20) UNIQUE NOT NULL,
+        ANNEE_ID INT NOT NULL, 
+        NOM NVARCHAR(100) NOT NULL,
+        CLASSE INT NOT NULL,
+        STATUT NVARCHAR(20) DEFAULT 'actif' 
+            CHECK (STATUT IN ('actif','inactif','suspendu')),
+        EMAIL NVARCHAR(100),
+        TELEPHONE NVARCHAR(20),
+        DATE_NAISSANCE DATE,
+        GENRE NCHAR(1) DEFAULT 'M' CHECK (GENRE IN ('M','F')),
+        ADRESSE NVARCHAR(MAX),
+        PARENT NVARCHAR(100),
+        
+        DATE_INSCRIPTION DATE DEFAULT GETDATE(),
+        CREATED_AT DATETIME DEFAULT GETDATE(),
+        UPDATED_AT DATETIME DEFAULT GETDATE(),
+
+        -- Clé étrangère vers la table CLASSES
+        CONSTRAINT FK_ELEVES_CLASSES FOREIGN KEY (CLASSE) 
+            REFERENCES CLASSES(ID),
+
+        -- CORRECTION ICI : Le nom de la colonne doit correspondre (ANNEE_ID)
+        CONSTRAINT FK_ELEVES_RANNEE FOREIGN KEY (ANNEE_ID) 
+            REFERENCES RANNEE(ID)
+    );
+END
+GO
+
+-- =====================================================
+-- TABLE ABSENCES
+-- =====================================================
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'ABSENCES')
+BEGIN
+    CREATE TABLE ABSENCES (
+        ID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+        ANNEE_ID INT NOT NULL,
+        MATRICULE NVARCHAR(20) NOT NULL, -- UNIQUE supprimé pour permettre plusieurs absences
+        NOM NVARCHAR(100) NOT NULL,
+        CLASSE INT NOT NULL,
+        TYPE NVARCHAR(20) NOT NULL,
+        DATE_DEBUT DATETIME NOT NULL,
+        DATE_FIN DATETIME NOT NULL,
+        DUREE NVARCHAR(20) NULL,
+        JUSTIF BIT NOT NULL DEFAULT 0, -- 0 = Non justifié par défaut
+        COMMENTAIRES NVARCHAR(MAX),
+        
+        -- Clé étrangère vers l'année scolaire[cite: 9]
+        CONSTRAINT FK_ABSENCES_RANNEE FOREIGN KEY (ANNEE_ID) 
+            REFERENCES RANNEE(ID),
+            
+        -- Correction : Référence vers la colonne MATRICULE de la table ELEVES
+        CONSTRAINT FK_ABSENCES_ELEVES_MATRICULE FOREIGN KEY (MATRICULE) 
+            REFERENCES ELEVES(MATRICULE),
+            
+        -- Clé étrangère vers la table des classes[cite: 9]
+        CONSTRAINT FK_ABSENCES_CLASSES FOREIGN KEY (CLASSE) 
+            REFERENCES CLASSES(ID)
     );
 END
 GO

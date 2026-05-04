@@ -5,7 +5,7 @@
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Absences — Gestion Scolaire</title>
+        <title>Retards & Absences — Gestion Scolaire</title>
 
         <!-- Font Awesome -->
         <link rel="stylesheet" href="../../_assets/css/all.min.css?v=<%=AuthHelper.Version %>">
@@ -104,7 +104,7 @@
                                 <!-- Modules -->
                                 <li class="nav-item">
                                     <div class="nav-section">Modules</div>
-                                    <a href="../eleves/eleves.aspx" class="nav-link active">
+                                    <a href="../eleves/eleves.aspx" class="nav-link">
                                         <div style="width:30px; text-align:center; margin-right:10px;">
                                             <i class="fas fa-users"></i>
                                         </div>
@@ -112,7 +112,7 @@
                                     </a>
                                 </li>
                                 <li class="nav-item">
-                                    <a href="absences.aspx" class="nav-link">
+                                    <a href="absences.aspx" class="nav-link active">
                                         <div style="width:30px; text-align:center; margin-right:10px;">
                                             <i class="fas fa-calendar-times"></i>
                                         </div>
@@ -276,7 +276,7 @@
                                         <div class="stat-icon"><i class="fas fa-exclamation-triangle"
                                                 style="color:var(--danger);"></i></div>
                                         <div class="stat-value" id="totalCritiquesVal">—</div>
-                                        <div class="stat-label">Élèves critiques</div>
+                                        <div class="stat-label">Non justifiées</div>
                                     </div>
                                 </div>
 
@@ -284,14 +284,17 @@
                                 <div style="overflow-x:auto;">
                                     <table class="dash-table">
                                         <thead>
-                                            <tr>
+                                            <tr style="text-align: center; vertical-align: middle;"></tr>
+                                                <th>Année</th>
                                                 <th>Matricule</th>
                                                 <th>Élève</th>
                                                 <th>Classe</th>
-                                                <th>Absences</th>
-                                                <th>Retards</th>
-                                                <th>Statut</th>
+                                                <th>Type</th>
+                                                <th>Date début</th>
+                                                <th>Date fin</th>
+                                                <th>Durée</th>
                                                 <th>Justifiée</th>
+                                                <th>Motifs</th>
                                                 <th>Actions</th>
                                             </tr>
                                         </thead>
@@ -325,10 +328,18 @@
                     <div class="modal-body">
                         <form id="absenceForm">
                             <div class="form-group">
-                                <label>Élève *</label>
-                                <select id="absenceStudent" class="form-control" required>
+                                <label>matricule *</label>
+                                <select id="absenceMatricule" class="form-control" required>
                                     <option value="">Sélectionner un élève (par matricule ou nom)</option>
                                 </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Eleves</label>
+                                <input type="text" id="absenceStudent" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Classe</label>
+                                <input type="text" id="absenceClasse" class="form-control" required>
                             </div>
                             <div class="form-group">
                                 <label>Type *</label>
@@ -338,8 +349,12 @@
                                 </select>
                             </div>
                             <div class="form-group">
-                                <label>Date *</label>
-                                <input type="date" id="absenceDate" class="form-control" required>
+                                <label>Date début*</label>
+                                <input type="date" id="absenceDateD" class="form-control" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Date fin*</label>
+                                <input type="date" id="absenceDateF" class="form-control" required>
                             </div>
                             <div class="form-group">
                                 <label>Heure (pour les retards)</label>
@@ -405,9 +420,9 @@
             </div>
 
             <!-- ═══ SCRIPTS ═══ -->
-            <script src="js/absences.js?v=<%=AuthHelper.Version %>"></script>
-            <script src="js/script.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="../../_assets/js/sweetalert2@11.js?v=<%=AuthHelper.Version %>"></script>
             <script src="../../_assets/js/global.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="js/absences.js?v=<%=AuthHelper.Version %>"></script>           
         </form>
     </body>
 

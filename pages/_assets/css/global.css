@@ -1226,3 +1226,8 @@ input:disabled, select:disabled {
     align-items: center;
 }
 
+.dash-table th {
+    text-align: center !important;
+    vertical-align: middle !important;
+}
+

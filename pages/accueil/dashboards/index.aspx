@@ -378,7 +378,7 @@
                                 </div>
                             </div>
 
-                            <!-- Absences + Activité récente -->
+                            <!-- Retards & Absences + Activité récente -->
                             <div class="row mt-1">
                                 <div class="col-lg-6">
                                     <div class="dash-card">
@@ -394,7 +394,7 @@
                                                     <tr>
                                                         <th>Élève</th>
                                                         <th>Classe</th>
-                                                        <th>Absences</th>
+                                                        <th>Retards & Absences</th>
                                                         <th>Statut</th>
                                                     </tr>
                                                 </thead>
