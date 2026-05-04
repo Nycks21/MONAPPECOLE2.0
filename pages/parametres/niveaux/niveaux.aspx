@@ -1,4 +1,4 @@
-<%@ Page Language="C#" AutoEventWireup="true" CodeFile="niveaux.cs" Inherits="niveaux" %>
+﻿<%@ Page Language="C#" AutoEventWireup="true" CodeFile="niveaux.cs" Inherits="niveaux" %>
     <!DOCTYPE html>
     <html lang="fr">
 

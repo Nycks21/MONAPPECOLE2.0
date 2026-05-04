@@ -1,4 +1,4 @@
-// matieres.cs — ASP.NET Web Forms / .NET Framework 4.8
+﻿// matieres.cs — ASP.NET Web Forms / .NET Framework 4.8
 // Toutes les dépendances sont natives : pas de NuGet requis.
 
 using System;

@@ -1,4 +1,4 @@
-'use strict';
+﻿'use strict';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // URLS DES HANDLERS — chemins relatifs depuis la page eleves.aspx
@@ -654,10 +654,32 @@ async function saveEleve(event) {
 // ─────────────────────────────────────────────────────────────────────────────
 // SUPPRESSION
 // ─────────────────────────────────────────────────────────────────────────────
-async function supprimerEleve(id) {
+// --- FONCTIONS UTILITAIRES À AJOUTER ---
+
+// 1. Pour échapper les caractères HTML (sécurité XSS)
+function escHtml(text) {
+    if (!text) return "";
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// 2. Pour parser le JSON en toute sécurité (utilisé dans votre fetch)
+async function safeJson(response) {
+    try {
+        return await response.json();
+    } catch (e) {
+        return { success: false, message: "Erreur de réponse serveur" };
+    }
+}
+
+// --- VOTRE FONCTION PRINCIPALE ---
+
+async function supprimerEleve(id, nom) {
+    // Note : escHtml(nom) fonctionnera maintenant car elle est définie plus haut
     var result = await Swal.fire({
         title: 'Supprimer cet élève ?',
-        text: 'Cette action est irréversible.',
+        html: '<strong>' + escHtml(nom) + '</strong> sera supprimé définitivement.',
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#d33',
@@ -667,29 +689,26 @@ async function supprimerEleve(id) {
 
     if (!result.isConfirmed) return;
 
-    showSpinner();
+    if (typeof showSpinner === "function") showSpinner();
+
     try {
         var res = await fetch(API.supprimer, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ ID: id })
         });
+
+        // Utilisation de safeJson définie plus haut
         var data = await safeJson(res);
 
         if (data.success) {
-            // --- MISE À JOUR VISUELLE SANS RECHARGEMENT ---
-            
-            // 1. Retirer l'élément de la source de données principale
+            // Mise à jour des données locales
             elevesData = elevesData.filter(function(e) { return e.ID !== id; });
-            
-            // 2. Retirer l'élément du périmètre filtré actuel
             baseFilteredData = baseFilteredData.filter(function(e) { return e.ID !== id; });
-            
-            // 3. Mettre à jour la liste affichée
             filteredEleves = filteredEleves.filter(function(e) { return e.ID !== id; });
 
-            // 4. Redessiner le tableau immédiatement
-            renderSimpleTable();
+            // Redessiner le tableau
+            if (typeof renderSimpleTable === "function") renderSimpleTable();
 
             Swal.fire({ 
                 icon: 'success', 
@@ -704,7 +723,7 @@ async function supprimerEleve(id) {
         console.error('supprimerEleve:', err);
         Swal.fire('Erreur réseau', err.message, 'error');
     } finally {
-        hideSpinner();
+        if (typeof hideSpinner === "function") hideSpinner();
     }
 }
 

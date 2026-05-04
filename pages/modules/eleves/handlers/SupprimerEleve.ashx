@@ -1,4 +1,4 @@
-<%@ WebHandler Language="C#" Class="SupprimerEleve" %>
+﻿<%@ WebHandler Language="C#" Class="SupprimerEleve" %>
 
 using System;
 using System.Configuration;

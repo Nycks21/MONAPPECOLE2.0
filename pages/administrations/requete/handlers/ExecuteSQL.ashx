@@ -1,4 +1,4 @@
-<%@ WebHandler Language="C#" Class="ExecuteSQL" %>
+﻿<%@ WebHandler Language="C#" Class="ExecuteSQL" %>
 
 using System;
 using System.Web;

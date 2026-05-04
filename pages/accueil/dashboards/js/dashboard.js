@@ -66,7 +66,7 @@ function masquerSpinner() {
 
 // ── FETCH HELPER ─────────────────────────────────────────────
 function apiFetch(action) {
-  return fetch('dashboard.aspx?action=' + action)
+  return fetch('index.aspx?action=' + action)
     .then(r => {
       if (!r.ok) throw new Error('Erreur réseau ' + r.status);
       return r.json();
@@ -76,49 +76,105 @@ function apiFetch(action) {
 // ════════════════════════════════════════════════════════════
 //  KPI
 // ════════════════════════════════════════════════════════════
+/**
+ * Gestion des indicateurs (KPI) du tableau de bord
+ * Fichier : dashboard.js
+ */
+
+'use strict';
+
+// 1. Fonction principale de chargement des KPI
 function chargerKpi() {
-  return apiFetch('kpi').then(d => {
-    setText('valEleves',  d.totalEleves);
-    setText('valClasses', d.totalClasses);
-    setText('valPresence', d.tauxPresence);
-    setText('valImpayes', d.fraisImpayes);
+  // Appel à l'API locale avec l'action 'kpi'
+  return apiFetch('kpi')
+    .then(d => {
+      // Affichage des valeurs principales dans les cartes
+      setText('valEleves',   d.totalEleves);    // Total des élèves
+      setText('valClasses',  d.totalClasses);   // Nombre de classes actives
+      setText('valPresence', d.tauxPresence);  // Pourcentage de présence[cite: 3]
+      setText('valImpayes',  d.fraisImpayes);   // Montant total des impayés[cite: 3]
 
-    // Pill nouveaux élèves
-    setPill('pillEleves', '+' + d.nouveauxRentree, 'up');
+      // Mise à jour des pastilles (Pills) de tendance[cite: 3]
+      setPill('pillEleves', '+' + d.nouveauxRentree, 'up'); // Nouveaux élèves[cite: 3]
+      setText('pillClasses', 'Moy. ' + d.moyEleves + ' élèves'); // Moyenne par classe[cite: 3]
 
-    // Pill classes
-    setText('pillClasses', 'Moy. ' + d.moyEleves + ' élèves');
+      // Calcul et affichage de la variation de présence[cite: 3]
+      const varPres = d.variationPresence || 0;
+      setPill('pillPresence', 
+        (varPres >= 0 ? '+' : '') + varPres + '%', 
+        varPres >= 0 ? 'up' : 'dn'
+      );
 
-    // Pill présence
-    const varPres = d.variationPresence;
-    setPill('pillPresence',
-      (varPres >= 0 ? '+' : '') + varPres + '%',
-      varPres >= 0 ? 'up' : 'dn');
+      // Calcul et affichage de la variation des impayés[cite: 3]
+      const varImp = (d.variationImpayes || 0) - (d.fraisImpayes || 0);
+      setPill('pillImpayes', 
+        (varImp >= 0 ? '+' : '') + varImp, 
+        varImp <= 0 ? 'up' : 'dn' // "up" (vert) si les impayés baissent
+      );
 
-    // Pill impayés
-    const varImp = d.variationImpayes - d.fraisImpayes;
-    setPill('pillImpayes',
-      (varImp >= 0 ? '+' : '') + varImp,
-      varImp <= 0 ? 'up' : 'dn');
+      // Mise à jour de la répartition Garçons / Filles[cite: 3]
+      const total = (d.garcons || 0) + (d.filles || 0);
+      if (total > 0) {
+        const pG = Math.round((d.garcons / total) * 100);
+        const pF = 100 - pG;
+        
+        setText('pctGarcons', pG + '%');
+        setText('pctFilles',  pF + '%');
+        
+        setBarWidth('fillGarcons', pG); // Animation de la barre bleue[cite: 3]
+        setBarWidth('fillFilles',  pF); // Animation de la barre orange[cite: 3]
+      }
 
-    // Garçons / Filles
-    const total = (d.garcons || 0) + (d.filles || 0);
-    if (total > 0) {
-      const pG = Math.round(d.garcons / total * 100);
-      const pF = 100 - pG;
-      setText('pctGarcons', pG + '%');
-      setText('pctFilles',  pF + '%');
-      setBarWidth('fillGarcons', pG);
-      setBarWidth('fillFilles',  pF);
-    }
+      // Initialisation des jauges circulaires si elles existent[cite: 3]
+      if (typeof renderGauges === 'function') {
+        renderGauges([
+          { label: 'Présence',  val: d.tauxPresence,  color: '#1e3a2f' }, // Forest[cite: 3]
+          { label: 'Réussite',  val: d.tauxReussite || 0, color: '#c9a84c' }, // Gold[cite: 3]
+          { label: 'Paiements', val: Math.round((1 - d.fraisImpayes / (d.totalGlobalFrais || 1)) * 100), color: '#b85c38' } // Terra[cite: 3]
+        ]);
+      }
+    })
+    .catch(e => {
+      console.error('Erreur lors du chargement des KPI:', e);
+      // En cas d'erreur, on affiche des tirets par défaut
+      ['valEleves', 'valClasses', 'valPresence', 'valImpayes'].forEach(id => setText(id, '—'));
+    });
+}
 
-    // Gauges
-    renderGauges([
-      { label: 'Présence',  val: d.tauxPresence,  color: C.forest      },
-      { label: 'Réussite',  val: 77,              color: C.gold        },
-      { label: 'Paiements', val: Math.round((1 - d.fraisImpayes / Math.max(d.totalEleves, 1)) * 100), color: C.terra },
-    ]);
-  }).catch(e => console.warn('KPI:', e));
+// 2. Fonctions utilitaires (Helpers)[cite: 3]
+
+/**
+ * Modifie le texte d'un élément HTML par son ID
+ */
+function setText(id, val) {
+  const el = document.getElementById(id);
+  if (el) {
+    el.textContent = (val !== null && val !== undefined) ? val : '—';
+  }
+}
+
+/**
+ * Met à jour le style et le texte d'une pastille (pill)
+ * @param {string} type - 'up' (vert), 'dn' (rouge), 'neu' (gris)
+ */
+function setPill(id, texte, type) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = texte;
+  el.className = 'pill pill-' + (type || 'neu'); // Applique la classe CSS correspondante[cite: 3]
+}
+
+/**
+ * Anime la largeur d'une barre de progression (Garçons/Filles)
+ */
+function setBarWidth(id, pct) {
+  const el = document.getElementById(id);
+  if (el) {
+    // Petit délai pour permettre l'animation CSS transition
+    setTimeout(() => { 
+      el.style.width = Math.min(100, Math.max(0, pct)) + '%'; 
+    }, 100);
+  }
 }
 
 // ════════════════════════════════════════════════════════════

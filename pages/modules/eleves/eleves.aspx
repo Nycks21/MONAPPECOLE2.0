@@ -1,4 +1,4 @@
-<%@ Page Language="C#" AutoEventWireup="true" CodeFile="eleves.cs" Inherits="eleves" %>
+﻿<%@ Page Language="C#" AutoEventWireup="true" CodeFile="eleves.cs" Inherits="eleves" %>
     <!DOCTYPE html>
     <html lang="fr">
 

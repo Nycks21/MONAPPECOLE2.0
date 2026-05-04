@@ -1,4 +1,4 @@
-<%@ WebHandler Language="C#" Class="GetEleve" %>
+﻿<%@ WebHandler Language="C#" Class="GetEleve" %>
 
 using System;
 using System.Collections.Generic;

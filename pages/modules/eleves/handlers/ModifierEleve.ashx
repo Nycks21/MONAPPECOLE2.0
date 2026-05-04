@@ -1,4 +1,4 @@
-<%@ WebHandler Language="C#" Class="ModifierEleve" %>
+﻿<%@ WebHandler Language="C#" Class="ModifierEleve" %>
 
 using System;
 using System.Configuration;

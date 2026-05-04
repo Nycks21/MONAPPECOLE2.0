@@ -1,4 +1,4 @@
-// ── État de la pagination (Inchangé) ──────────────────────────────────────────
+﻿// ── État de la pagination (Inchangé) ──────────────────────────────────────────
 var sqlCurrentPage = 1;
 var sqlRowsPerPage = 10;
 var sqlAllData = [];
@@ -20,21 +20,37 @@ function formatNetDate(jsonDate) {
 function executeCustomSQL() {
     var queryArea = document.getElementById('sqlConsole');
     var resultDiv = document.getElementById('sqlExecutionResult');
+    
     if (!queryArea || !queryArea.value.trim()) {
         Swal.fire({ icon: 'error', title: 'Champ vide', text: 'Veuillez saisir une requête.' });
         return;
     }
+
     var queryText = queryArea.value.trim();
-    var isSelect = /^\s*SELECT\b/i.test(queryText);
-    var MOT_DE_PASSE_ADMIN = 'MONAPP1234';
+
+    // On supprime la vérification du mot de passe en dur ici.
+    // La sécurité est maintenant gérée par le serveur (ExecuteSQL.ashx).
+    lancerExecution();
 
     function lancerExecution() {
-        Swal.fire({ title: 'Confirmer l\'exécution ?', text: 'Action directe sur la base de données.', icon: 'warning', showCancelButton: true, confirmButtonText: 'Oui, exécuter' }).then(function (result) {
+        Swal.fire({ 
+            title: 'Confirmer l\'exécution ?', 
+            text: 'Action directe sur la base de données.', 
+            icon: 'warning', 
+            showCancelButton: true, 
+            confirmButtonText: 'Oui, exécuter' 
+        }).then(function (result) {
             if (!result.isConfirmed) return;
+            
             Swal.showLoading();
             var formData = new URLSearchParams();
             formData.append('query', queryText);
-            fetch('handlers/ExecuteSQL.ashx', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: formData })
+
+            fetch('handlers/ExecuteSQL.ashx', { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, 
+                body: formData 
+            })
             .then(function (r) { return r.json(); })
             .then(function (res) {
                 Swal.close();
@@ -48,17 +64,18 @@ function executeCustomSQL() {
                         resultDiv.innerHTML = '<div class="alert alert-success m-2">' + res.message + '</div>';
                     }
                 } else {
+                    // Si le serveur renvoie une erreur (ex: pas autorisé), on l'affiche ici
                     resultDiv.innerHTML = '<div class="alert alert-danger m-2">' + res.message + '</div>';
+                    if(res.message.includes("Autorisation")) {
+                        Swal.fire('Accès refusé', 'Vous n\'avez pas les droits pour cette action.', 'error');
+                    }
                 }
-            }).catch(function () { Swal.fire('Erreur', 'Erreur serveur.', 'error'); });
+            })
+            .catch(function () { 
+                Swal.fire('Erreur', 'Erreur de communication avec le serveur.', 'error'); 
+            });
         });
     }
-
-    if (!isSelect) {
-        Swal.fire({ title: 'Admin', text: 'Mot de passe :', input: 'password', showCancelButton: true }).then(function (res) {
-            if (res.isConfirmed && res.value === MOT_DE_PASSE_ADMIN) lancerExecution();
-        });
-    } else { lancerExecution(); }
 }
 
 // ── Rendu du tableau (LOGIQUE CONSERVÉE + RESIZE) ─────────────────────────────

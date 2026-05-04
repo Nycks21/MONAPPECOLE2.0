@@ -1,4 +1,4 @@
-<%@ Page Language="C#" AutoEventWireup="true" CodeFile="utilitaires.cs" Inherits="utilitaires" %>
+﻿<%@ Page Language="C#" AutoEventWireup="true" CodeFile="utilitaires.cs" Inherits="utilitaires" %>
     <!DOCTYPE html>
     <html lang="fr">
 

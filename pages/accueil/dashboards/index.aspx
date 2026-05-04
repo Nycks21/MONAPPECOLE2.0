@@ -93,7 +93,7 @@
                                 <!-- Accueil -->
                                 <li class="nav-item">
                                     <div class="nav-section">Accueil</div>
-                                    <a href="index.aspx" class="nav-link active">
+                                    <a href="acceuil" class="nav-link active">
                                         <div style="width:30px; text-align:center; margin-right:10px;">
                                             <i class="fas fa-chalkboard"></i>
                                         </div>

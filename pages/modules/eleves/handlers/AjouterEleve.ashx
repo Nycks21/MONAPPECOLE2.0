@@ -1,4 +1,4 @@
-<%@ WebHandler Language="C#" Class="AjouterEleve" %>
+﻿<%@ WebHandler Language="C#" Class="AjouterEleve" %>
 
 using System;
 using System.Configuration;
