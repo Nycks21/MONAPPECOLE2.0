@@ -75,9 +75,15 @@
 
                     <div class="sidebar">
                         <!-- Utilisateur -->
-                        <div class="user-panel">
-                            <i class="fas fa-user-tie"></i>
-                            <span id="navbarUsername">Admin Système</span>
+                        <div class="user-profile-nav">
+                            <div class="user-avatar">
+                                <i class="fas fa-user-tie"></i>
+                                <span class="status-indicator"></span>
+                            </div>
+                            <div class="user-info">
+                                <span class="user-role">Profile :</span>
+                                <span id="navbarUsername" class="user-name">Admin Système</span>
+                            </div>
                         </div>
 
                         <!-- Navigation -->
