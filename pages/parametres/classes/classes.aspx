@@ -267,17 +267,19 @@
                                     id="ClassesStatsContainer"></div>
 
                                 <!-- Tableau -->
-                                <div style="overflow-x:auto;">
-                                    <table class="dash-table">
+                                <div
+                                    style="overflow-x: auto; width: 100%; border: 1px solid #dee2e6; border-radius: 8px;">
+                                    <table class="dash-table"
+                                        style="table-layout: fixed; width: 1200px; min-width: 100%; border-collapse: collapse;">
                                         <thead>
-                                            <tr>
-                                                <th>Classe</th>
-                                                <th>Niveau</th>
-                                                <th>Effectif</th>
-                                                <th>Titulaire</th>
-                                                <th>Salle</th>
-                                                <th>Statut</th>
-                                                <th>Actions</th>
+                                            <tr style="background-color: #f8f9fa; text-align: center;">
+                                                <th style="width: 120px;">Classe</th>
+                                                <th style="width: 120px;">Niveau</th>
+                                                <th style="width: 120px;">Effectif</th>
+                                                <th style="width: 120px;">Titulaire</th>
+                                                <th style="width: 120px;">Salle</th>
+                                                <th style="width: 120px;">Statut</th>
+                                                <th style="width: 120px;">Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody id="ClassesTableBody"></tbody>

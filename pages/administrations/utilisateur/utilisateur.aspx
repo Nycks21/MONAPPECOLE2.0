@@ -278,18 +278,20 @@
 
                             <div class="dash-card-body">
                                 <!-- Tableau -->
-                                <div style="overflow-x:auto;">
-                                    <table class="dash-table" id="dash-tables">
+                                <div
+                                    style="overflow-x: auto; width: 100%; border: 1px solid #dee2e6; border-radius: 8px;">
+                                    <table class="dash-table"
+                                        style="table-layout: fixed; width: 1200px; min-width: 100%; border-collapse: collapse;">
                                         <thead>
-                                            <tr>
-                                                <th>Nom d'utilisateur</th>
-                                                <th>Nom complet</th>
-                                                <th>Email</th>
-                                                <th>Rôle</th>
-                                                <th>Téléphone</th>
-                                                <th>Date de création</th>
-                                                <th>Statut</th>
-                                                <th>Actions</th>
+                                            <tr style="background-color: #f8f9fa; text-align: center;">
+                                                <th style="width: 180px;">Nom d'utilisateur</th>
+                                                <th style="width: 180px;">Nom complet</th>
+                                                <th style="width: 180px;">Email</th>
+                                                <th style="width: 100px;">Rôle</th>
+                                                <th style="width: 80px;">Téléphone</th>
+                                                <th style="width: 80px;">Date de création</th>
+                                                <th style="width: 80px;">Statut</th>
+                                                <th style="width: 80px;">Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody id="usersTableBody"></tbody>

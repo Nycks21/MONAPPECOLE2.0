@@ -137,29 +137,44 @@ function renderSallesTable() {
 
     tbody.innerHTML = sallesData.map(function (s, idx) {
         var date = s.CREATED_AT ? new Date(s.CREATED_AT).toLocaleDateString('fr-FR') : '—';
-        var dispo = s.STATUT === true || s.STATUT === 1;
+        var dispo = s.STATUT === true || s.STATUT === 1 || s.STATUT === 'True';
+        
+        // Badge de disponibilité avec largeur fixe pour l'alignement
         var badge = dispo
-            ? '<span style="background:#d4edda;color:#155724;padding:3px 12px;border-radius:15px;font-size:11px;font-weight:600;border:1px solid #c3e6cb;">Disponible</span>'
-            : '<span style="background:#f8d7da;color:#721c24;padding:3px 12px;border-radius:15px;font-size:11px;font-weight:600;border:1px solid #f5c6cb;">Indisponible</span>';
+            ? '<span style="background:#d4edda;color:#155724;padding:3px 12px;border-radius:15px;font-size:11px;font-weight:600;border:1px solid #c3e6cb;display:inline-block;min-width:90px;">Disponible</span>'
+            : '<span style="background:#f8d7da;color:#721c24;padding:3px 12px;border-radius:15px;font-size:11px;font-weight:600;border:1px solid #f5c6cb;display:inline-block;min-width:90px;">Indisponible</span>';
+
+        // Style commun pour le centrage
+        var centerStyle = 'style="text-align:center;vertical-align:middle;"';
+        var lightTextStyle = 'style="text-align:center;vertical-align:middle;color:#888;font-size:12px;"';
 
         return '<tr>' +
-            '<td style="color:#888;font-size:12px;">' + (idx + 1) + '</td>' +
-            '<td>' +
-            '  <span style="background:#e8f4fd;color:#0c5460;padding:3px 12px;border-radius:15px;font-size:12px;font-weight:600;border:1px solid #bee5eb;">' +
+            // Index
+            '<td ' + lightTextStyle + '>' + (idx + 1) + '</td>' +
+            
+            // Numéro de salle (Badge bleu)
+            '<td ' + centerStyle + '>' +
+            '  <span style="background:#e8f4fd;color:#0c5460;padding:3px 12px;border-radius:15px;font-size:12px;font-weight:600;border:1px solid #bee5eb;display:inline-block;min-width:80px;">' +
             '    <i class="fas fa-door-open" style="margin-right:5px;"></i>' + escHtml(s.NUMERO) +
             '  </span>' +
             '</td>' +
-            '<td><span class="badge-coeff">' + escHtml(String(s.CAPACITE)) + '</span></td>' +
-            '<td>' + badge + '</td>' +
-            '<td style="color:#888;font-size:12px;">' + date + '</td>' +
-            '<td class="action-cell">' +
-            // ✅ Correction : Ajout de '\'' autour de s.ID pour le GUID
-            '  <button type="button" class="btn btn-sm btn-primary"' +
+            
+            // Capacité
+            '<td ' + centerStyle + '><span class="badge-coeff" style="font-weight:700;">' + escHtml(String(s.CAPACITE)) + '</span></td>' +
+            
+            // Statut
+            '<td ' + centerStyle + '>' + badge + '</td>' +
+            
+            // Date de création
+            '<td ' + lightTextStyle + '>' + date + '</td>' +
+            
+            // Actions
+            '<td ' + centerStyle + ' style="white-space:nowrap; vertical-align:middle; text-align:center;">' +
+            '  <button type="button" class="btn btn-sm btn-primary" style="margin:0 2px;" ' +
             '    onclick="editSalle(\'' + s.ID + '\')" title="Modifier">' +
             '    <i class="fas fa-edit"></i>' +
             '  </button>' +
-            // ✅ Correction : Ajout de '\'' autour de s.ID pour le GUID
-            '  <button type="button" class="btn btn-sm btn-danger"' +
+            '  <button type="button" class="btn btn-sm btn-danger" style="margin:0 2px;" ' +
             '    onclick="deleteSalle(\'' + s.ID + '\',\'' + escHtml(s.NUMERO).replace(/'/g, "\\'") + '\')" title="Supprimer">' +
             '    <i class="fas fa-trash"></i>' +
             '  </button>' +
@@ -167,7 +182,6 @@ function renderSallesTable() {
             '</tr>';
     }).join('');
 }
-
 // ─────────────────────────────────────────────
 // MODAL — OUVRIR / FERMER
 // ─────────────────────────────────────────────

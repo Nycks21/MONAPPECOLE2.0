@@ -116,28 +116,49 @@ function renderNiveauxTable() {
 
     tbody.innerHTML = niveauxData.map(function (n, idx) {
         var date = n.CREATED_AT ? new Date(n.CREATED_AT).toLocaleDateString('fr-FR') : '—';
-        var actif = n.STATUT === true || n.STATUT === 1;
+        var actif = n.STATUT === true || n.STATUT === 1 || n.STATUT === 'True';
+        
+        // Badge de statut avec largeur fixe pour l'alignement
         var badge = actif
-            ? '<span class="badge bg-success" style="background: #28a745; padding: 4px 10px; border-radius: 20px; color: white; font-size: 12px; font-weight: 500;">✓ Actif</span>'
-            : '<span class="badge bg-danger" style="background: #dc3545; padding: 4px 10px; border-radius: 20px; color: white; font-size: 12px; font-weight: 500;">✗ Inactif</span>';
+            ? '<span style="background: #28a745; padding: 4px 10px; border-radius: 20px; color: white; font-size: 11px; font-weight: 600; display: inline-block; min-width: 80px;">✓ Actif</span>'
+            : '<span style="background: #dc3545; padding: 4px 10px; border-radius: 20px; color: white; font-size: 11px; font-weight: 600; display: inline-block; min-width: 80px;">✗ Inactif</span>';
+
+        // Styles réutilisables pour le centrage
+        var centerStyle = 'style="text-align:center; vertical-align:middle;"';
+        var lightTextStyle = 'style="text-align:center; vertical-align:middle; color:#888; font-size:12px;"';
 
         return '<tr>' +
-            '<td style="color:#888;font-size:12px;">' + (idx + 1) + '</td>' +
-            '<td><strong>' + escHtml(n.NOM) + '</strong></td>' +
-            '<td><span class="badge-coeff">' + escHtml(String(n.ORDRE)) + '</span></td>' +
-            '<td>' + badge + '</td>' +
-            '<td style="color:#888;font-size:12px;">' + date + '</td>' +
-            '<td class="action-cell">' +
-            // ✅ Correction : Ajout de '\'' autour de n.ID
-            '  <button type="button" class="btn btn-sm btn-primary"' +
-            '    onclick="editNiveau(\'' + n.ID + '\')" title="Modifier">' +
-            '    <i class="fas fa-edit"></i>' +
-            '  </button>' +
-            // ✅ Correction : Ajout de '\'' autour de n.ID
-            '  <button type="button" class="btn btn-sm btn-danger"' +
-            '    onclick="deleteNiveau(\'' + n.ID + '\',\'' + escHtml(n.NOM).replace(/'/g, "\\'") + '\')" title="Supprimer">' +
-            '    <i class="fas fa-trash"></i>' +
-            '  </button>' +
+            // Index
+            '<td ' + lightTextStyle + '>' + (idx + 1) + '</td>' +
+            
+            // Nom du niveau
+            '<td ' + centerStyle + '>' +
+                '<span style="display: inline-block; min-width: 120px; padding: 3px 8px; border: 1px solid #f0f0f0; border-radius: 8px;">' +
+                    '<strong>' + escHtml(n.NOM) + '</strong>' +
+                '</span>' +
+            '</td>' +
+            
+            // Ordre (Badge cercle)
+            '<td ' + centerStyle + '>' +
+                '<span class="badge-coeff" style="font-weight:700; background-color: #007bff; color: #ffffff; border-radius:50%;">' + 
+                    escHtml(String(n.ORDRE)) + 
+                '</span>' +
+            '</td>' +
+            
+            // Statut
+            '<td ' + centerStyle + '>' + badge + '</td>' +
+            
+            // Date
+            '<td ' + lightTextStyle + '>' + date + '</td>' +
+            
+            // Actions
+            '<td ' + centerStyle + ' style="white-space:nowrap; vertical-align:middle; text-align:center;">' +
+                '<button type="button" class="btn btn-sm btn-primary" style="margin: 0 2px;" onclick="editNiveau(\'' + n.ID + '\')" title="Modifier">' +
+                    '<i class="fas fa-edit"></i>' +
+                '</button>' +
+                '<button type="button" class="btn btn-sm btn-danger" style="margin: 0 2px;" onclick="deleteNiveau(\'' + n.ID + '\',\'' + escHtml(n.NOM).replace(/'/g, "\\'") + '\')" title="Supprimer">' +
+                    '<i class="fas fa-trash"></i>' +
+                '</button>' +
             '</td>' +
             '</tr>';
     }).join('');

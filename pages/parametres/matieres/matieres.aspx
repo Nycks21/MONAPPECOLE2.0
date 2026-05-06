@@ -265,17 +265,19 @@
                                     id="matieresStatsContainer"></div>
 
                                 <!-- Tableau -->
-                                <div style="overflow-x:auto;">
-                                    <table class="dash-table">
+                                <div
+                                    style="overflow-x: auto; width: 100%; border: 1px solid #dee2e6; border-radius: 8px;">
+                                    <table class="dash-table"
+                                        style="table-layout: fixed; width: 1200px; min-width: 100%; border-collapse: collapse;">
                                         <thead>
-                                            <tr>
-                                                <th>Matière</th>
-                                                <th>Enseignant</th>
-                                                <th>Coefficient</th>
-                                                <th>Heures/sem.</th>
-                                                <th>Niveau</th>
-                                                <th>Créé le</th>
-                                                <th>Actions</th>
+                                            <tr style="background-color: #f8f9fa; text-align: center;">
+                                                <th style="width: 120px;">Matière</th>
+                                                <th style="width: 120px;">Enseignant</th>
+                                                <th style="width: 120px;">Coefficient</th>
+                                                <th style="width: 120px;">Heures/sem.</th>
+                                                <th style="width: 120px;">Niveau</th>
+                                                <th style="width: 120px;">Créé le</th>
+                                                <th style="width: 120px;">Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody id="matieresTableBody"></tbody>

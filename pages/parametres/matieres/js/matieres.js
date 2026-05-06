@@ -225,51 +225,76 @@ function renderMatieresTable() {
     }
 
     pageMatieres.forEach(function (m) {
-        var date = m.CREATED_AT
-            ? new Date(m.CREATED_AT).toLocaleDateString('fr-FR')
-            : '—';
+    var date = m.CREATED_AT
+        ? new Date(m.CREATED_AT).toLocaleDateString('fr-FR')
+        : '—';
 
-        var row = tbody.insertRow();
+    var row = tbody.insertRow();
 
-        // Nom
-        var cellNom = row.insertCell(0);
-        cellNom.innerHTML = '<strong>' + escHtml(m.NOM) + '</strong>';
+    // 0. Nom (Centré avec style badge léger)
+    var cellNom = row.insertCell(0);
+    cellNom.style.textAlign = 'center';
+    cellNom.style.verticalAlign = 'middle';
+    cellNom.innerHTML = `
+        <span style="display: inline-block; min-width: 120px; padding: 3px 8px; border: 1px solid #f0f0f0; border-radius: 8px;">
+            <strong>${escHtml(m.NOM)}</strong>
+        </span>`;
 
-        // Enseignant — NOM lisible avec badge stylisé
-        row.insertCell(1).innerHTML = `
-        <span style="background-color: #fce4ec; color: #d32f2f; padding: 3px 12px; border-radius: 15px; font-size: 11px; font-weight: 600; display: inline-block; border: 1px solid #ffcdd2;">
+    // 1. Enseignant (Badge rouge, Centré)
+    var cellEnseignant = row.insertCell(1);
+    cellEnseignant.style.textAlign = 'center';
+    cellEnseignant.style.verticalAlign = 'middle';
+    cellEnseignant.innerHTML = `
+        <span style="background-color: #fce4ec; color: #d32f2f; padding: 3px 12px; border-radius: 15px; font-size: 11px; font-weight: 600; display: inline-block; border: 1px solid #ffcdd2; min-width: 130px;">
             <i class="fas fa-user-tie mr-1"></i> ${escHtml(m.ENSEIGNANT) || '—'}
         </span>`;
 
-        // Coefficient
-        row.insertCell(2).innerHTML =
-            '<span class="badge-coeff">' + parseFloat(m.COEFFICIENT).toFixed(1) + '</span>';
+    // 2. Coefficient (Centré avec badge cercle)
+    var cellCoeff = row.insertCell(2);
+    cellCoeff.style.textAlign = 'center';
+    cellCoeff.style.verticalAlign = 'middle';
+    cellCoeff.innerHTML = `
+        <span style="background-color: #f8f9fa; color: #333; padding: 4px 8px; border-radius: 50%; font-weight: 700; border: 1px solid #ddd; font-size: 11px;">
+            ${parseFloat(m.COEFFICIENT).toFixed(1)}
+        </span>`;
 
-        // Heures
-        row.insertCell(3).textContent = (m.HEURES_SEMAINE || 0) + 'h';
+    // 3. Heures (Centré)
+    var cellHeures = row.insertCell(3);
+    cellHeures.style.textAlign = 'center';
+    cellHeures.style.verticalAlign = 'middle';
+    cellHeures.style.fontWeight = '600';
+    cellHeures.textContent = (m.HEURES_SEMAINE || 0) + 'h';
 
-        // Niveau — Affichage avec icône et badge stylisé
-        row.insertCell(4).innerHTML = `
-        <span style="background-color: #e1f5fe; color: #01579b; padding: 3px 12px; border-radius: 15px; font-size: 11px; font-weight: 600; display: inline-block; border: 1px solid #b3e5fc;">
+    // 4. Niveau (Badge bleu, Centré)
+    var cellNiveau = row.insertCell(4);
+    cellNiveau.style.textAlign = 'center';
+    cellNiveau.style.verticalAlign = 'middle';
+    cellNiveau.innerHTML = `
+        <span style="background-color: #e1f5fe; color: #01579b; padding: 3px 12px; border-radius: 15px; font-size: 11px; font-weight: 600; display: inline-block; border: 1px solid #b3e5fc; min-width: 90px;">
             <i class="fas fa-layer-group mr-1"></i> ${escHtml(m.NIVEAU) || '—'}
         </span>`;
 
-        // Date
-        var cellDate = row.insertCell(5);
-        cellDate.textContent = date;
-        cellDate.style.cssText = 'color:#888;font-size:12px;';
+    // 5. Date (Centré et stylisé)
+    var cellDate = row.insertCell(5);
+    cellDate.style.textAlign = 'center';
+    cellDate.style.verticalAlign = 'middle';
+    cellDate.style.color = '#888';
+    cellDate.style.fontSize = '12px';
+    cellDate.textContent = date;
 
-        // Actions — ID GUID entre guillemets simples comme dans classe.js
-        row.insertCell(6).innerHTML =
-            '<button type="button" class="btn btn-sm btn-primary"' +
-            ' onclick="editMatiere(\'' + m.ID + '\')" title="Modifier">' +
-            '  <i class="fas fa-edit"></i>' +
-            '</button> ' +
-            '<button type="button" class="btn btn-sm btn-danger"' +
-            ' onclick="deleteMatiere(\'' + m.ID + '\',\'' + escHtml(m.NOM).replace(/'/g, "\\'") + '\')" title="Supprimer">' +
-            '  <i class="fas fa-trash"></i>' +
-            '</button>';
-    });
+    // 6. Actions (Centré, sans retour à la ligne)
+    var cellActions = row.insertCell(6);
+    cellActions.style.textAlign = 'center';
+    cellActions.style.verticalAlign = 'middle';
+    cellActions.style.whiteSpace = 'nowrap';
+    cellActions.innerHTML = `
+        <button type="button" class="btn btn-sm btn-primary" style="margin: 0 2px;" onclick="editMatiere('${m.ID}')" title="Modifier">
+            <i class="fas fa-edit"></i>
+        </button>
+        <button type="button" class="btn btn-sm btn-danger" style="margin: 0 2px;" onclick="deleteMatiere('${m.ID}', '${escHtml(m.NOM).replace(/'/g, "\\'")}')" title="Supprimer">
+            <i class="fas fa-trash"></i>
+        </button>`;
+});
 
     if (typeof createPaginationControls === "function") createPaginationControls(totalPages);
 }

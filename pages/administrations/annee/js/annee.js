@@ -65,15 +65,15 @@ function renderTable() {
     pageData.forEach(item => {
         const tr = document.createElement('tr');
         tr.innerHTML = `
-            <td>${item.ANNEE || '-'}</td>
-            <td>${formatNetDate(item.DATE_DEBUT)}</td>
-            <td>${formatNetDate(item.DATE_FIN)}</td>
-            <td>${item.CLOTURE
+            <td class="text-center">${item.ANNEE || '-'}</td>
+            <td class="text-center">${formatNetDate(item.DATE_DEBUT)}</td>
+            <td class="text-center">${formatNetDate(item.DATE_FIN)}</td>
+            <td class="text-center">${item.CLOTURE
                 ? '<span style="background:#dc3545;padding:4px 10px;border-radius:20px;color:white;font-size:12px;font-weight:500;">✗ Clôturée</span>'
                 : '<span style="background:#28a745;padding:4px 10px;border-radius:20px;color:white;font-size:12px;font-weight:500;">✓ Ouverte</span>'
             }</td>
-            <td>${item.DATE_CLOTURE ? formatNetDate(item.DATE_CLOTURE) : '-'}</td>
-            <td>
+            <td class="text-center">${item.DATE_CLOTURE ? formatNetDate(item.DATE_CLOTURE) : '-'}</td>
+            <td class="text-center">
                 <button type="button" class="btn btn-sm btn-primary"
                     style="padding:5px 10px;margin:0 3px;border-radius:4px;"
                     onclick="openEditAnneeModal(${item.ID})">

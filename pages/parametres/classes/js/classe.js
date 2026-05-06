@@ -54,12 +54,12 @@ async function chargerNiveaux() {
     try {
         const response = await fetch(API.niveaux);
         const data = await response.json();
-        
+
         if (data.success) {
             const select = document.getElementById('ClasseNiveau');
             // On garde la première option par défaut
             select.innerHTML = '<option value="">-- Sélectionner un niveau --</option>';
-            
+
             data.niveaux.forEach(niv => {
                 const opt = document.createElement('option');
                 opt.value = niv.ID; // On stocke le GUID (ID) pour la clé étrangère
@@ -78,25 +78,25 @@ async function chargerNiveaux() {
 async function chargerSalles() {
     try {
         // ✅ Correction : On appelle l'API des salles, pas celle des niveaux
-        const response = await fetch(API.salles); 
+        const response = await fetch(API.salles);
         const data = await response.json();
-        
+
         if (data.success) {
             const select = document.getElementById('ClasseSalle');
             if (!select) return;
 
             // On garde la première option par défaut
             select.innerHTML = '<option value="">-- Sélectionner une salle --</option>';
-            
+
             // ✅ On boucle sur data.salles (ou le nom de la liste retournée par votre ASHH)
             const listeSalles = data.salles || data.Salles || [];
 
             listeSalles.forEach(s => {
                 const opt = document.createElement('option');
                 // ✅ CRUCIAL : On stocke l'ID (GUID) dans la value pour la clé étrangère
-                opt.value = s.ID; 
+                opt.value = s.ID;
                 // On affiche le NUMERO pour l'utilisateur
-                opt.textContent = s.NUMERO; 
+                opt.textContent = s.NUMERO;
                 select.appendChild(opt);
             });
         }
@@ -291,57 +291,80 @@ function renderClassesTable() {
     }
 
     pageClasses.forEach(classe => {
-        const row = tbody.insertRow();
-        
-        // Nom de la classe
-        const cellNom = row.insertCell(0);
-        cellNom.innerHTML = `<strong>${escHtml(classe.NOM) || '-'}</strong>`;
-        cellNom.style.color = '#333333';
+    const row = tbody.insertRow();
 
-        // Niveau (Badge bleu)
-        row.insertCell(1).innerHTML = `
-            <span style="background-color: #e1f5fe; color: #01579b; padding: 3px 12px; border-radius: 15px; font-size: 11px; font-weight: 600; display: inline-block; border: 1px solid #b3e5fc;">
-                <i class="fas fa-layer-group mr-1"></i> ${escHtml(classe.NIVEAU) || '-'}
-            </span>`;
+    // 1. Nom de la classe (Badge transparent, Centré)
+    const cellNom = row.insertCell(0);
+    cellNom.style.textAlign = 'center';
+    cellNom.style.verticalAlign = 'middle';
+    cellNom.innerHTML = `
+        <span style="display: inline-block; min-width: 100px; padding: 3px 12px; border: 1px solid #e1f5fe; border-radius: 15px;">
+            <strong>${escHtml(classe.NOM) || '-'}</strong>
+        </span>`;
+    cellNom.style.color = '#333333';
 
-        row.insertCell(2).innerHTML = classe.EFFECTIF || '0';
+    // 2. Niveau (Badge bleu, Centré)
+    const cellNiveau = row.insertCell(1); // Changement de nom de variable ici pour éviter l'erreur
+    cellNiveau.style.textAlign = 'center';
+    cellNiveau.style.verticalAlign = 'middle';
+    cellNiveau.innerHTML = `
+        <span style="background-color: #e1f5fe; color: #01579b; padding: 3px 12px; border-radius: 15px; font-size: 11px; font-weight: 600; display: inline-block; border: 1px solid #b3e5fc;">
+            <i class="fas fa-layer-group mr-1"></i> ${escHtml(classe.NIVEAU) || '-'}
+        </span>`;
 
-        // Niveau (Badge rouge)
-        row.insertCell(3).innerHTML = `
-            <span style="background-color: #e1f5fe; color: rgb(243, 10, 10); padding: 3px 12px; border-radius: 15px; font-size: 11px; font-weight: 600; display: inline-block; border: 1px solid #eea3ad;">
-                <i class="fas fa-user-tie mr-1"></i> ${escHtml(classe.TITULAIRE) || '-'}
-            </span>`;
+    // 3. Effectif (Centré)
+    const cellEffectif = row.insertCell(2);
+    cellEffectif.style.textAlign = 'center';
+    cellEffectif.style.verticalAlign = 'middle';
+    cellEffectif.innerHTML = `<strong>${classe.EFFECTIF || '0'}</strong>`;
 
-        // Niveau (Badge Vert)
-        row.insertCell(4).innerHTML = ` 
-            <span style="background-color: #e1f5fe; color: rgb(1, 155, 52); padding: 3px 12px; border-radius: 15px; font-size: 11px; font-weight: 600; display: inline-block; border: 1px solid rgb(179, 252, 207);">
-                <i class="fas fa-door-open mr-1"></i> ${escHtml(classe.SALLE) || '-'}
-            </span>`;
+    // 4. Titulaire (Badge rouge, Centré)
+    const cellTitulaire = row.insertCell(3);
+    cellTitulaire.style.textAlign = 'center';
+    cellTitulaire.style.verticalAlign = 'middle';
+    cellTitulaire.innerHTML = `
+        <span style="background-color: #fff1f2; color: rgb(243, 10, 10); padding: 3px 12px; border-radius: 15px; font-size: 11px; font-weight: 600; display: inline-block; border: 1px solid #eea3ad;">
+            <i class="fas fa-user-tie mr-1"></i> ${escHtml(classe.TITULAIRE) || '-'}
+        </span>`;
 
-        // Statut
-        const isActif = (
-            classe.STATUT === true ||
-            classe.STATUT === 1 ||
-            classe.STATUT === '1' ||
-            classe.STATUT === 'True' ||
-            classe.STATUT === 'Actif'
-        );
+    // 5. Salle (Badge Vert, Centré)
+    const cellSalle = row.insertCell(4);
+    cellSalle.style.textAlign = 'center';
+    cellSalle.style.verticalAlign = 'middle';
+    cellSalle.innerHTML = ` 
+        <span style="background-color: #e8f5e9; color: rgb(1, 155, 52); padding: 3px 12px; border-radius: 15px; font-size: 11px; font-weight: 600; display: inline-block; border: 1px solid rgb(179, 252, 207);">
+            <i class="fas fa-door-open mr-1"></i> ${escHtml(classe.SALLE) || '-'}
+        </span>`;
 
-        row.insertCell(5).innerHTML = isActif
-            ? '<span class="badge bg-success" style="background: #28a745; padding: 4px 10px; border-radius: 20px; color: white; font-size: 12px;">✓ Actif</span>'
-            : '<span class="badge bg-danger" style="background: #dc3545; padding: 4px 10px; border-radius: 20px; color: white; font-size: 12px;">✗ Inactif</span>';
+    // 6. Statut (Badge, Centré)
+    const cellStatut = row.insertCell(5);
+    cellStatut.style.textAlign = 'center';
+    cellStatut.style.verticalAlign = 'middle';
+    const isActif = (
+        classe.STATUT === true ||
+        classe.STATUT === 1 ||
+        classe.STATUT === '1' ||
+        classe.STATUT === 'True' ||
+        classe.STATUT === 'Actif'
+    );
+    cellStatut.innerHTML = isActif
+        ? '<span style="background: #28a745; padding: 4px 10px; border-radius: 20px; color: white; font-size: 11px; font-weight: 600; display: inline-block; min-width: 80px;">✓ Actif</span>'
+        : '<span style="background: #dc3545; padding: 4px 10px; border-radius: 20px; color: white; font-size: 11px; font-weight: 600; display: inline-block; min-width: 80px;">✗ Inactif</span>';
 
-        // --- CORRECTION DES ACTIONS (GUID) ---
-        // On ajoute des quotes simples \' autour de classe.ID
-        row.insertCell(6).innerHTML = `
-            <button type="button" class="btn btn-sm btn-primary" onclick="editClasse('${classe.ID}')" title="Modifier">
-                <i class="fas fa-edit"></i>
-            </button>
-            <button type="button" class="btn btn-sm btn-danger" onclick="deleteClasse('${classe.ID}', '${escHtml(classe.NOM).replace(/'/g, "\\'")}')" title="Supprimer">
-                <i class="fas fa-trash"></i>
-            </button>
-        `;
-    });
+    // 7. Actions (Centré)
+    const cellActions = row.insertCell(6);
+    cellActions.style.textAlign = 'center';
+    cellActions.style.verticalAlign = 'middle';
+    cellActions.style.whiteSpace = 'nowrap';
+    cellActions.innerHTML = `
+        <button type="button" class="btn btn-sm btn-primary" style="margin: 0 2px;" onclick="editClasse('${classe.ID}')" title="Modifier">
+            <i class="fas fa-edit"></i>
+        </button>
+        <button type="button" class="btn btn-sm btn-danger" style="margin: 0 2px;" onclick="deleteClasse('${classe.ID}', '${escHtml(classe.NOM).replace(/'/g, "\\'")}')" title="Supprimer">
+            <i class="fas fa-trash"></i>
+        </button>
+    `;
+});
 
     if (typeof createPaginationControls === "function") createPaginationControls(totalPages);
 }
@@ -494,8 +517,8 @@ function editClasse(id) {
     document.getElementById('ClasseNom').value = m.NOM;
     // On utilise les GUIDs/IDs pour sélectionner la bonne option dans chaque liste déroulante
     document.getElementById('ClasseNiveau').value = m.NIVEAU_ID;
-    document.getElementById('ClasseUser').value   = m.TITULAIRE_ID;
-    document.getElementById('ClasseSalle').value  = m.SALLE_ID;
+    document.getElementById('ClasseUser').value = m.TITULAIRE_ID;
+    document.getElementById('ClasseSalle').value = m.SALLE_ID;
     document.getElementById('ClasseEffectif').value = m.EFFECTIF;
 
     // --- CORRECTION DU STATUT POUR LE MODAL ---
