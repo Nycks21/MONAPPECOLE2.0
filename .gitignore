@@ -1,0 +1,36 @@
+# Fichiers de backup
+backup/
+*.bak
+*.sql
+
+# Dossiers de compilation
+bin/
+obj/
+packages/
+
+# Fichiers DLL et EXE
+*.dll
+*.exe
+
+# Fichiers de log
+*.log
+logs/
+
+# Fichiers temporaires
+*.tmp
+*.temp
+*.cache
+
+# IDE
+.vs/
+.vscode/
+.idea/
+
+# Fichiers système
+Thumbs.db
+.DS_Store
+
+# Fichiers sensibles
+*.config.local
+web.config.local
+web.config

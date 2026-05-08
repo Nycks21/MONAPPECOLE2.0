@@ -1,0 +1,260 @@
+/* ═══════════════════════════════════════════════════════════════
+   RESPONSIVE ADDITIONS — Gestion Scolaire
+   À fusionner dans css/style.css
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── 1. PLEIN ÉCRAN — Toujours occuper 100% de la fenêtre ── */
+*, *::before, *::after {
+    box-sizing: border-box;
+}
+
+html, body {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+}
+
+/* Le wrapper principal couvre toute la hauteur */
+.wrapper {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    width: 100%;
+    position: relative;
+}
+
+/* Topbar fixe en haut, pleine largeur */
+.main-header {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1030;
+    height: 57px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    width: 100%;
+}
+
+/* Sidebar fixe à gauche, hauteur complète */
+.main-sidebar {
+    position: fixed;
+    top: 57px;             /* sous la topbar */
+    left: 0;
+    bottom: 0;
+    width: 250px;
+    overflow-y: auto;
+    overflow-x: hidden;
+    z-index: 1020;
+    transition: transform 0.3s ease, width 0.3s ease;
+}
+
+/* Content wrapper prend l'espace restant */
+.content-wrapper {
+    margin-left: 250px;
+    margin-top: 57px;
+    min-height: calc(100vh - 57px);
+    width: calc(100% - 250px);
+    transition: margin-left 0.3s ease, width 0.3s ease;
+    overflow-x: hidden;
+}
+
+/* ── 2. SIDEBAR COLLAPSED (desktop) ── */
+body.sidebar-collapsed .main-sidebar {
+    width: 60px;
+}
+
+body.sidebar-collapsed .main-sidebar .brand-text,
+body.sidebar-collapsed .main-sidebar .nav-link span,
+body.sidebar-collapsed .main-sidebar .nav-section,
+body.sidebar-collapsed .main-sidebar .user-panel span,
+body.sidebar-collapsed .main-sidebar #navbarUsername {
+    display: none;
+}
+
+body.sidebar-collapsed .main-sidebar .brand-link {
+    justify-content: center;
+    padding: 8px 0;
+}
+
+body.sidebar-collapsed .main-sidebar .nav-link {
+    justify-content: center;
+    padding: 10px 0;
+}
+
+body.sidebar-collapsed .main-sidebar .nav-link div {
+    margin-right: 0 !important;
+}
+
+body.sidebar-collapsed .content-wrapper {
+    margin-left: 60px;
+    width: calc(100% - 60px);
+}
+
+/* ── 3. OVERLAY pour mobile ── */
+.sidebar-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1015;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+body.sidebar-open .sidebar-overlay {
+    display: block;
+    opacity: 1;
+}
+
+/* ── 4. RESPONSIVE MOBILE (≤ 768px) ── */
+@media (max-width: 768px) {
+
+    /* Sidebar cachée par défaut sur mobile */
+    .main-sidebar {
+        transform: translateX(-100%);
+        width: 260px;
+        top: 0;            /* couvre toute la hauteur sur mobile */
+        z-index: 1050;
+    }
+
+    /* Sidebar visible quand ouverte */
+    body.sidebar-open .main-sidebar {
+        transform: translateX(0);
+    }
+
+    /* Content wrapper occupe tout sur mobile */
+    .content-wrapper {
+        margin-left: 0 !important;
+        width: 100% !important;
+        margin-top: 57px;
+    }
+
+    /* Topbar : icônes plus accessibles */
+    .main-header {
+        padding: 0 10px;
+    }
+
+    /* Breadcrumb sur mobile */
+    .breadcrumb {
+        float: none !important;
+        padding: 4px 0;
+        font-size: 12px;
+    }
+
+    /* Titres de page */
+    .content-header h1 {
+        font-size: 1.3rem;
+    }
+
+    /* Dash card : padding réduit */
+    .dash-card {
+        padding: 16px !important;
+    }
+
+    /* Wizard d'import : scroll horizontal */
+    .imp-wizard {
+        overflow-x: auto;
+        flex-wrap: nowrap !important;
+        gap: 8px;
+        padding-bottom: 8px;
+    }
+
+    .imp-step {
+        min-width: 70px;
+    }
+
+    .imp-step-label {
+        font-size: 11px;
+    }
+
+    /* Table de mappage : scroll horizontal */
+    .imp-mapping-table {
+        min-width: 500px;
+    }
+
+    /* Boutons de navigation import */
+    .imp-nav {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+
+    /* Modal plein écran sur mobile */
+    .modal-dialog {
+        margin: 8px !important;
+        max-width: calc(100vw - 16px) !important;
+    }
+
+    /* Row du header : colonne sur mobile */
+    .content-header .row {
+        flex-direction: column;
+    }
+
+    .content-header .col-lg-6 {
+        width: 100%;
+    }
+
+    /* Flex wrap pour les boutons */
+    [style*="display:flex"] {
+        flex-wrap: wrap;
+    }
+}
+
+/* ── 5. RESPONSIVE TABLETTE (769px – 1024px) ── */
+@media (min-width: 769px) and (max-width: 1024px) {
+
+    .main-sidebar {
+        width: 200px;
+    }
+
+    .content-wrapper {
+        margin-left: 200px;
+        width: calc(100% - 200px);
+    }
+
+    body.sidebar-collapsed .main-sidebar {
+        width: 60px;
+    }
+
+    body.sidebar-collapsed .content-wrapper {
+        margin-left: 60px;
+        width: calc(100% - 60px);
+    }
+
+    .dash-card {
+        padding: 18px !important;
+    }
+}
+
+/* ── 6. GRANDS ÉCRANS ── */
+@media (min-width: 1400px) {
+    .container-fluid {
+        max-width: 100%;
+        padding-left: 24px;
+        padding-right: 24px;
+    }
+}
+
+/* ── 7. SCROLLBAR SIDEBAR ── */
+.main-sidebar::-webkit-scrollbar {
+    width: 4px;
+}
+
+.main-sidebar::-webkit-scrollbar-thumb {
+    border-radius: 4px;
+    background: rgba(255,255,255,0.2);
+}
+
+/* ── 8. USER PANEL sur mobile ── */
+.user-panel {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    white-space: nowrap;
+    overflow: hidden;
+}

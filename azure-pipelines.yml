@@ -1,0 +1,304 @@
+# ========================================
+# Azure DevOps Pipeline CI/CD
+# Projet ASP.NET WebForms + SQL Server
+# ========================================
+
+# Déclenchement automatique du pipeline
+trigger:
+  branches:
+    include:
+      - main        # Branche principale
+      - develop     # Branche de développement
+  paths:
+    exclude:
+      - README.md
+      - docs/*
+
+# Pool d'agents (machine virtuelle Windows)
+pool:
+  vmImage: 'windows-latest'
+
+# Variables globales
+variables:
+  solution: '**/*.sln'
+  buildPlatform: 'Any CPU'
+  buildConfiguration: 'Release'
+  websiteName: 'MVolaTransaction'  # À ADAPTER selon ton site IIS
+
+# ========================================
+# STAGE 1 : BUILD & TEST
+# ========================================
+stages:
+  - stage: Build
+    displayName: 'Build et Test'
+    jobs:
+      - job: BuildJob
+        displayName: 'Compilation du projet'
+        steps:
+
+          # ===== Checkout du code source =====
+          - checkout: self
+            clean: true
+            displayName: 'Récupération du code source'
+
+          # ===== Installation de NuGet =====
+          - task: NuGetToolInstaller@1
+            displayName: 'Installation de NuGet'
+            inputs:
+              versionSpec: '>=5.0.0'
+
+          # ===== Restauration des packages NuGet =====
+          - task: NuGetCommand@2
+            displayName: 'Restauration des packages NuGet'
+            inputs:
+              command: 'restore'
+              restoreSolution: '$(solution)'
+              feedsToUse: 'select'
+
+          # ===== Build de la solution ASP.NET =====
+          - task: VSBuild@1
+            displayName: 'Build de la solution ASP.NET'
+            inputs:
+              solution: '$(solution)'
+              msbuildArgs: >
+                /p:DeployOnBuild=true
+                /p:WebPublishMethod=Package
+                /p:PackageAsSingleFile=true
+                /p:SkipInvalidConfigurations=true
+                /p:PackageLocation="$(build.artifactStagingDirectory)"
+                /p:Configuration=$(buildConfiguration)
+                /p:Platform="$(buildPlatform)"
+              platform: '$(buildPlatform)'
+              configuration: '$(buildConfiguration)'
+
+          # ===== Tests unitaires (optionnel - décommente si tu as des tests) =====
+          # - task: VSTest@2
+          #   displayName: 'Exécution des tests unitaires'
+          #   inputs:
+          #     platform: '$(buildPlatform)'
+          #     configuration: '$(buildConfiguration)'
+          #     testAssemblyVer2: |
+          #       **\*test*.dll
+          #       !**\*TestAdapter.dll
+          #       !**\obj\**
+          #   condition: succeededOrFailed()
+
+          # ===== Analyse de code (optionnel) =====
+          # - task: SonarCloudPrepare@1
+          #   displayName: 'Préparation SonarCloud'
+          #   inputs:
+          #     SonarCloud: 'SonarCloud'
+          #     organization: 'ton-organisation'
+          #     scannerMode: 'MSBuild'
+          #     projectKey: 'mvola-transaction'
+
+          # ===== Publication des artifacts pour le déploiement =====
+          - task: PublishBuildArtifacts@1
+            displayName: 'Publication des artifacts'
+            inputs:
+              PathtoPublish: '$(build.artifactStagingDirectory)'
+              ArtifactName: 'drop'
+              publishLocation: 'Container'
+
+# ========================================
+# STAGE 2 : DEPLOY EN STAGING (Test)
+# ========================================
+  - stage: DeployStaging
+    displayName: 'Déploiement STAGING'
+    dependsOn: Build
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/develop'))
+    jobs:
+      - deployment: DeployWebStaging
+        displayName: 'Déploiement sur serveur de test'
+        environment: 'staging'  # Crée cet environnement dans Azure DevOps
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+
+                # ===== Téléchargement des artifacts =====
+                - download: current
+                  artifact: drop
+                  displayName: 'Téléchargement des artifacts'
+
+                # ===== Arrêt du site IIS =====
+                - task: IISWebAppManagementOnMachineGroup@0
+                  displayName: 'Arrêt du site IIS (Staging)'
+                  inputs:
+                    IISDeploymentType: 'IISWebsite'
+                    ActionIISWebsite: 'StopWebsite'
+                    WebsiteName: '$(websiteName)-staging'
+
+                # ===== Déploiement sur IIS =====
+                - task: IISWebAppDeploymentOnMachineGroup@0
+                  displayName: 'Déploiement IIS (Staging)'
+                  inputs:
+                    WebSiteName: '$(websiteName)-staging'
+                    Package: '$(Pipeline.Workspace)/drop/*.zip'
+                    RemoveAdditionalFilesFlag: true
+                    TakeAppOfflineFlag: true
+
+                # ===== Mise à jour de la base de données SQL Server =====
+                - task: SqlAzureDacpacDeployment@1
+                  displayName: 'Mise à jour SQL Server (Staging)'
+                  inputs:
+                    azureSubscription: 'AzureServiceConnection'  # À configurer dans Azure DevOps
+                    ServerName: '$(stagingSqlServer)'
+                    DatabaseName: '$(stagingDatabase)'
+                    SqlUsername: '$(stagingSqlUsername)'
+                    SqlPassword: '$(stagingSqlPassword)'
+                    deployType: 'InlineSqlTask'
+                    SqlInline: |
+                      -- Script de migration SQL
+                      -- Ajoute tes scripts de mise à jour ici
+                      PRINT 'Migration de la base de données...'
+
+                # ===== Démarrage du site IIS =====
+                - task: IISWebAppManagementOnMachineGroup@0
+                  displayName: 'Démarrage du site IIS (Staging)'
+                  inputs:
+                    IISDeploymentType: 'IISWebsite'
+                    ActionIISWebsite: 'StartWebsite'
+                    WebsiteName: '$(websiteName)-staging'
+
+                # ===== Test de santé (Health Check) =====
+                - task: PowerShell@2
+                  displayName: 'Vérification du site (Health Check)'
+                  inputs:
+                    targetType: 'inline'
+                    script: |
+                      $url = "https://staging.ton-domaine.com/health"
+                      try {
+                          $response = Invoke-WebRequest -Uri $url -UseBasicParsing
+                          if ($response.StatusCode -eq 200) {
+                              Write-Host "✅ Le site staging est opérationnel"
+                          } else {
+                              Write-Error "❌ Le site staging ne répond pas correctement"
+                              exit 1
+                          }
+                      } catch {
+                          Write-Error "❌ Erreur lors du health check: $_"
+                          exit 1
+                      }
+
+# ========================================
+# STAGE 3 : DEPLOY EN PRODUCTION
+# ========================================
+  - stage: DeployProduction
+    displayName: 'Déploiement PRODUCTION'
+    dependsOn: Build
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+    jobs:
+      - deployment: DeployWebProduction
+        displayName: 'Déploiement sur serveur de production'
+        environment: 'production'  # Nécessite une approbation manuelle
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+
+                # ===== Téléchargement des artifacts =====
+                - download: current
+                  artifact: drop
+                  displayName: 'Téléchargement des artifacts'
+
+                # ===== Sauvegarde avant déploiement =====
+                - task: PowerShell@2
+                  displayName: 'Sauvegarde du site actuel'
+                  inputs:
+                    targetType: 'inline'
+                    script: |
+                      $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
+                      $backupPath = "C:\Backups\$(websiteName)_$timestamp"
+                      Write-Host "Création de la sauvegarde dans $backupPath"
+                      # Ajoute ta logique de backup ici
+
+                # ===== Arrêt du site IIS =====
+                - task: IISWebAppManagementOnMachineGroup@0
+                  displayName: 'Arrêt du site IIS (Production)'
+                  inputs:
+                    IISDeploymentType: 'IISWebsite'
+                    ActionIISWebsite: 'StopWebsite'
+                    WebsiteName: '$(websiteName)'
+
+                # ===== Déploiement sur IIS =====
+                - task: IISWebAppDeploymentOnMachineGroup@0
+                  displayName: 'Déploiement IIS (Production)'
+                  inputs:
+                    WebSiteName: '$(websiteName)'
+                    Package: '$(Pipeline.Workspace)/drop/*.zip'
+                    RemoveAdditionalFilesFlag: true
+                    TakeAppOfflineFlag: true
+                    XmlTransformation: true
+                    XmlVariableSubstitution: true
+
+                # ===== Mise à jour de la base de données SQL Server =====
+                - task: SqlAzureDacpacDeployment@1
+                  displayName: 'Mise à jour SQL Server (Production)'
+                  inputs:
+                    azureSubscription: 'AzureServiceConnection'
+                    ServerName: '$(prodSqlServer)'
+                    DatabaseName: '$(prodDatabase)'
+                    SqlUsername: '$(prodSqlUsername)'
+                    SqlPassword: '$(prodSqlPassword)'
+                    deployType: 'InlineSqlTask'
+                    SqlInline: |
+                      -- Script de migration SQL pour production
+                      PRINT 'Migration de la base de données production...'
+
+                # ===== Démarrage du site IIS =====
+                - task: IISWebAppManagementOnMachineGroup@0
+                  displayName: 'Démarrage du site IIS (Production)'
+                  inputs:
+                    IISDeploymentType: 'IISWebsite'
+                    ActionIISWebsite: 'StartWebsite'
+                    WebsiteName: '$(websiteName)'
+
+                # ===== Test de santé (Health Check) =====
+                - task: PowerShell@2
+                  displayName: 'Vérification du site (Health Check)'
+                  inputs:
+                    targetType: 'inline'
+                    script: |
+                      $url = "https://www.ton-domaine.com/health"
+                      try {
+                          $response = Invoke-WebRequest -Uri $url -UseBasicParsing
+                          if ($response.StatusCode -eq 200) {
+                              Write-Host "✅ Le site production est opérationnel"
+                          } else {
+                              Write-Error "❌ Le site production ne répond pas correctement"
+                              exit 1
+                          }
+                      } catch {
+                          Write-Error "❌ Erreur lors du health check: $_"
+                          exit 1
+                      }
+
+                # ===== Notification de succès =====
+                - task: PowerShell@2
+                  displayName: '📧 Notification de déploiement'
+                  inputs:
+                    targetType: 'inline'
+                    script: |
+                      Write-Host "🚀 Déploiement réussi en PRODUCTION !"
+                      Write-Host "Version: $(Build.BuildNumber)"
+                      Write-Host "Branche: $(Build.SourceBranchName)"
+                      # Ajoute ici l'envoi d'email ou notification Slack si besoin
+
+# ========================================
+# VARIABLES SECRÈTES À CONFIGURER
+# ========================================
+# Dans Azure DevOps, va dans Pipelines > Library > Variable groups
+# et crée un groupe "SQL-Secrets" avec :
+#
+# STAGING :
+# - stagingSqlServer: ton-serveur-staging.database.windows.net
+# - stagingDatabase: MVolaDB_Staging
+# - stagingSqlUsername: admin_staging
+# - stagingSqlPassword: ******* (marqué comme secret)
+#
+# PRODUCTION :
+# - prodSqlServer: ton-serveur-prod.database.windows.net
+# - prodDatabase: MVolaDB
+# - prodSqlUsername: admin_prod
+# - prodSqlPassword: ******* (marqué comme secret)

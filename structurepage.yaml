@@ -1,0 +1,9 @@
+application/
+├── dashboard/
+│   └── dashboard-content.aspx   ← nouveau (contenu pur)
+├── dashboard.aspx                ← shell (nav + aside fixes)
+├── dashboard.aspx.cs             ← code-behind corrigé
+├── js/
+│   └── spa-nav.js               ← moteur SPA
+└── application/
+    └── jsgrid.aspx              ← page enfant
