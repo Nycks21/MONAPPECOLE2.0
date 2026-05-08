@@ -153,12 +153,10 @@ function setFieldsStateByType(isRetard) {
     var dateFinGroup = document.getElementById('dateFinGroup');
     
     if (!isRetard) {
-        // Type 'absence' : CACHER les groupes
         if (timeGroup) timeGroup.style.display = 'none';
         if (dureeGroup) dureeGroup.style.display = 'none';
         if (dateFinGroup) dateFinGroup.style.display = 'block';
     } else {
-        // Type 'retard' : AFFICHER les groupes
         if (timeGroup) timeGroup.style.display = 'block';
         if (dureeGroup) dureeGroup.style.display = 'block';
         if (dateFinGroup) dateFinGroup.style.display = 'none';
@@ -170,6 +168,82 @@ function setJustifiedFieldsState(isJustified) {
     if (motifGroup) {
         motifGroup.style.display = (isJustified === true || isJustified === 'oui') ? 'block' : 'none';
     }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BARRE DE FILTRES (placée sous les statistiques)
+// ─────────────────────────────────────────────────────────────────────────────
+function createFilterControls() {
+    if (document.getElementById('abs-filter-container')) return;
+
+    var fc = document.createElement('div');
+    fc.id = 'abs-filter-container';
+    fc.style.cssText = 'margin:20px 0 20px;padding:14px 18px;background:linear-gradient(135deg,#f8f9fa,#e9ecef);border-radius:10px;display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;box-shadow:0 2px 8px rgba(0,0,0,.08);border:1px solid #dee2e6;';
+    fc.innerHTML = `
+        <div style="flex:2;min-width:200px;">
+            <label style="display:block;margin-bottom:6px;font-weight:600;color:#495057;font-size:13px;">
+                <i class="fas fa-search"></i> Recherche
+            </label>
+            <input type="text" id="abs-search-filter" placeholder="Nom, matricule..."
+                style="width:100%;padding:9px 12px;border:1px solid #ced4da;border-radius:6px;font-size:13px;">
+        </div>
+        <div style="min-width:150px;">
+            <label style="display:block;margin-bottom:6px;font-weight:600;color:#495057;font-size:13px;">
+                <i class="fas fa-filter"></i> Type
+            </label>
+            <select id="abs-type-filter" class="form-control">
+                <option value="">Tous</option>
+                <option value="absence">Absence</option>
+                <option value="retard">Retard</option>
+            </select>
+        </div>
+        <div style="min-width:150px;">
+            <label style="display:block;margin-bottom:6px;font-weight:600;color:#495057;font-size:13px;">
+                <i class="fas fa-check-circle"></i> Justifiée
+            </label>
+            <select id="abs-justif-filter" class="form-control">
+                <option value="">Tous</option>
+                <option value="oui">Oui</option>
+                <option value="non">Non</option>
+            </select>
+        </div>
+        <div style="min-width:130px;">
+            <label style="display:block;margin-bottom:6px;font-weight:600;color:#495057;font-size:13px;">
+                <i class="fas fa-list"></i> Lignes par page
+            </label>
+            <select id="abs-rows-per-page" class="form-control">
+                <option value="5">5</option>
+                <option value="10" selected>10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+            </select>
+        </div>
+        <button id="abs-reset-filters" type="button"
+            style="padding:9px 20px;background:#6c757d;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px;">
+            <i class="fas fa-undo"></i> Réinitialiser
+        </button>`;
+
+    // Insérer après les statistiques
+    var statsContainer = document.getElementById('absenceStatsContainer');
+    if (statsContainer && statsContainer.parentNode) {
+        statsContainer.parentNode.insertBefore(fc, statsContainer.nextSibling);
+    } else {
+        var dashCardBody = document.querySelector('.dash-card-body');
+        if (dashCardBody) {
+            dashCardBody.insertBefore(fc, dashCardBody.firstChild);
+        }
+    }
+
+    document.getElementById('abs-search-filter')?.addEventListener('input', filterAbsences);
+    document.getElementById('abs-type-filter')?.addEventListener('change', filterAbsences);
+    document.getElementById('abs-justif-filter')?.addEventListener('change', filterAbsences);
+    document.getElementById('abs-rows-per-page')?.addEventListener('change', function(e) {
+        absRowsPerPage = parseInt(e.target.value);
+        absPage = 1;
+        renderTable();
+    });
+    document.getElementById('abs-reset-filters')?.addEventListener('click', resetFilters);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -186,6 +260,7 @@ async function loadAbsences() {
             filteredAbs = [...absencesData];
             applySort();
             updateStats();
+            createFilterControls();
             renderTable();
         } else {
             if (typeof Swal !== 'undefined') {
@@ -247,10 +322,8 @@ function onTypeChange() {
     var type = document.getElementById('absenceType')?.value;
     var isRetard = (type === 'retard');
     
-    // Gérer l'affichage des champs
     setFieldsStateByType(isRetard);
     
-    // Pour les absences, la date fin est la même que la date de début
     var dateEl = document.getElementById('absenceDate');
     var dateFinEl = document.getElementById('absenceDateF');
     
@@ -266,7 +339,6 @@ function onDateChange() {
     var dateEl = document.getElementById('absenceDate');
     var dateFinEl = document.getElementById('absenceDateF');
     
-    // Pour les absences, synchroniser la date fin avec la date de début
     if (type !== 'retard' && dateEl && dateFinEl) {
         dateFinEl.value = dateEl.value;
     }
@@ -300,7 +372,7 @@ function updateStats() {
 function updateCounter(count) {
     var el = document.getElementById('abs-counter');
     if (el) {
-        el.innerHTML = 'Affichage de <b>' + count + '</b> enregistrement(s)' +
+        el.innerHTML = '<i class="fas fa-database"></i> Affichage de <b>' + count + '</b> enregistrement(s)' +
             (count !== absencesData.length ? ' sur ' + absencesData.length : '');
     }
 }
@@ -330,9 +402,9 @@ function sortBy(column) {
 }
 
 function filterAbsences() {
-    var searchInput = document.getElementById('abs-search');
-    var typeSelect = document.getElementById('abs-filter-type');
-    var justifSelect = document.getElementById('abs-filter-justif');
+    var searchInput = document.getElementById('abs-search-filter');
+    var typeSelect = document.getElementById('abs-type-filter');
+    var justifSelect = document.getElementById('abs-justif-filter');
     
     var search = searchInput ? searchInput.value.toLowerCase().trim() : '';
     var type = typeSelect ? typeSelect.value : '';
@@ -352,9 +424,9 @@ function filterAbsences() {
 }
 
 function resetFilters() {
-    var search = document.getElementById('abs-search');
-    var type = document.getElementById('abs-filter-type');
-    var justif = document.getElementById('abs-filter-justif');
+    var search = document.getElementById('abs-search-filter');
+    var type = document.getElementById('abs-type-filter');
+    var justif = document.getElementById('abs-justif-filter');
     var rows = document.getElementById('abs-rows-per-page');
     
     if (search) search.value = '';
@@ -370,7 +442,7 @@ function resetFilters() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PAGINATION
+// PAGINATION (en bas du tableau)
 // ─────────────────────────────────────────────────────────────────────────────
 function renderPagination() {
     var container = document.getElementById('abs-pagination');
@@ -382,7 +454,7 @@ function renderPagination() {
         return;
     }
     
-    var html = '';
+    var html = '<div style="display:flex;justify-content:center;align-items:center;gap:5px;flex-wrap:wrap;margin-top:15px;">';
     html += '<button type="button" class="btn btn-sm btn-light" onclick="window.absencesManager.goToPage(1)" ' + (absPage === 1 ? 'disabled' : '') + '>&laquo;</button>';
     html += '<button type="button" class="btn btn-sm btn-light" onclick="window.absencesManager.goToPage(' + (absPage - 1) + ')" ' + (absPage === 1 ? 'disabled' : '') + '>&lsaquo;</button>';
     
@@ -394,6 +466,7 @@ function renderPagination() {
     
     html += '<button type="button" class="btn btn-sm btn-light" onclick="window.absencesManager.goToPage(' + (absPage + 1) + ')" ' + (absPage === totalPages ? 'disabled' : '') + '>&rsaquo;</button>';
     html += '<button type="button" class="btn btn-sm btn-light" onclick="window.absencesManager.goToPage(' + totalPages + ')" ' + (absPage === totalPages ? 'disabled' : '') + '>&raquo;</button>';
+    html += '</div>';
     
     container.innerHTML = html;
 }
@@ -408,15 +481,20 @@ function goToPage(page) {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// RENDU DU TABLEAU
+// RENDU DU TABLEAU (version modifiée)
 // ─────────────────────────────────────────────────────────────────────────────
 function renderTable() {
     var tbody = document.getElementById('absencesTableBody');
     if (!tbody) return;
     
     if (!filteredAbs || filteredAbs.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:50px;">Aucune absence trouvée通报</td>';
+        tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:50px;">' +
+            '<i class="fas fa-search" style="font-size:40px;color:#ccc;display:block;margin-bottom:12px;"></i>' +
+            'Aucune absence trouvée</td></tr>';
         updateCounter(0);
+        // Cacher la pagination
+        var pagContainer = document.getElementById('abs-pagination');
+        if (pagContainer) pagContainer.innerHTML = '';
         return;
     }
     
@@ -438,14 +516,14 @@ function renderTable() {
             '<td class="text-center">' + getMatriculeBadge(abs.MATRICULE) + '</td>' +
             '<td class="text-center">' + getNomBadge(abs.NOM) + '</td>' +
             '<td class="text-center">' + getClasseBadge(abs.CLASSE_NOM || '-') + '</td>' +
-            '<td class="text-center">' + getTypeBadge(abs.TYPE) + '</td>' +
+            '<td class="text-center">' + getTypeBadge(abs.TYPE) + '<tr>' +
             '<td class="text-center">' + escapeHtml(formatDate(abs.DATE_DEBUT)) + '</td>' +
             '<td class="text-center">' + escapeHtml(formatDate(abs.DATE_FIN)) + '</td>' +
             '<td class="text-center"><strong>' + escapeHtml(formatDuree(abs.DUREE)) + '</strong></td>' +
             '<td class="text-center">' + getJustifiedBadge(abs.JUSTIF) + '</td>' +
             '<td title="' + escapeHtml(abs.COMMENTAIRES || '') + '">' + truncateText(abs.COMMENTAIRES, 25) + '</td>' +
-            '<td class="text-center">' +
-                '<div style="display:flex; gap:4px; justify-content:center;">' +
+            '<td>' +
+                '<div style="display:flex; gap:4px; justify-content:flex-start;">' +
                     '<button type="button" class="btn btn-sm btn-primary" onclick="window.absencesManager.editAbsence(\'' + escapeHtml(abs.ID) + '\')" title="Modifier"><i class="fas fa-edit"></i></button>' +
                     '<button type="button" class="btn btn-sm btn-danger" onclick="window.absencesManager.deleteAbsence(\'' + escapeHtml(abs.ID) + '\')" title="Supprimer"><i class="fas fa-trash"></i></button>' +
                     btnJustif +
@@ -454,7 +532,137 @@ function renderTable() {
     }
     
     updateCounter(filteredAbs.length);
-    renderPagination();
+    renderPagination();  // Appel à la pagination
+}
+
+// Fonction pour créer le conteneur de pagination s'il n'existe pas
+function ensurePaginationContainer() {
+    var container = document.getElementById('abs-pagination');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'abs-pagination';
+        container.style.cssText = 'margin-top:15px;';
+        
+        // Trouver le bon endroit pour insérer
+        var dashCardBody = document.querySelector('.dash-card-body');
+        if (dashCardBody) {
+            dashCardBody.appendChild(container);
+        } else {
+            var tbody = document.getElementById('absencesTableBody');
+            if (tbody && tbody.parentNode && tbody.parentNode.parentNode) {
+                tbody.parentNode.parentNode.parentNode.appendChild(container);
+            }
+        }
+    }
+    return container;
+}
+
+// Fonction renderPagination modifiée
+// ─────────────────────────────────────────────────────────────────────────────
+// RENDU DU TABLEAU (version modifiée)
+// ─────────────────────────────────────────────────────────────────────────────
+function renderTable() {
+    var tbody = document.getElementById('absencesTableBody');
+    if (!tbody) return;
+    
+    if (!filteredAbs || filteredAbs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:50px;">' +
+            '<i class="fas fa-search" style="font-size:40px;color:#ccc;display:block;margin-bottom:12px;"></i>' +
+            'Aucune absence trouvée</td></tr>';
+        updateCounter(0);
+        // Cacher la pagination
+        var pagContainer = document.getElementById('abs-pagination');
+        if (pagContainer) pagContainer.innerHTML = '';
+        return;
+    }
+    
+    var start = (absPage - 1) * absRowsPerPage;
+    var pageData = filteredAbs.slice(start, start + absRowsPerPage);
+    
+    tbody.innerHTML = '';
+    for (var i = 0; i < pageData.length; i++) {
+        var abs = pageData[i];
+        var row = tbody.insertRow();
+        
+        var btnJustif = '';
+        if (!abs.JUSTIF) {
+            btnJustif = '<button type="button" class="btn btn-sm btn-success" onclick="window.absencesManager.openJustifyModal(\'' + escapeHtml(abs.ID) + '\')" title="Justifier"><i class="fas fa-check"></i></button>';
+        }
+        
+        row.innerHTML =
+            '<td class="text-center">' + escapeHtml(abs.ANNEE_TEXTE || '-') + '</td>' +
+            '<td class="text-center">' + getMatriculeBadge(abs.MATRICULE) + '</td>' +
+            '<td class="text-center">' + getNomBadge(abs.NOM) + '</td>' +
+            '<td class="text-center">' + getClasseBadge(abs.CLASSE_NOM || '-') + '</td>' +
+            '<td class="text-center">' + getTypeBadge(abs.TYPE) + '<tr>' +
+            '<td class="text-center">' + escapeHtml(formatDate(abs.DATE_DEBUT)) + '</td>' +
+            '<td class="text-center">' + escapeHtml(formatDate(abs.DATE_FIN)) + '</td>' +
+            '<td class="text-center"><strong>' + escapeHtml(formatDuree(abs.DUREE)) + '</strong></td>' +
+            '<td class="text-center">' + getJustifiedBadge(abs.JUSTIF) + '</td>' +
+            '<td title="' + escapeHtml(abs.COMMENTAIRES || '') + '">' + truncateText(abs.COMMENTAIRES, 25) + '</td>' +
+            '<td>' +
+                '<div style="display:flex; gap:4px; justify-content:flex-start">' +
+                    '<button type="button" class="btn btn-sm btn-primary" onclick="window.absencesManager.editAbsence(\'' + escapeHtml(abs.ID) + '\')" title="Modifier"><i class="fas fa-edit"></i></button>' +
+                    '<button type="button" class="btn btn-sm btn-danger" onclick="window.absencesManager.deleteAbsence(\'' + escapeHtml(abs.ID) + '\')" title="Supprimer"><i class="fas fa-trash"></i></button>' +
+                    btnJustif +
+                '</div>' +
+            '</td>';
+    }
+    
+    updateCounter(filteredAbs.length);
+    renderPagination();  // Appel à la pagination
+}
+
+// Fonction pour créer le conteneur de pagination s'il n'existe pas
+function ensurePaginationContainer() {
+    var container = document.getElementById('abs-pagination');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'abs-pagination';
+        container.style.cssText = 'margin-top:15px;';
+        
+        // Trouver le bon endroit pour insérer
+        var dashCardBody = document.querySelector('.dash-card-body');
+        if (dashCardBody) {
+            dashCardBody.appendChild(container);
+        } else {
+            var tbody = document.getElementById('absencesTableBody');
+            if (tbody && tbody.parentNode && tbody.parentNode.parentNode) {
+                tbody.parentNode.parentNode.parentNode.appendChild(container);
+            }
+        }
+    }
+    return container;
+}
+
+// Fonction renderPagination modifiée
+function renderPagination() {
+    ensurePaginationContainer();
+    
+    var container = document.getElementById('abs-pagination');
+    if (!container) return;
+    
+    var totalPages = Math.ceil(filteredAbs.length / absRowsPerPage);
+    if (totalPages <= 1) {
+        container.innerHTML = '';
+        return;
+    }
+    
+    var html = '<div style="display:flex;justify-content:center;align-items:center;gap:5px;flex-wrap:wrap;">';
+    html += '<button type="button" class="btn btn-sm btn-light" onclick="window.absencesManager.goToPage(1)" ' + (absPage === 1 ? 'disabled' : '') + '>&laquo;</button>';
+    html += '<button type="button" class="btn btn-sm btn-light" onclick="window.absencesManager.goToPage(' + (absPage - 1) + ')" ' + (absPage === 1 ? 'disabled' : '') + '>&lsaquo;</button>';
+    
+    var start = Math.max(1, absPage - 2);
+    var end = Math.min(totalPages, absPage + 2);
+    for (var i = start; i <= end; i++) {
+        html += '<button type="button" class="btn btn-sm ' + (i === absPage ? 'btn-primary' : 'btn-light') + '" onclick="window.absencesManager.goToPage(' + i + ')">' + i + '</button>';
+    }
+    
+    html += '<button type="button" class="btn btn-sm btn-light" onclick="window.absencesManager.goToPage(' + (absPage + 1) + ')" ' + (absPage === totalPages ? 'disabled' : '') + '>&rsaquo;</button>';
+    html += '<button type="button" class="btn btn-sm btn-light" onclick="window.absencesManager.goToPage(' + totalPages + ')" ' + (absPage === totalPages ? 'disabled' : '') + '>&raquo;</button>';
+    html += '</div>';
+    
+    container.innerHTML = html;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -464,7 +672,6 @@ function openSignalModal() {
     currentAbsMode = 'add';
     currentAbsId = null;
     
-    // Réinitialiser le formulaire
     var sel = document.getElementById('absenceMatricule');
     if (sel) sel.value = '';
     
@@ -492,7 +699,20 @@ function openSignalModal() {
         fJustif.style.cursor = 'pointer';
     }
     
-    // Cacher initialement les groupes
+    // Désactiver les champs Élève et Classe
+    var studentField = document.getElementById('absenceStudent');
+    var classField = document.getElementById('absenceClasse');
+    if (studentField) {
+        studentField.disabled = true;
+        studentField.style.backgroundColor = '#e9ecef';
+        studentField.style.cursor = 'not-allowed';
+    }
+    if (classField) {
+        classField.disabled = true;
+        classField.style.backgroundColor = '#e9ecef';
+        classField.style.cursor = 'not-allowed';
+    }
+    
     var timeGroup = document.getElementById('timeGroup');
     var dureeGroup = document.getElementById('dureeGroup');
     var dateFinGroup = document.getElementById('dateFinGroup');
@@ -503,7 +723,6 @@ function openSignalModal() {
     var motifGroup = document.getElementById('motifGroup');
     if (motifGroup) motifGroup.style.display = 'none';
     
-    // Initialiser le type à 'absence' par défaut
     var typeSelect = document.getElementById('absenceType');
     if (typeSelect) {
         typeSelect.value = 'absence';
@@ -523,6 +742,8 @@ function closeSignalModal() {
 // SAUVEGARDE
 // ─────────────────────────────────────────────────────────────────────────────
 async function saveAbsence() {
+    console.log('[saveAbsence] Début de la sauvegarde...');
+    
     var matricule = document.getElementById('absenceMatricule')?.value || '';
     var type = document.getElementById('absenceType')?.value || 'absence';
     var date = document.getElementById('absenceDate')?.value || '';
@@ -533,12 +754,25 @@ async function saveAbsence() {
     var heureDebut = document.getElementById('absenceHeureDebut')?.value || '';
     var heureFin = document.getElementById('absenceHeureFin')?.value || '';
     
+    console.log('[saveAbsence] Données collectées:', {
+        matricule, type, date, dateFin, duree, motif, justified, heureDebut, heureFin
+    });
+    
     if (!matricule) {
-        if (typeof Swal !== 'undefined') Swal.fire('Erreur', 'Veuillez sélectionner un élève.', 'warning');
+        if (typeof Swal !== 'undefined') {
+            Swal.fire('Erreur', 'Veuillez sélectionner un élève.', 'warning');
+        } else {
+            alert('Veuillez sélectionner un élève.');
+        }
         return;
     }
+    
     if (!date) {
-        if (typeof Swal !== 'undefined') Swal.fire('Erreur', 'La date est obligatoire.', 'warning');
+        if (typeof Swal !== 'undefined') {
+            Swal.fire('Erreur', 'La date est obligatoire.', 'warning');
+        } else {
+            alert('La date est obligatoire.');
+        }
         return;
     }
     
@@ -569,6 +803,8 @@ async function saveAbsence() {
     }
     
     var url = (currentAbsMode === 'edit') ? API_ABS.modifier : API_ABS.ajouter;
+    console.log('[saveAbsence] URL:', url);
+    console.log('[saveAbsence] Body:', body);
     
     showSpinner();
     try {
@@ -577,19 +813,30 @@ async function saveAbsence() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body)
         });
+        
+        console.log('[saveAbsence] Réponse status:', res.status);
+        
         var result = await res.json();
+        console.log('[saveAbsence] Résultat:', result);
+        
         if (result.success) {
             closeSignalModal();
             if (typeof Swal !== 'undefined') {
                 Swal.fire({ icon: 'success', title: result.message || 'Opération réussie', timer: 1500, showConfirmButton: false });
             }
-            setTimeout(loadAbsences, 1500);
+            setTimeout(function() {
+                loadAbsences();
+            }, 1500);
         } else {
-            if (typeof Swal !== 'undefined') Swal.fire('Erreur', result.message || 'Erreur inconnue.', 'error');
+            if (typeof Swal !== 'undefined') {
+                Swal.fire('Erreur', result.message || 'Erreur inconnue.', 'error');
+            }
         }
     } catch (err) {
-        console.error('Erreur:', err);
-        if (typeof Swal !== 'undefined') Swal.fire('Erreur réseau', err.message, 'error');
+        console.error('[saveAbsence] Erreur:', err);
+        if (typeof Swal !== 'undefined') {
+            Swal.fire('Erreur réseau', err.message, 'error');
+        }
     } finally {
         hideSpinner();
     }
@@ -637,13 +884,24 @@ function editAbsence(id) {
     var fDuree = document.getElementById('absenceDuration');
     var fReason = document.getElementById('absenceReason');
     
-    if (fNom) fNom.value = abs.NOM || '';
-    if (fClasse) fClasse.value = abs.CLASSE_NOM || '';
+    // Désactiver les champs Élève et Classe
+    if (fNom) {
+        fNom.disabled = true;
+        fNom.style.backgroundColor = '#e9ecef';
+        fNom.style.cursor = 'not-allowed';
+        fNom.value = abs.NOM || '';
+    }
+    if (fClasse) {
+        fClasse.disabled = true;
+        fClasse.style.backgroundColor = '#e9ecef';
+        fClasse.style.cursor = 'not-allowed';
+        fClasse.value = abs.CLASSE_NOM || '';
+    }
+    
     if (fType) fType.value = (abs.TYPE || 'absence').toLowerCase();
     if (fDate) fDate.value = formatDateForInput(abs.DATE_DEBUT);
     if (fDateFin) fDateFin.value = formatDateForInput(abs.DATE_FIN);
     
-    // Remplir les heures uniquement si c'est un retard
     var isRetard = (fType && fType.value === 'retard');
     
     if (fHeureD && abs.HEURE_DEBUT && isRetard) {
@@ -677,7 +935,6 @@ function editAbsence(id) {
     }
     if (fReason) fReason.value = abs.COMMENTAIRES || '';
     
-    // Gestion du champ JUSTIFIE en mode édition
     var fJustif = document.getElementById('absenceJustified');
     if (fJustif) {
         var isJustified = (abs.JUSTIF === true || abs.JUSTIF === 1 || abs.JUSTIF === 'True' || abs.JUSTIF === 'true');
@@ -687,7 +944,6 @@ function editAbsence(id) {
         fJustif.style.cursor = 'not-allowed';
     }
     
-    // Gérer l'affichage des champs selon le type
     setFieldsStateByType(isRetard);
     setJustifiedFieldsState(fJustif && fJustif.value === 'oui');
     
@@ -852,7 +1108,6 @@ function exportToCsv() {
 function init() {
     console.log('[Absences] Initialisation...');
     
-    // Attacher les événements
     var typeSelect = document.getElementById('absenceType');
     if (typeSelect) typeSelect.addEventListener('change', onTypeChange);
     
@@ -865,29 +1120,9 @@ function init() {
     var matriculeSelect = document.getElementById('absenceMatricule');
     if (matriculeSelect) matriculeSelect.addEventListener('change', onMatriculeChange);
     
-    var searchInput = document.getElementById('abs-search');
-    if (searchInput) searchInput.addEventListener('keyup', function(e) {
-        if (e.key === 'Enter') filterAbsences();
-    });
-    
-    var filterType = document.getElementById('abs-filter-type');
-    if (filterType) filterType.addEventListener('change', filterAbsences);
-    
-    var filterJustif = document.getElementById('abs-filter-justif');
-    if (filterJustif) filterJustif.addEventListener('change', filterAbsences);
-    
-    var rowsPerPage = document.getElementById('abs-rows-per-page');
-    if (rowsPerPage) rowsPerPage.addEventListener('change', function() {
-        absRowsPerPage = parseInt(this.value);
-        absPage = 1;
-        renderTable();
-    });
-    
-    // Charger les données
     loadAbsences();
     loadElevesSelect();
     
-    // Fermer modals sur Echap
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
             closeModal('signalAbsenceModal');
@@ -897,7 +1132,7 @@ function init() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// EXPOSITION GLOBALE (pour les onclick HTML)
+// EXPOSITION GLOBALE
 // ─────────────────────────────────────────────────────────────────────────────
 window.absencesManager = {
     init: init,
@@ -920,7 +1155,6 @@ window.absencesManager = {
     onJustifiedChange: onJustifiedChange
 };
 
-// Démarrer automatiquement
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
 } else {

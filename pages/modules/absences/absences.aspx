@@ -291,7 +291,7 @@
                                     <table class="dash-table"
                                         style="table-layout: fixed; width: 1200px; min-width: 100%; border-collapse: collapse;">
                                         <thead>
-                                            <tr style="background-color: #f8f9fa; text-align: center;">
+                                            <tr style="background-color: #f8f9fa;">
                                                 <th style="width: 80px;">Année</th>
                                                 <th style="width: 130px;">Matricule</th>
                                                 <th style="width: 180px;">Élève</th>
@@ -308,7 +308,8 @@
                                         <tbody id="absencesTableBody"></tbody>
                                     </table>
                                 </div>
-
+                                <!-- AJOUTER ICI LA PAGINATION -->
+                                <div id="abs-pagination" style="margin-top: 20px;"></div>
                             </div>
                         </div>
 

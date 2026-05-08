@@ -1411,3 +1411,14 @@ textarea:disabled {
     cursor: not-allowed;
 }
 
+/* Dans global.css */
+.actions-cell {
+    text-align: left !important;
+}
+
+.actions-cell div {
+    display: flex;
+    gap: 4px;
+    justify-content: flex-start;
+}
+

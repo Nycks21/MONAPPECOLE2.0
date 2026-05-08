@@ -13,8 +13,7 @@ public class AjouterAbsence : IHttpHandler, IRequiresSessionState
     public void ProcessRequest(HttpContext ctx)
     {
         ctx.Response.ContentType = "application/json";
-        ctx.Response.Charset     = "utf-8";
-        ctx.Response.Cache.SetNoStore();
+        ctx.Response.Charset = "utf-8";
 
         JavaScriptSerializer ser = new JavaScriptSerializer();
 
@@ -25,119 +24,85 @@ public class AjouterAbsence : IHttpHandler, IRequiresSessionState
             return;
         }
 
-        if (ctx.Request.HttpMethod != "POST")
-        {
-            ctx.Response.StatusCode = 405;
-            ctx.Response.Write("{\"success\":false,\"message\":\"Méthode non autorisée\"}");
-            return;
-        }
-
         try
         {
             string body;
             using (var reader = new StreamReader(ctx.Request.InputStream))
                 body = reader.ReadToEnd();
 
-            var payload = ser.Deserialize<AbsencePayload>(body);
+            var payload = ser.Deserialize<dynamic>(body);
             if (payload == null) throw new ArgumentException("Données invalides.");
 
-            if (string.IsNullOrWhiteSpace(payload.matricule))
-                throw new ArgumentException("Le matricule est obligatoire.");
-            if (string.IsNullOrWhiteSpace(payload.type))
-                throw new ArgumentException("Le type est obligatoire.");
-            if (string.IsNullOrWhiteSpace(payload.dateDebut))
-                throw new ArgumentException("La date de début est obligatoire.");
+            string matricule = payload["matricule"];
+            string type = payload["type"];
+            string dateDebut = payload["dateDebut"];
+            string dateFin = payload["dateFin"];
+            decimal duree = Convert.ToDecimal(payload["duree"]);
+            bool justifie = payload["justifie"];
+            string motif = payload.ContainsKey("motif") ? payload["motif"].ToString() : "";
+            string heureDebut = payload.ContainsKey("heureDebut") ? payload["heureDebut"].ToString() : "";
+            string heureFin = payload.ContainsKey("heureFin") ? payload["heureFin"].ToString() : "";
 
-            DateTime dateDebut;
-            if (!DateTime.TryParse(payload.dateDebut, out dateDebut))
-                throw new ArgumentException("Date de début invalide.");
-
-            DateTime dateFin;
-            if (!DateTime.TryParse(payload.dateFin, out dateFin))
-                dateFin = dateDebut;
-
-            decimal duree = 1;
-            if (!string.IsNullOrWhiteSpace(payload.duree))
-                decimal.TryParse(payload.duree, System.Globalization.NumberStyles.Any,
-                                 System.Globalization.CultureInfo.InvariantCulture, out duree);
-
-            bool justifie = payload.justifie;
+            if (string.IsNullOrEmpty(matricule)) throw new ArgumentException("Matricule requis");
+            if (string.IsNullOrEmpty(type)) throw new ArgumentException("Type requis");
+            if (string.IsNullOrEmpty(dateDebut)) throw new ArgumentException("Date début requise");
 
             string connStr = ConfigurationManager.ConnectionStrings["MaConnexion"].ConnectionString;
-
-            // ── Récupérer NOM, CLASSE (ID) et ANNEE_ID depuis le matricule ──
-            string nomEleve  = "";
-            int    classeId  = 0;
-            int    anneeId   = 0;
-
+            
+            // Récupérer les infos de l'élève
+            string nomEleve = "";
+            int classeId = 0;
+            int anneeId = 0;
+            
             using (var conn = new SqlConnection(connStr))
-            using (var cmdE = new SqlCommand(
-                "SELECT NOM, CLASSE, ANNEE_ID FROM ELEVES WHERE MATRICULE = @mat", conn))
             {
-                cmdE.Parameters.AddWithValue("@mat", payload.matricule.Trim());
                 conn.Open();
-                var rdr = cmdE.ExecuteReader();
-                if (rdr.Read())
+                using (var cmd = new SqlCommand("SELECT NOM, CLASSE, ANNEE_ID FROM ELEVES WHERE MATRICULE = @mat", conn))
                 {
-                    nomEleve = rdr["NOM"].ToString();
-                    int.TryParse(rdr["CLASSE"].ToString(), out classeId);
-                    int.TryParse(rdr["ANNEE_ID"].ToString(), out anneeId);
+                    cmd.Parameters.AddWithValue("@mat", matricule);
+                    var rdr = cmd.ExecuteReader();
+                    if (rdr.Read())
+                    {
+                        nomEleve = rdr["NOM"].ToString();
+                        classeId = Convert.ToInt32(rdr["CLASSE"]);
+                        anneeId = Convert.ToInt32(rdr["ANNEE_ID"]);
+                    }
+                    rdr.Close();
                 }
-                rdr.Close();
             }
+            
+            if (string.IsNullOrEmpty(nomEleve)) throw new ArgumentException("Élève non trouvé");
 
-            if (string.IsNullOrEmpty(nomEleve))
-                throw new ArgumentException("Matricule introuvable dans la base.");
-
-            // ── Insertion ──
             using (var conn = new SqlConnection(connStr))
-            using (var cmd  = new SqlCommand(
-                @"INSERT INTO ABSENCES
-                    (MATRICULE, NOM, CLASSE, ANNEE_ID, TYPE,
-                     DATE_DEBUT, DATE_FIN, DUREE, JUSTIF, COMMENTAIRES, CREATED_AT)
-                  VALUES
-                    (@matricule, @nom, @classe, @anneeId, @type,
-                     @dateDebut, @dateFin, @duree, @justif, @commentaires, GETDATE())", conn))
+            using (var cmd = new SqlCommand(
+                @"INSERT INTO ABSENCES 
+                  (ANNEE_ID, MATRICULE, NOM, CLASSE, TYPE, DATE_DEBUT, DATE_FIN, DUREE, JUSTIF, COMMENTAIRES, CREATED_AT)
+                  VALUES 
+                  (@anneeId, @matricule, @nom, @classe, @type, @dateDebut, @dateFin, @duree, @justif, @commentaires, GETDATE())", conn))
             {
-                cmd.Parameters.Add("@matricule",    System.Data.SqlDbType.NVarChar,  50).Value = payload.matricule.Trim();
-                cmd.Parameters.Add("@nom",          System.Data.SqlDbType.NVarChar, 255).Value = nomEleve;
-                cmd.Parameters.Add("@classe",       System.Data.SqlDbType.Int).Value            = (classeId > 0 ? (object)classeId : DBNull.Value);
-                cmd.Parameters.Add("@anneeId",      System.Data.SqlDbType.Int).Value            = (anneeId  > 0 ? (object)anneeId  : DBNull.Value);
-                cmd.Parameters.Add("@type",         System.Data.SqlDbType.NVarChar,  20).Value = payload.type.Trim().ToLower();
-                cmd.Parameters.Add("@dateDebut",    System.Data.SqlDbType.DateTime).Value      = dateDebut;
-                cmd.Parameters.Add("@dateFin",      System.Data.SqlDbType.DateTime).Value      = dateFin;
-                cmd.Parameters.Add("@duree",        System.Data.SqlDbType.Decimal).Value       = duree;
-                cmd.Parameters.Add("@justif",       System.Data.SqlDbType.Bit).Value           = justifie;
-                cmd.Parameters.Add("@commentaires", System.Data.SqlDbType.NVarChar, 500).Value = (object)payload.motif?.Trim() ?? DBNull.Value;
-
+                cmd.Parameters.AddWithValue("@anneeId", anneeId);
+                cmd.Parameters.AddWithValue("@matricule", matricule);
+                cmd.Parameters.AddWithValue("@nom", nomEleve);
+                cmd.Parameters.AddWithValue("@classe", classeId);
+                cmd.Parameters.AddWithValue("@type", type);
+                cmd.Parameters.AddWithValue("@dateDebut", DateTime.Parse(dateDebut));
+                cmd.Parameters.AddWithValue("@dateFin", string.IsNullOrEmpty(dateFin) ? (object)DBNull.Value : DateTime.Parse(dateFin));
+                cmd.Parameters.AddWithValue("@duree", duree);
+                cmd.Parameters.AddWithValue("@justif", justifie ? 1 : 0);
+                cmd.Parameters.AddWithValue("@commentaires", motif);
+                
                 conn.Open();
                 cmd.ExecuteNonQuery();
             }
 
             ctx.Response.Write("{\"success\":true,\"message\":\"Absence enregistrée avec succès.\"}");
         }
-        catch (ArgumentException ex)
-        {
-            ctx.Response.StatusCode = 400;
-            ctx.Response.Write("{\"success\":false,\"message\":" + ser.Serialize(ex.Message) + "}");
-        }
         catch (Exception ex)
         {
             ctx.Response.StatusCode = 500;
-            ctx.Response.Write("{\"success\":false,\"message\":" + ser.Serialize(ex.Message) + "}");
+            ctx.Response.Write("{\"success\":false,\"message\":" + new JavaScriptSerializer().Serialize(ex.Message) + "}");
         }
     }
 
     public bool IsReusable { get { return false; } }
-
-    private class AbsencePayload
-    {
-        public string matricule { get; set; }
-        public string type      { get; set; }
-        public string dateDebut { get; set; }
-        public string dateFin   { get; set; }
-        public string duree     { get; set; }
-        public string motif     { get; set; }
-        public bool   justifie  { get; set; }
-    }
 }
