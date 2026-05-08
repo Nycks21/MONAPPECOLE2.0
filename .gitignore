@@ -1,7 +1,6 @@
 # Fichiers de backup
 backup/
 *.bak
-*.sql
 
 # Dossiers de compilation
 bin/
