@@ -1,4 +1,4 @@
-﻿<%@ WebHandler Language="C#" Class="ModifierEleve" %>
+<%@ WebHandler Language="C#" Class="ModifierAbsence" %>
 
 using System;
 using System.Configuration;
@@ -8,13 +8,12 @@ using System.Web;
 using System.Web.Script.Serialization;
 using System.Web.SessionState;
 
-public class ModifierEleve : IHttpHandler, IRequiresSessionState
+public class ModifierAbsence : IHttpHandler, IRequiresSessionState
 {
     public void ProcessRequest(HttpContext ctx)
     {
         ctx.Response.ContentType = "application/json";
         ctx.Response.Charset = "utf-8";
-        ctx.Response.Cache.SetNoStore();
 
         JavaScriptSerializer ser = new JavaScriptSerializer();
 
@@ -31,87 +30,92 @@ public class ModifierEleve : IHttpHandler, IRequiresSessionState
             using (var reader = new StreamReader(ctx.Request.InputStream))
                 body = reader.ReadToEnd();
 
-            var payload = ser.Deserialize<ElevePayload>(body);
+            var payload = ser.Deserialize<dynamic>(body);
             if (payload == null) throw new ArgumentException("Données invalides.");
 
-            // ID unique de l'élève (GUID)
-            Guid eleveGuid;
-            if (string.IsNullOrEmpty(payload.ID) || !Guid.TryParse(payload.ID, out eleveGuid))
-                throw new ArgumentException("ID d'élève invalide.");
-
-            // Validation de la classe (INT)
-            int classeId;
-            if (payload.CLASSE == null || !int.TryParse(payload.CLASSE.ToString(), out classeId)) 
-                throw new ArgumentException("Classe invalide.");
-
-            // DATE_NAISSANCE
-            DateTime? dateNaiss = null;
-            if (!string.IsNullOrEmpty(payload.DATE_NAISSANCE))
-            {
-                DateTime d;
-                if (DateTime.TryParse(payload.DATE_NAISSANCE, out d)) dateNaiss = d;
-            }
-
+            Guid absenceId = Guid.Parse(payload["id"].ToString());
             string connStr = ConfigurationManager.ConnectionStrings["MaConnexion"].ConnectionString;
+
             using (var conn = new SqlConnection(connStr))
-            using (var cmd = new SqlCommand(
-                @"UPDATE [dbo].[ELEVES] SET 
-                    NOM=@nom, 
-                    CLASSE=@classe, 
-                    EMAIL=@email, 
-                    TELEPHONE=@tel, 
-                    STATUT=@statut, 
-                    GENRE=@genre, 
-                    DATE_NAISSANCE=@dateNaiss, 
-                    ADRESSE=@adresse, 
-                    PARENT=@parent, 
-                    UPDATED_AT=GETDATE() 
-                  WHERE ID=@id", conn))
             {
-                // Note : ANNEE_ID et MATRICULE sont retirés du UPDATE car ils sont grisés (non modifiables)
-                
-                cmd.Parameters.Add("@id", System.Data.SqlDbType.UniqueIdentifier).Value = eleveGuid;
-                cmd.Parameters.Add("@nom", System.Data.SqlDbType.NVarChar, 255).Value = payload.NOM.Trim();
-                cmd.Parameters.Add("@classe", System.Data.SqlDbType.Int).Value = classeId;
-                
-                cmd.Parameters.Add("@email", System.Data.SqlDbType.NVarChar, 255).Value = (payload.EMAIL != null) ? (object)payload.EMAIL.Trim() : DBNull.Value;
-                cmd.Parameters.Add("@tel", System.Data.SqlDbType.NVarChar, 50).Value = (payload.TELEPHONE != null) ? (object)payload.TELEPHONE.Trim() : DBNull.Value;
-                
-                string statut = (string.IsNullOrEmpty(payload.STATUT)) ? "actif" : payload.STATUT.Trim().ToLower();
-                cmd.Parameters.Add("@statut", System.Data.SqlDbType.NVarChar, 20).Value = statut;
-
-                string genre = (string.IsNullOrEmpty(payload.GENRE)) ? "M" : payload.GENRE.Trim().ToUpper().Substring(0, 1);
-                cmd.Parameters.Add("@genre", System.Data.SqlDbType.NChar, 1).Value = genre;
-
-                cmd.Parameters.Add("@dateNaiss", System.Data.SqlDbType.Date).Value = (dateNaiss.HasValue) ? (object)dateNaiss.Value : DBNull.Value;
-                cmd.Parameters.Add("@adresse", System.Data.SqlDbType.NVarChar, 500).Value = (payload.ADRESSE != null) ? (object)payload.ADRESSE.Trim() : DBNull.Value;
-                cmd.Parameters.Add("@parent", System.Data.SqlDbType.NVarChar, 255).Value = (payload.PARENT != null) ? (object)payload.PARENT.Trim() : DBNull.Value;
-
                 conn.Open();
-                if (cmd.ExecuteNonQuery() == 0) throw new Exception("Élève introuvable ou aucune modification effectuée.");
+                
+                // Cas simple : juste justification
+                if (payload.ContainsKey("justifie") && (bool)payload["justifie"] == true && !payload.ContainsKey("type"))
+                {
+                    string motif = payload.ContainsKey("motif") ? payload["motif"].ToString() : "";
+                    using (var cmd = new SqlCommand(
+                        "UPDATE ABSENCES SET JUSTIF = 1, COMMENTAIRES = @commentaires, UPDATED_AT = GETDATE() WHERE ID = @id", conn))
+                    {
+                        cmd.Parameters.AddWithValue("@id", absenceId);
+                        cmd.Parameters.AddWithValue("@commentaires", motif);
+                        cmd.ExecuteNonQuery();
+                    }
+                }
+                else
+                {
+                    // Modification complète
+                    string matricule = payload["matricule"].ToString();
+                    string type = payload["type"].ToString();
+                    DateTime dateDebut = DateTime.Parse(payload["dateDebut"].ToString());
+                    DateTime dateFin = payload.ContainsKey("dateFin") ? DateTime.Parse(payload["dateFin"].ToString()) : dateDebut;
+                    decimal duree = payload.ContainsKey("duree") ? Convert.ToDecimal(payload["duree"]) : 1;
+                    string commentaire = payload.ContainsKey("motif") ? payload["motif"].ToString() : "";
+                    
+                    // Récupérer les infos de l'élève
+                    string nom = "";
+                    int classeId = 0;
+                    int anneeId = 0;
+                    using (var cmdGet = new SqlCommand("SELECT NOM, CLASSE, ANNEE_ID FROM ELEVES WHERE MATRICULE = @mat", conn))
+                    {
+                        cmdGet.Parameters.AddWithValue("@mat", matricule);
+                        var rdr = cmdGet.ExecuteReader();
+                        if (rdr.Read())
+                        {
+                            nom = rdr["NOM"].ToString();
+                            classeId = Convert.ToInt32(rdr["CLASSE"]);
+                            anneeId = Convert.ToInt32(rdr["ANNEE_ID"]);
+                        }
+                        rdr.Close();
+                    }
+                    
+                    using (var cmd = new SqlCommand(
+                        @"UPDATE ABSENCES 
+                          SET ANNEE_ID = @anneeId,
+                              MATRICULE = @matricule,
+                              NOM = @nom,
+                              CLASSE = @classe,
+                              TYPE = @type,
+                              DATE_DEBUT = @dateDebut,
+                              DATE_FIN = @dateFin,
+                              DUREE = @duree,
+                              COMMENTAIRES = @commentaires,
+                              UPDATED_AT = GETDATE()
+                          WHERE ID = @id", conn))
+                    {
+                        cmd.Parameters.AddWithValue("@id", absenceId);
+                        cmd.Parameters.AddWithValue("@anneeId", anneeId);
+                        cmd.Parameters.AddWithValue("@matricule", matricule);
+                        cmd.Parameters.AddWithValue("@nom", nom);
+                        cmd.Parameters.AddWithValue("@classe", classeId);
+                        cmd.Parameters.AddWithValue("@type", type);
+                        cmd.Parameters.AddWithValue("@dateDebut", dateDebut);
+                        cmd.Parameters.AddWithValue("@dateFin", dateFin);
+                        cmd.Parameters.AddWithValue("@duree", duree);
+                        cmd.Parameters.AddWithValue("@commentaires", commentaire);
+                        cmd.ExecuteNonQuery();
+                    }
+                }
             }
 
-            ctx.Response.Write("{\"success\":true,\"message\":\"Profil élève mis à jour avec succès.\"}");
+            ctx.Response.Write("{\"success\":true,\"message\":\"Absence modifiée avec succès.\"}");
         }
         catch (Exception ex)
         {
             ctx.Response.StatusCode = 500;
-            ctx.Response.Write("{\"success\":false,\"message\":" + ser.Serialize(ex.Message) + "}");
+            ctx.Response.Write("{\"success\":false,\"message\":" + new JavaScriptSerializer().Serialize(ex.Message) + "}");
         }
     }
 
     public bool IsReusable { get { return false; } }
-    
-    private class ElevePayload {
-        public string ID { get; set; }
-        public string NOM { get; set; }
-        public string CLASSE { get; set; }
-        public string EMAIL { get; set; }
-        public string TELEPHONE { get; set; }
-        public string STATUT { get; set; }
-        public string GENRE { get; set; }
-        public string DATE_NAISSANCE { get; set; }
-        public string ADRESSE { get; set; }
-        public string PARENT { get; set; }
-    }
 }

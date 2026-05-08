@@ -537,25 +537,6 @@
             cursor: pointer;
         }
 
-        .form-group {
-            margin-bottom: 15px;
-        }
-
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 600;
-            font-size: 13px;
-        }
-
-        .form-control {
-            width: 100%;
-            padding: 8px 12px;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            font-size: 14px;
-        }
-
         .modal {
             display: none;
             position: fixed;
@@ -582,24 +563,8 @@
             overflow-y: auto;
         }
 
-        .modal-header {
-            padding: 15px 20px;
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
         .modal-body {
             padding: 20px;
-        }
-
-        .modal-footer {
-            padding: 15px 20px;
-            border-top: 1px solid var(--border-color);
-            display: flex;
-            justify-content: flex-end;
-            gap: 10px;
         }
 
         .row {
@@ -970,14 +935,14 @@
         }
 
         /* Styles spécifiques pour la gestion des élèves */
-        .eleves-stats {
+        .absences-stats {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
             gap: 15px;
             margin-bottom: 25px;
         }
 
-        .stat-card-eleve {
+        .stat-card-absence {
             background: white;
             border-radius: 12px;
             padding: 15px;
@@ -987,31 +952,31 @@
             cursor: pointer;
         }
 
-        .stat-card-eleve:hover {
+        .stat-card-absence:hover {
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.12);
         }
 
-        .stat-card-eleve .stat-icon {
+        .stat-card-absence .stat-icon {
             font-size: 28px;
             margin-bottom: 8px;
         }
 
-        .stat-card-eleve .stat-value {
+        .stat-card-absence .stat-value {
             font-size: 28px;
             font-weight: bold;
             color: var(--text-dark);
             margin: 8px 0;
         }
 
-        .stat-card-eleve .stat-label {
+        .stat-card-absence .stat-label {
             font-size: 12px;
             color: #6c757d;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
 
-        .eleves-filters {
+        .absences-filters {
             display: flex;
             gap: 15px;
             margin-bottom: 20px;
@@ -1019,21 +984,21 @@
             align-items: center;
         }
 
-        .eleves-filters select,
-        .eleves-filters input {
+        .absences-filters select,
+        .absences-filters input {
             padding: 8px 12px;
             border: 1px solid var(--border-color);
             border-radius: 6px;
             font-size: 14px;
         }
 
-        .search-box-eleve {
+        .search-box-absence {
             flex: 1;
             min-width: 250px;
             position: relative;
         }
 
-        .search-box-eleve i {
+        .search-box-absence i {
             position: absolute;
             left: 12px;
             top: 50%;
@@ -1041,17 +1006,17 @@
             color: #6c757d;
         }
 
-        .search-box-eleve input {
+        .search-box-absence input {
             width: 100%;
             padding-left: 35px;
         }
 
-        .btn-group-eleve {
+        .btn-group-absence {
             display: flex;
             gap: 8px;
         }
 
-        .avatar-eleve {
+        .avatar-absence {
             width: 40px;
             height: 40px;
             border-radius: 50%;
@@ -1064,7 +1029,7 @@
             font-size: 16px;
         }
 
-        .status-badge-eleve {
+        .status-badge-absence {
             padding: 4px 12px;
             border-radius: 20px;
             font-size: 11px;
@@ -1086,32 +1051,32 @@
             color: #856404;
         }
 
-        .modal-eleve {
+        .modal-absence {
             max-width: 600px;
         }
 
-        .modal-eleve .form-row {
+        .modal-absence .form-row {
             display: flex;
             gap: 15px;
             margin-bottom: 15px;
         }
 
-        .modal-eleve .form-row .form-group {
+        .modal-absence .form-row {
             flex: 1;
             margin-bottom: 0;
         }
 
         @media (max-width: 768px) {
-            .eleves-stats {
+            .absences-stats {
                 grid-template-columns: repeat(2, 1fr);
             }
 
-            .eleves-filters {
+            .absences-filters {
                 flex-direction: column;
                 align-items: stretch;
             }
 
-            .modal-eleve .form-row {
+            .modal-absence .form-row {
                 flex-direction: column;
                 gap: 10px;
             }

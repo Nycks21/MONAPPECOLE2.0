@@ -237,8 +237,9 @@
                                 </div>
                                 <div class="col-lg-6">
                                     <ol class="breadcrumb" style="float: right;">
-                                        <li class="breadcrumb-item">Application</li>
-                                        <li class="breadcrumb-item active" id="dynBreadcrumb">Tableau de bord</li>
+                                        <li class="breadcrumb-item">Modules</li>
+                                        <li class="breadcrumb-item active" id="dynBreadcrumb">Retards &amp; Absences
+                                        </li>
                                     </ol>
                                 </div>
                             </div>
@@ -325,64 +326,130 @@
 
             <!-- MODAL SIGNALER ABSENCE/RETARD -->
             <div id="signalAbsenceModal" class="modal">
-                <div class="modal-content">
+                <div class="modal-content modal-absence" style="max-width:700px;">
                     <div class="modal-header">
                         <h3><i class="fas fa-exclamation-triangle"></i> Signaler absence / retard</h3>
                         <button onclick="closeSignalModal()"
                             style="background:none; border:none; font-size:24px; cursor:pointer;">&times;</button>
                     </div>
                     <div class="modal-body">
+                        <div classe="form-row">
+                            <label><span class="text-danger">* Champ obligatoire</span></label>
+                        </div>
+                        <br />
+
                         <form id="absenceForm">
-                            <div class="form-group">
-                                <label>matricule *</label>
-                                <select id="absenceMatricule" class="form-control" required>
-                                    <option value="">Sélectionner un élève (par matricule ou nom)</option>
-                                </select>
+                            <div class="row">
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label>matricule *</label>
+                                        <select id="absenceMatricule" class="form-control" required>
+                                            <option value="">Sélectionner un élève (par matricule ou nom)</option>
+                                        </select>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="form-group">
-                                <label>Eleves</label>
-                                <input type="text" id="absenceStudent" class="form-control" required>
+
+                            <div class="row">
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label>Élève</label>
+                                        <input type="text" id="absenceStudent" class="form-control" readonly>
+                                    </div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label>Classe</label>
+                                        <input type="text" id="absenceClasse" class="form-control" readonly>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="form-group">
-                                <label>Classe</label>
-                                <input type="text" id="absenceClasse" class="form-control" required>
+
+                            <div class="row">
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label>Type *</label>
+                                        <select id="absenceType" class="form-control" required>
+                                            <option value="absence">Absence</option>
+                                            <option value="retard">Retard</option>
+                                        </select>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="form-group">
-                                <label>Type *</label>
-                                <select id="absenceType" class="form-control" required>
-                                    <option value="absence">Absence</option>
-                                    <option value="retard">Retard</option>
-                                </select>
+
+                            <!-- Dans le formulaire de la modal -->
+                            <div class="row">
+                                <div class="col-sm-6">
+                                    <div class="form-group">
+                                        <label>Date début<span class="text-danger">*</span></label>
+                                        <input type="date" id="absenceDate" class="form-control" required>
+                                    </div>
+                                </div>
+
+                                <!-- Groupe Date fin (visible pour Absence, caché pour Retard) -->
+                                <div class="col-sm-6">
+                                    <div id="dateFinGroup" style="display:block;">
+                                        <div class="form-group">
+                                            <label>Date fin</label>
+                                            <input type="date" id="absenceDateF" class="form-control">
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="form-group">
-                                <label>Date début*</label>
-                                <input type="date" id="absenceDateD" class="form-control" required>
+
+                            <!-- Bloc Heures (caché par défaut) -->
+                            <div id="timeGroup" style="display:none;">
+                                <div class="row">
+                                    <!-- Groupe Heures (caché pour Absence, visible pour Retard) -->
+                                    <div class="col-sm-4">
+                                        <div class="form-group">
+                                            <label>Heure entrée</label>
+                                            <input type="time" id="absenceHeureDebut" class="form-control">
+                                        </div>
+                                    </div>
+
+                                    <div class="col-sm-4">
+                                        <div class="form-group">
+                                            <label>Heure sortie</label>
+                                            <input type="time" id="absenceHeureFin" class="form-control">
+                                        </div>
+                                    </div>
+
+                                    <div class="col-sm-4">
+                                        <div class="form-group">
+                                            <label>Durée (en heures)</label>
+                                            <input type="number" id="absenceDuration" class="form-control" step="0.5"
+                                                min="0" value="1">
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="form-group">
-                                <label>Date fin*</label>
-                                <input type="date" id="absenceDateF" class="form-control" required>
+
+                            <!-- Groupe Justifié (caché en mode édition) -->
+                            <div id="justifyGroup" style="display:block;">
+                                <div class="row">
+                                    <div class="col-sm-6">
+                                        <div class="form-group">
+                                            <label>Justifiée ?</label>
+                                            <select id="absenceJustified" class="form-control">
+                                                <option value="non">Non</option>
+                                                <option value="oui">Oui</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="form-group">
-                                <label>Heure (pour les retards)</label>
-                                <input type="time" id="absenceTime" class="form-control">
+
+                            <div class="row">
+                                <div class="col-sm-12">
+                                    <div class="form-group">
+                                        <label>Motif</label>
+                                        <textarea id="absenceReason" class="form-control" rows="2"
+                                            placeholder="Motif de l'absence/retard..."></textarea>
+                                    </div>
+                                </div>
                             </div>
-                            <div class="form-group">
-                                <label>Durée (en heures)</label>
-                                <input type="number" id="absenceDuration" class="form-control" step="0.5" min="0"
-                                    value="1">
-                            </div>
-                            <div class="form-group">
-                                <label>Motif</label>
-                                <textarea id="absenceReason" class="form-control" rows="2"
-                                    placeholder="Motif de l'absence/retard..."></textarea>
-                            </div>
-                            <div class="form-group">
-                                <label>Justifiée ?</label>
-                                <select id="absenceJustified" class="form-control">
-                                    <option value="non">Non</option>
-                                    <option value="oui">Oui</option>
-                                </select>
-                            </div>
+
                         </form>
                     </div>
                     <div class="modal-footer">
@@ -395,7 +462,7 @@
 
             <!-- MODAL JUSTIFIER ABSENCE -->
             <div id="justifyModal" class="modal">
-                <div class="modal-content">
+                <div class="modal-content modal-absence" style="max-width:700px;">
                     <div class="modal-header">
                         <h3><i class="fas fa-check-circle"></i> Justifier l'absence</h3>
                         <button onclick="closeJustifyModal()"

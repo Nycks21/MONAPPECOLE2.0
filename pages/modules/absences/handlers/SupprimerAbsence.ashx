@@ -1,4 +1,4 @@
-﻿<%@ WebHandler Language="C#" Class="SupprimerEleve" %>
+﻿<%@ WebHandler Language="C#" Class="SupprimerAbsence" %>
 
 using System;
 using System.Configuration;
@@ -8,13 +8,12 @@ using System.Web;
 using System.Web.Script.Serialization;
 using System.Web.SessionState;
 
-public class SupprimerEleve : IHttpHandler, IRequiresSessionState
+public class SupprimerAbsence : IHttpHandler, IRequiresSessionState
 {
     public void ProcessRequest(HttpContext ctx)
     {
         ctx.Response.ContentType = "application/json";
-        ctx.Response.Charset     = "utf-8";
-        ctx.Response.Cache.SetNoStore();
+        ctx.Response.Charset = "utf-8";
 
         JavaScriptSerializer ser = new JavaScriptSerializer();
 
@@ -25,47 +24,27 @@ public class SupprimerEleve : IHttpHandler, IRequiresSessionState
             return;
         }
 
-        if (ctx.Request.HttpMethod != "POST")
-        {
-            ctx.Response.StatusCode = 405;
-            ctx.Response.Write("{\"success\":false,\"message\":\"Méthode non autorisée\"}");
-            return;
-        }
-
         try
         {
             string body;
             using (var reader = new StreamReader(ctx.Request.InputStream))
                 body = reader.ReadToEnd();
 
-            var payload = ser.Deserialize<IdPayload>(body);
+            var payload = ser.Deserialize<dynamic>(body);
+            if (payload == null) throw new ArgumentException("Données invalides.");
 
-            if (payload == null || string.IsNullOrWhiteSpace(payload.ID))
-                throw new ArgumentException("ID d'élève invalide.");
-
-            // ID élève est un GUID
-            Guid eleveGuid;
-            if (!Guid.TryParse(payload.ID, out eleveGuid))
-                throw new ArgumentException("ID d'élève invalide (format GUID attendu).");
-
+            Guid absenceId = Guid.Parse(payload["id"].ToString());
             string connStr = ConfigurationManager.ConnectionStrings["MaConnexion"].ConnectionString;
 
             using (var conn = new SqlConnection(connStr))
-            using (var cmd  = new SqlCommand("DELETE FROM [dbo].[ELEVES] WHERE ID = @id", conn))
+            using (var cmd = new SqlCommand("DELETE FROM ABSENCES WHERE ID = @id", conn))
             {
-                cmd.Parameters.Add("@id", System.Data.SqlDbType.UniqueIdentifier).Value = eleveGuid;
+                cmd.Parameters.AddWithValue("@id", absenceId);
                 conn.Open();
-                int rows = cmd.ExecuteNonQuery();
-                if (rows == 0)
-                    throw new Exception("Élève introuvable (ID=" + payload.ID + ").");
+                cmd.ExecuteNonQuery();
             }
 
-            ctx.Response.Write("{\"success\":true,\"message\":\"Élève supprimé avec succès.\"}");
-        }
-        catch (ArgumentException ex)
-        {
-            ctx.Response.StatusCode = 400;
-            ctx.Response.Write("{\"success\":false,\"message\":" + ser.Serialize(ex.Message) + "}");
+            ctx.Response.Write("{\"success\":true,\"message\":\"Absence supprimée avec succès.\"}");
         }
         catch (Exception ex)
         {
@@ -75,6 +54,4 @@ public class SupprimerEleve : IHttpHandler, IRequiresSessionState
     }
 
     public bool IsReusable { get { return false; } }
-
-    private class IdPayload { public string ID { get; set; } }
 }
