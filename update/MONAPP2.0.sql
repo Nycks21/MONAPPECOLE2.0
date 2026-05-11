@@ -251,6 +251,106 @@ END
 GO
 
 -- =====================================================
+-- TABLE FRAIS
+-- =====================================================
+
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'FRAIS')
+BEGIN
+    CREATE TABLE FRAIS (
+    ID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    ANNEE_ID INT NOT NULL,
+    MATRICULE NVARCHAR(20) NOT NULL,
+    NOM NVARCHAR(100) NOT NULL,
+    CLASSE INT NOT NULL,
+    
+    -- Valeurs numériques avec virgule (Precision 18, échelle 2)
+    TOTAL DECIMAL(18, 2) NULL DEFAULT 0,
+    PAYE DECIMAL(18, 2) NULL DEFAULT 0,
+    
+    -- Colonne calculée pour le RESTE
+    RESTE AS (ISNULL(TOTAL, 0) - ISNULL(PAYE, 0)),
+    
+    MODEPAIE NVARCHAR(20) NOT NULL DEFAULT 'Especes',
+    REFERENCE NVARCHAR(100) NULL,
+    COMMENTAIRE NVARCHAR(MAX) NULL,
+    
+    -- Colonne calculée pour la PROGRESSION (Évite la division par zéro)
+    PROGRESSION AS (
+        CASE 
+            WHEN ISNULL(TOTAL, 0) = 0 THEN 0 
+            ELSE (ISNULL(PAYE, 0) / ISNULL(TOTAL, 0)) * 100 
+        END
+    ),
+    
+    -- Colonne calculée pour le STATUT
+    STATUT AS (
+        CASE 
+            WHEN ISNULL(PAYE, 0) = 0 THEN 'Non payé'
+            WHEN ISNULL(PAYE, 0) >= ISNULL(TOTAL, 0) THEN 'Terminé'
+            ELSE 'En cours'
+        END
+    ),
+    
+    DERNIER_PAIEMENT DATETIME NULL,
+    CREATED_AT DATETIME DEFAULT GETDATE(),
+    UPDATED_AT DATETIME DEFAULT GETDATE(),
+
+    -- Clés étrangères
+    CONSTRAINT FK_FRAIS_RANNEE FOREIGN KEY (ANNEE_ID) 
+        REFERENCES RANNEE(ID) ON DELETE CASCADE,
+        
+    CONSTRAINT FK_FRAIS_ELEVES_MATRICULE FOREIGN KEY (MATRICULE) 
+        REFERENCES ELEVES(MATRICULE) ON DELETE CASCADE,
+        
+    CONSTRAINT FK_FRAIS_CLASSES FOREIGN KEY (CLASSE) 
+        REFERENCES CLASSES(ID) ON DELETE CASCADE,
+    CONSTRAINT CHK_FRAIS_MODEPAIE 
+        CHECK (MODEPAIE IN ('Especes', 'Cheques', 'Virement', 'MobileMoney'))
+);
+END
+GO
+
+-- =====================================================
+-- TABLE BULLETINS
+-- =====================================================
+
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'BULLETINS')
+BEGIN
+    CREATE TABLE BULLETINS (
+        ID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+        ANNEE_ID INT NOT NULL,
+        MATRICULE NVARCHAR(20) NOT NULL,
+        NOM NVARCHAR(100) NOT NULL,
+        CLASSE INT NOT NULL,
+        MATIERE_ID UNIQUEIDENTIFIER NOT NULL,
+        NOTE DECIMAL(4,2) NOT NULL CHECK (NOTE BETWEEN 0 AND 20),
+        PERIODE NVARCHAR(10) NOT NULL,
+        COMMENTAIRE NVARCHAR(MAX) NULL,
+        CREATED_AT DATETIME DEFAULT GETDATE(),
+        UPDATED_AT DATETIME DEFAULT GETDATE(),
+
+        -- Clés étrangères
+        CONSTRAINT FK_BULLETINS_RANNEE FOREIGN KEY (ANNEE_ID) 
+            REFERENCES RANNEE(ID) ON DELETE CASCADE,
+            
+        CONSTRAINT FK_BULLETINS_ELEVES_MATRICULE FOREIGN KEY (MATRICULE) 
+            REFERENCES ELEVES(MATRICULE) ON DELETE CASCADE,
+            
+        CONSTRAINT FK_BULLETINS_CLASSES FOREIGN KEY (CLASSE) 
+            REFERENCES CLASSES(ID) ON DELETE CASCADE,
+            
+        CONSTRAINT FK_BULLETINS_MATIERES FOREIGN KEY (MATIERE_ID) 
+            REFERENCES MATIERES(ID) ON DELETE CASCADE,
+            
+        CONSTRAINT CHK_BULLETINS_PERIODE 
+            CHECK (PERIODE IN ('T1', 'T2', 'T3', 'Sem1', 'Sem2')),
+            
+        CONSTRAINT UQ_BULLETIN UNIQUE (MATRICULE, MATIERE_ID, PERIODE, ANNEE_ID)
+    );
+END
+GO
+
+-- =====================================================
 -- Table pour stocker les logs d'erreurs
 -- =====================================================
 IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'ErrorLogs')
@@ -331,3 +431,52 @@ VALUES
     ('MAT-2024-023', '1', 'RAOUL Julien', '2', 'actif', 'julien.r@email.com', '0348880022', '2013-04-12', 'M', 'Mahamasina', 'Mme Raoul'),
     ('MAT-2024-024', '1', 'KOLOINA Sarah', '2', 'actif', 'sarah.k@email.com', '0321113355', '2009-05-20', 'F', 'Ankadifotsy', 'Koloina Felix');
 END
+
+-- Insérer des données de frais pour les élèves existants (si nécessaire)
+INSERT INTO FRAIS (ANNEE_ID, MATRICULE, NOM, CLASSE, TOTAL, PAYE)
+SELECT 
+    (SELECT TOP 1 ID FROM RANNEE WHERE CLOTURE = 0),
+    MATRICULE,
+    NOM,
+    CLASSE,
+    500000.00,  -- Montant total des frais
+    0.00        -- Montant déjà payé
+FROM ELEVES
+WHERE NOT EXISTS (SELECT 1 FROM FRAIS WHERE FRAIS.MATRICULE = ELEVES.MATRICULE)
+
+-- =====================================================
+-- INSERTION SIMPLE POUR BULLETINS
+-- =====================================================
+-- Version plus courte avec les 10 premiers élèves
+INSERT INTO BULLETINS (ANNEE_ID, MATRICULE, NOM, CLASSE, MATIERE_ID, NOTE, PERIODE, COMMENTAIRE)
+VALUES 
+(1, 'MAT-2024-001', 'RAKOTO Jean', 2, '4F387ADE-E00E-4220-9B91-E3DFF8E579CC', 15.5, 'T1', 'Bon travail'),
+(1, 'MAT-2024-002', 'RANDRIA Alice', 2, '4F387ADE-E00E-4220-9B91-E3DFF8E579CC', 17.5, 'T1', 'Excellente'),
+(1, 'MAT-2024-004', 'PEREIRA Maria', 2, '4F387ADE-E00E-4220-9B91-E3DFF8E579CC', 14.0, 'T1', 'Bon travail');
+
+CREATE VIEW VW_BULLETINS AS
+SELECT 
+    b.ID,
+    b.ANNEE_ID,
+    r.ANNEE AS ANNEE_TEXTE,
+    b.MATRICULE,
+    b.NOM,
+    b.CLASSE,
+    c.NOM AS CLASSE_NOM,
+    b.MATIERE_ID,
+    m.NOM AS MATIERE_NOM,
+    m.ENSEIGNANT,
+    u.NOM AS ENSEIGNANT_NOM,
+    m.COEFFICIENT,
+    b.NOTE,
+    (b.NOTE * m.COEFFICIENT) AS NOTE_PONDEREE,
+    b.PERIODE,
+    b.COMMENTAIRE,
+    b.CREATED_AT,
+    b.UPDATED_AT
+FROM BULLETINS b
+LEFT JOIN RANNEE r ON b.ANNEE_ID = r.ID
+LEFT JOIN CLASSES c ON b.CLASSE = c.ID
+LEFT JOIN MATIERES m ON b.MATIERE_ID = m.ID
+LEFT JOIN USERS u ON m.ENSEIGNANT = u.IDUSER
+GO

@@ -1,513 +1,620 @@
 ﻿/**
  * ════════════════════════════════════════════════════════════
  *  DASHBOARD — dashboard.js
- *  Gestion scolaire · Thème Académie Prestige
- *  Dépendances : jQuery, Chart.js 4.x, AdminLTE
+ *  Gestion scolaire · Version stable
  * ════════════════════════════════════════════════════════════
  */
 
 'use strict';
 
-// ── PALETTE COULEURS (cohérence avec style.css) ──────────────
-const C = {
-  forest:      '#1e3a2f',
-  forestMid:   '#2d5240',
-  forestLight: '#3d6b54',
-  terra:       '#b85c38',
-  gold:        '#c9a84c',
-  cream:       '#f5f0e8',
-  creamborder: '#d9d0be',
-  creamdeep:   '#ede7d9',
-  ink:         '#1a1a1a',
-  inkMid:      '#4a4a4a',
-  inkMuted:    '#888070',
-  danger:      '#b84040',
-  success:     '#3a7d5a',
-  warn:        '#b87a1e',
-  paidLight:   '#f0d4c8',
+// Variables globales pour les chartes
+let chartPresence = null;
+let chartDonut = null;
+let chartFrais = null;
+
+// URLs des APIs
+const API = {
+    kpi: '/handlers/GetKPI.ashx',
+    presence: '/handlers/GetPresences.ashx',
+    repartition: '/handlers/GetRepartition.ashx',
+    reussite: '/handlers/GetReussite.ashx',
+    frais: '/handlers/GetFrais.ashx',
+    absences: '/handlers/GetAbsencesFrequentes.ashx',
+    activite: '/handlers/GetActivite.ashx'
 };
 
-// ── VARIABLES GLOBALES ───────────────────────────────────────
-let chartPresence = null;
-let chartDonut    = null;
-let chartFrais    = null;
+// Couleurs
+const C = {
+    forest: '#1e3a2f',
+    forestLight: '#3d6b54',
+    terra: '#b85c38',
+    gold: '#c9a84c',
+    cream: '#f5f0e8'
+};
 
-// ── INIT ─────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', function () {
-  masquerSpinner();
-  chargerTout();
-  genererCalendrier(new Date());
+// ─────────────────────────────────────────────────────────────
+// CHARGEMENT PRINCIPAL - Version corrigée
+// ─────────────────────────────────────────────────────────────
+function loadDashboard() {
+    showSpinner();
+    
+    // Mettre à jour les titres
+    const dynTitle = document.getElementById('dynPageTitle');
+    const dynBreadcrumb = document.getElementById('dynBreadcrumb');
+    if (dynTitle) dynTitle.textContent = 'Tableau de bord';
+    if (dynBreadcrumb) dynBreadcrumb.textContent = 'Tableau de bord';
+    
+    // Mettre à jour le lien actif dans la sidebar
+    document.querySelectorAll('.sidebar .nav-link, .nav-pills .nav-link').forEach(link => {
+        link.classList.remove('active');
+    });
+    
+    // Trouver et activer le lien du dashboard
+    const dashboardLinks = document.querySelectorAll('.sidebar .nav-link, .nav-pills .nav-link');
+    for (let link of dashboardLinks) {
+        if (link.textContent.trim() === 'Dashboard' || link.getAttribute('onclick') === 'loadDashboard()') {
+            link.classList.add('active');
+            break;
+        }
+    }
+    
+    // Charger tous les composants
+    Promise.all([
+        loadKPI(),
+        loadPresences(),
+        loadRepartition(),
+        loadReussite(),
+        loadFrais(),
+        loadAbsencesFrequentes(),
+        loadActivite()
+    ]).catch(error => {
+        console.error('Erreur chargement dashboard:', error);
+    }).finally(() => {
+        hideSpinner();
+    });
+    
+    // Générer le calendrier
+    generateCalendar(new Date());
+}
+
+// ─────────────────────────────────────────────────────────────
+// 1. KPI
+// ─────────────────────────────────────────────────────────────
+async function loadKPI() {
+    try {
+        const response = await fetch(API.kpi);
+        const data = await response.json();
+        
+        if (data.success) {
+            // Mettre à jour les valeurs KPI
+            const valEleves = document.getElementById('valEleves');
+            const valClasses = document.getElementById('valClasses');
+            const valPresence = document.getElementById('valPresence');
+            const valImpayes = document.getElementById('valImpayes');
+            
+            if (valEleves) valEleves.textContent = data.totalEleves || '—';
+            if (valClasses) valClasses.textContent = data.totalClasses || '—';
+            if (valPresence) valPresence.textContent = data.tauxPresence || '—';
+            if (valImpayes) valImpayes.textContent = formatCurrency(data.fraisImpayes || 0);
+            
+            // Mettre à jour les pastilles
+            const pillEleves = document.getElementById('pillEleves');
+            if (pillEleves) {
+                pillEleves.textContent = '+' + (data.nouveauxRentree || 0);
+                pillEleves.className = 'pill pill-up';
+            }
+            
+            const pillClasses = document.getElementById('pillClasses');
+            if (pillClasses) {
+                pillClasses.textContent = 'Moy. ' + (data.moyenneEleves || 0) + ' élèves';
+            }
+            
+            const varPres = data.variationPresence || 0;
+            const pillPresence = document.getElementById('pillPresence');
+            if (pillPresence) {
+                pillPresence.textContent = (varPres >= 0 ? '+' : '') + varPres + '%';
+                pillPresence.className = 'pill pill-' + (varPres >= 0 ? 'up' : 'dn');
+            }
+            
+            // Mettre à jour les jauges
+            updateGauges([
+                { label: 'Présence', value: data.tauxPresence || 0, color: C.forest },
+                { label: 'Réussite', value: data.tauxReussite || 0, color: C.gold },
+                { label: 'Paiements', value: data.tauxPaiement || 0, color: C.terra }
+            ]);
+            
+            // Mettre à jour la répartition garçons/filles
+            const total = (data.garcons || 0) + (data.filles || 0);
+            if (total > 0) {
+                const pG = Math.round((data.garcons / total) * 100);
+                const pF = 100 - pG;
+                
+                const pctGarcons = document.getElementById('pctGarcons');
+                const pctFilles = document.getElementById('pctFilles');
+                if (pctGarcons) pctGarcons.textContent = pG + '%';
+                if (pctFilles) pctFilles.textContent = pF + '%';
+                
+                setBarWidth('fillGarcons', pG);
+                setBarWidth('fillFilles', pF);
+            }
+        }
+    } catch (error) {
+        console.error('Erreur KPI:', error);
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// 2. PRÉSENCES (graphique)
+// ─────────────────────────────────────────────────────────────
+async function loadPresences() {
+    try {
+        const response = await fetch(API.presence);
+        const data = await response.json();
+        
+        const ctx = document.getElementById('chartPresence');
+        if (!ctx) {
+            console.warn('canvas chartPresence non trouvé');
+            return;
+        }
+        
+        if (chartPresence) chartPresence.destroy();
+        
+        const labels = data.labels || ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+        const presents = data.presents || [0, 0, 0, 0, 0, 0];
+        const absents = data.absents || [0, 0, 0, 0, 0, 0];
+        
+        chartPresence = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [
+                    { label: 'Présents', data: presents, backgroundColor: C.forest, borderRadius: 6 },
+                    { label: 'Absents', data: absents, backgroundColor: C.terra, borderRadius: 6 }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { 
+                    legend: { display: false }, 
+                    tooltip: { mode: 'index' } 
+                },
+                scales: { 
+                    x: { stacked: true, grid: { display: false } }, 
+                    y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } } 
+                }
+            }
+        });
+    } catch (error) {
+        console.error('Erreur Présences:', error);
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// 3. RÉPARTITION PAR NIVEAU (donut)
+// ─────────────────────────────────────────────────────────────
+async function loadRepartition() {
+    try {
+        const response = await fetch(API.repartition);
+        const data = await response.json();
+        
+        const ctx = document.getElementById('chartDonut');
+        if (!ctx) {
+            console.warn('canvas chartDonut non trouvé');
+            return;
+        }
+        
+        const colors = [C.forest, C.forestLight, C.terra, C.gold, '#6c757d', '#17a2b8'];
+        const niveaux = data.niveaux || ['6ème', '5ème', '4ème', '3ème', '2nde', '1ère'];
+        const counts = data.counts || [0, 0, 0, 0, 0, 0];
+        
+        if (chartDonut) chartDonut.destroy();
+        
+        chartDonut = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: niveaux,
+                datasets: [{ data: counts, backgroundColor: colors.slice(0, niveaux.length), borderWidth: 2, borderColor: '#fff' }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                cutout: '65%',
+                plugins: { 
+                    legend: { display: false }, 
+                    tooltip: { callbacks: { label: (c) => c.label + ' : ' + c.parsed } } 
+                }
+            }
+        });
+        
+        // Légende personnalisée
+        const legend = document.getElementById('donutLegend');
+        if (legend && niveaux.length) {
+            legend.innerHTML = niveaux.map((n, i) => `
+                <div class="leg-item">
+                    <span class="leg-sq" style="background:${colors[i % colors.length]}"></span>
+                    ${n} <span style="float:right; font-weight:600;">${counts[i]}</span>
+                </div>
+            `).join('');
+        }
+    } catch (error) {
+        console.error('Erreur Répartition:', error);
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// 4. TAUX DE RÉUSSITE PAR CLASSE
+// ─────────────────────────────────────────────────────────────
+async function loadReussite() {
+    try {
+        const response = await fetch(API.reussite);
+        const data = await response.json();
+        
+        const container = document.getElementById('reussiteContainer');
+        if (!container) return;
+        
+        if (data.success && data.data && data.data.length) {
+            container.innerHTML = data.data.map(item => `
+                <div class="prog-item">
+                    <div class="prog-head">
+                        <span class="prog-name">${escapeHtml(item.classe)}</span>
+                        <span class="prog-pct">${item.taux}%</span>
+                    </div>
+                    <div class="prog-track">
+                        <div class="prog-fill" style="width:${item.taux}%; background:${C.forest}"></div>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            container.innerHTML = '<p class="text-center" style="color:#6c757d; padding:20px;">Aucune donnée disponible</p>';
+        }
+    } catch (error) {
+        console.error('Erreur Réussite:', error);
+        const container = document.getElementById('reussiteContainer');
+        if (container) {
+            container.innerHTML = '<p class="text-center" style="color:#6c757d; padding:20px;">Données non disponibles</p>';
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// 5. FRAIS SCOLAIRES (graphique)
+// ─────────────────────────────────────────────────────────────
+async function loadFrais() {
+    try {
+        const response = await fetch(API.frais);
+        const data = await response.json();
+        
+        const ctx = document.getElementById('chartFrais');
+        if (!ctx) {
+            console.warn('canvas chartFrais non trouvé');
+            return;
+        }
+        
+        if (chartFrais) chartFrais.destroy();
+        
+        const labels = data.labels || ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin'];
+        const payes = data.payes || [0, 0, 0, 0, 0, 0];
+        const impayes = data.impayes || [0, 0, 0, 0, 0, 0];
+        
+        chartFrais = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    { label: 'Payé', data: payes, borderColor: C.forest, backgroundColor: 'rgba(30,58,47,0.1)', fill: true, tension: 0.4, pointRadius: 3, pointBackgroundColor: C.forest },
+                    { label: 'Impayé', data: impayes, borderColor: C.terra, backgroundColor: 'rgba(184,92,56,0.1)', fill: true, tension: 0.4, pointRadius: 3, pointBackgroundColor: C.terra }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: { legend: { display: false }, tooltip: { mode: 'index' } },
+                scales: { y: { beginAtZero: true, ticks: { callback: (v) => v + 'k' } } }
+            }
+        });
+    } catch (error) {
+        console.error('Erreur Frais:', error);
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// 6. ABSENCES FRÉQUENTES
+// ─────────────────────────────────────────────────────────────
+async function loadAbsencesFrequentes() {
+    try {
+        const response = await fetch(API.absences);
+        const data = await response.json();
+        
+        const tbody = document.getElementById('tbodyAbsences');
+        if (!tbody) return;
+        
+        if (data.success && data.data && data.data.length) {
+            tbody.innerHTML = data.data.map(item => {
+                const badgeClass = item.statut === 'Critique' ? 'badge-danger' : 'badge-warning';
+                return `
+                    <tr style="cursor:pointer;" onclick="showStudentDetail('${escapeHtml(item.nom)}')">
+                        <td><strong>${escapeHtml(item.nom)}</strong></td>
+                        <td>${escapeHtml(item.classe)}</td>
+                        <td>${item.nb}</td>
+                        <td><span class="badge ${badgeClass}">${escapeHtml(item.statut)}</span></td>
+                    </tr>
+                `;
+            }).join('');
+        } else {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center" style="padding:30px;">Aucune absence ce mois</td></tr>';
+        }
+    } catch (error) {
+        console.error('Erreur Absences:', error);
+        const tbody = document.getElementById('tbodyAbsences');
+        if (tbody) {
+            tbody.innerHTML = '<tr><td colspan="4" class="text-center" style="padding:30px;">Erreur chargement</td></tr>';
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// 7. ACTIVITÉ RÉCENTE
+// ─────────────────────────────────────────────────────────────
+async function loadActivite() {
+    try {
+        const response = await fetch(API.activite);
+        const data = await response.json();
+        
+        const feed = document.getElementById('activityFeed');
+        if (!feed) return;
+        
+        const icons = { success: 'fa-check-circle', danger: 'fa-exclamation-circle', warning: 'fa-clock', info: 'fa-edit' };
+        
+        if (data.success && data.data && data.data.length) {
+            feed.innerHTML = data.data.map(item => `
+                <div class="activity-item">
+                    <div class="activity-icon ${item.type}">
+                        <i class="fas ${icons[item.type] || 'fa-bell'}"></i>
+                    </div>
+                    <div class="activity-content">
+                        <div class="activity-text">${escapeHtml(item.texte)}</div>
+                        <div class="activity-time">${escapeHtml(item.temps)}</div>
+                    </div>
+                </div>
+            `).join('');
+        } else {
+            feed.innerHTML = '<p class="text-center" style="color:#6c757d; padding:20px;">Aucune activité récente</p>';
+        }
+    } catch (error) {
+        console.error('Erreur Activité:', error);
+        const feed = document.getElementById('activityFeed');
+        if (feed) {
+            feed.innerHTML = '<p class="text-center" style="color:#6c757d; padding:20px;">Erreur chargement</p>';
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// 8. CALENDRIER
+// ─────────────────────────────────────────────────────────────
+function generateCalendar(date) {
+    const grid = document.getElementById('calendarGrid');
+    if (!grid) return;
+    
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const today = new Date();
+    const firstDay = new Date(year, month, 1);
+    const lastDate = new Date(year, month + 1, 0).getDate();
+    
+    let startOffset = firstDay.getDay() - 1;
+    if (startOffset < 0) startOffset = 6;
+    
+    const days = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+    let html = days.map(d => '<div class="cal-hd">' + d + '</div>').join('');
+    
+    for (let i = 0; i < startOffset; i++) html += '<div class="cal-d empty"></div>';
+    
+    // Événements prédéfinis (à remplacer par des données réelles)
+    const eventDays = [5, 12, 20, 28];
+    
+    for (let d = 1; d <= lastDate; d++) {
+        const isToday = d === today.getDate() && month === today.getMonth() && year === today.getFullYear();
+        const isEvent = eventDays.includes(d);
+        let cls = 'cal-d';
+        if (isToday) cls += ' today';
+        if (isEvent) cls += ' event';
+        html += `<div class="${cls}" onclick="selectDate(${d})">${d}</div>`;
+    }
+    
+    grid.innerHTML = html;
+    
+    // Événements du mois
+    const eventList = document.getElementById('eventList');
+    if (eventList) {
+        const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+        const events = [
+            { jour: 5, desc: 'Conseil de classe' },
+            { jour: 12, desc: 'Remise des bulletins' },
+            { jour: 20, desc: 'Réunion parents' },
+            { jour: 28, desc: 'Sortie pédagogique' }
+        ];
+        eventList.innerHTML = events.map(e => `
+            <div class="event-list-item">
+                <span class="event-date">${e.jour} ${monthNames[month]}</span>
+                <span class="event-desc">— ${e.desc}</span>
+            </div>
+        `).join('');
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// 9. JAUGES
+// ─────────────────────────────────────────────────────────────
+function updateGauges(items) {
+    const container = document.getElementById('gaugeContainer');
+    if (!container) return;
+    
+    container.innerHTML = items.map(item => `
+        <div class="gauge-item">
+            <div class="gauge-val">${Math.round(item.value)}<span style="font-size:12px">%</span></div>
+            <div class="gauge-bar">
+                <div class="gauge-fill" style="width:${Math.min(100, Math.max(0, item.value))}%; background:${item.color}"></div>
+            </div>
+            <div class="gauge-lbl">${item.label}</div>
+        </div>
+    `).join('');
+}
+
+// ─────────────────────────────────────────────────────────────
+// UTILITAIRES
+// ─────────────────────────────────────────────────────────────
+function showSpinner() {
+    const el = document.getElementById('spinnerOverlay');
+    if (el) el.style.display = 'flex';
+}
+
+function hideSpinner() {
+    const el = document.getElementById('spinnerOverlay');
+    if (el) el.style.display = 'none';
+}
+
+function setBarWidth(id, percent) {
+    const el = document.getElementById(id);
+    if (el) {
+        setTimeout(() => { 
+            el.style.width = Math.min(100, Math.max(0, percent)) + '%'; 
+        }, 100);
+    }
+}
+
+function formatCurrency(value) {
+    if (value >= 1000000) return (value / 1000000).toFixed(1) + 'M Ar';
+    if (value >= 1000) return (value / 1000).toFixed(0) + 'k Ar';
+    return value + ' Ar';
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+// ─────────────────────────────────────────────────────────────
+// INITIALISATION
+// ─────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM chargé, initialisation du dashboard...');
+    initializeApp();
+    loadDashboard();
 });
 
-// ── CHARGEMENT GLOBAL ────────────────────────────────────────
-function chargerTout() {
-  afficherSpinner();
-
-  Promise.all([
-    chargerKpi(),
-    chargerPresences(),
-    chargerRepartition(),
-    chargerReussite(),
-    chargerFrais(),
-    chargerAbsences(),
-    chargerActivite(),
-  ]).finally(() => masquerSpinner());
-}
-
-// ── SPINNER ──────────────────────────────────────────────────
-function afficherSpinner() {
-  const el = document.getElementById('spinnerOverlay');
-  if (el) el.style.display = 'flex';
-}
-function masquerSpinner() {
-  const el = document.getElementById('spinnerOverlay');
-  if (el) el.style.display = 'none';
-}
-
-// ── FETCH HELPER ─────────────────────────────────────────────
-function apiFetch(action) {
-  return fetch('index.aspx?action=' + action)
-    .then(r => {
-      if (!r.ok) throw new Error('Erreur réseau ' + r.status);
-      return r.json();
-    });
-}
-
-// ════════════════════════════════════════════════════════════
-//  KPI
-// ════════════════════════════════════════════════════════════
-/**
- * Gestion des indicateurs (KPI) du tableau de bord
- * Fichier : dashboard.js
- */
-
-'use strict';
-
-// 1. Fonction principale de chargement des KPI
-function chargerKpi() {
-  // Appel à l'API locale avec l'action 'kpi'
-  return apiFetch('kpi')
-    .then(d => {
-      // Affichage des valeurs principales dans les cartes
-      setText('valEleves',   d.totalEleves);    // Total des élèves
-      setText('valClasses',  d.totalClasses);   // Nombre de classes actives
-      setText('valPresence', d.tauxPresence);  // Pourcentage de présence[cite: 3]
-      setText('valImpayes',  d.fraisImpayes);   // Montant total des impayés[cite: 3]
-
-      // Mise à jour des pastilles (Pills) de tendance[cite: 3]
-      setPill('pillEleves', '+' + d.nouveauxRentree, 'up'); // Nouveaux élèves[cite: 3]
-      setText('pillClasses', 'Moy. ' + d.moyEleves + ' élèves'); // Moyenne par classe[cite: 3]
-
-      // Calcul et affichage de la variation de présence[cite: 3]
-      const varPres = d.variationPresence || 0;
-      setPill('pillPresence', 
-        (varPres >= 0 ? '+' : '') + varPres + '%', 
-        varPres >= 0 ? 'up' : 'dn'
-      );
-
-      // Calcul et affichage de la variation des impayés[cite: 3]
-      const varImp = (d.variationImpayes || 0) - (d.fraisImpayes || 0);
-      setPill('pillImpayes', 
-        (varImp >= 0 ? '+' : '') + varImp, 
-        varImp <= 0 ? 'up' : 'dn' // "up" (vert) si les impayés baissent
-      );
-
-      // Mise à jour de la répartition Garçons / Filles[cite: 3]
-      const total = (d.garcons || 0) + (d.filles || 0);
-      if (total > 0) {
-        const pG = Math.round((d.garcons / total) * 100);
-        const pF = 100 - pG;
-        
-        setText('pctGarcons', pG + '%');
-        setText('pctFilles',  pF + '%');
-        
-        setBarWidth('fillGarcons', pG); // Animation de la barre bleue[cite: 3]
-        setBarWidth('fillFilles',  pF); // Animation de la barre orange[cite: 3]
-      }
-
-      // Initialisation des jauges circulaires si elles existent[cite: 3]
-      if (typeof renderGauges === 'function') {
-        renderGauges([
-          { label: 'Présence',  val: d.tauxPresence,  color: '#1e3a2f' }, // Forest[cite: 3]
-          { label: 'Réussite',  val: d.tauxReussite || 0, color: '#c9a84c' }, // Gold[cite: 3]
-          { label: 'Paiements', val: Math.round((1 - d.fraisImpayes / (d.totalGlobalFrais || 1)) * 100), color: '#b85c38' } // Terra[cite: 3]
-        ]);
-      }
-    })
-    .catch(e => {
-      console.error('Erreur lors du chargement des KPI:', e);
-      // En cas d'erreur, on affiche des tirets par défaut
-      ['valEleves', 'valClasses', 'valPresence', 'valImpayes'].forEach(id => setText(id, '—'));
-    });
-}
-
-// 2. Fonctions utilitaires (Helpers)[cite: 3]
-
-/**
- * Modifie le texte d'un élément HTML par son ID
- */
-function setText(id, val) {
-  const el = document.getElementById(id);
-  if (el) {
-    el.textContent = (val !== null && val !== undefined) ? val : '—';
-  }
-}
-
-/**
- * Met à jour le style et le texte d'une pastille (pill)
- * @param {string} type - 'up' (vert), 'dn' (rouge), 'neu' (gris)
- */
-function setPill(id, texte, type) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.textContent = texte;
-  el.className = 'pill pill-' + (type || 'neu'); // Applique la classe CSS correspondante[cite: 3]
-}
-
-/**
- * Anime la largeur d'une barre de progression (Garçons/Filles)
- */
-function setBarWidth(id, pct) {
-  const el = document.getElementById(id);
-  if (el) {
-    // Petit délai pour permettre l'animation CSS transition
-    setTimeout(() => { 
-      el.style.width = Math.min(100, Math.max(0, pct)) + '%'; 
-    }, 100);
-  }
-}
-
-// ════════════════════════════════════════════════════════════
-//  PRÉSENCES
-// ════════════════════════════════════════════════════════════
-function chargerPresences() {
-  return apiFetch('presences').then(d => {
-    const ctx = document.getElementById('chartPresence');
-    if (!ctx) return;
-
-    // Mois courant dans le label
-    const now = new Date();
-    setText('lblMoisPresence', now.toLocaleString('fr-FR', { month: 'long', year: 'numeric' }));
-
-    if (chartPresence) chartPresence.destroy();
-
-    chartPresence = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: d.labels,
-        datasets: [
-          {
-            label: 'Présents',
-            data: d.presents,
-            backgroundColor: C.forest,
-            borderRadius: 6,
-            barPercentage: 0.65,
-          },
-          {
-            label: 'Absents',
-            data: d.absents,
-            backgroundColor: C.terra,
-            borderRadius: 6,
-            barPercentage: 0.65,
-          },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false }, tooltip: { mode: 'index' } },
-        scales: {
-          x: {
-            stacked: true,
-            grid: { display: false },
-            ticks: { color: C.inkMuted, font: { size: 11 }, autoSkip: false },
-          },
-          y: {
-            stacked: true,
-            grid: { color: '#e8e0d0' },
-            border: { display: false },
-            ticks: { color: C.inkMuted, font: { size: 11 } },
-          },
-        },
-      },
-    });
-  }).catch(e => console.warn('Présences:', e));
-}
-
-// ════════════════════════════════════════════════════════════
-//  RÉPARTITION DONUT
-// ════════════════════════════════════════════════════════════
-function chargerRepartition() {
-  return apiFetch('repartition').then(d => {
-    const ctx = document.getElementById('chartDonut');
-    if (!ctx) return;
-
-    const couleurs = [C.forest, C.forestLight, C.terra, C.gold, C.creamborder, C.inkMuted];
-
-    if (chartDonut) chartDonut.destroy();
-    chartDonut = new Chart(ctx, {
-      type: 'doughnut',
-      data: {
-        labels: d.niveaux,
-        datasets: [{
-          data: d.counts,
-          backgroundColor: couleurs.slice(0, d.niveaux.length),
-          borderWidth: 0,
-          hoverOffset: 4,
-        }],
-      },
-      options: {
-        responsive: false,
-        cutout: '68%',
-        plugins: {
-          legend: { display: false },
-          tooltip: { callbacks: { label: c => c.label + ' : ' + c.parsed } },
-        },
-      },
-    });
-
-    // Légende custom
-    const leg = document.getElementById('donutLegend');
-    if (!leg) return;
-    leg.innerHTML = d.niveaux.map((n, i) =>
-      '<div class="leg-item">' +
-      '<span class="leg-sq" style="background:' + couleurs[i] + '"></span>' +
-      n + '<span class="leg-val">' + d.counts[i] + '</span>' +
-      '</div>'
-    ).join('');
-  }).catch(e => console.warn('Répartition:', e));
-}
-
-// ════════════════════════════════════════════════════════════
-//  TAUX DE RÉUSSITE
-// ════════════════════════════════════════════════════════════
-function chargerReussite() {
-  return apiFetch('reussite').then(items => {
-    const container = document.getElementById('reussiteContainer');
-    if (!container) return;
-
-    const couleurs = [C.forest, C.forestLight, C.gold, C.terra, C.danger, C.inkMuted];
-
-    if (!items || items.length === 0) {
-      container.innerHTML = '<p style="color:#888070;font-size:12px;text-align:center;padding:20px 0;">Aucune donnée disponible</p>';
-      return;
+function initializeApp() {
+    // Menu toggle
+    const menuToggle = document.getElementById('menuToggle');
+    const sidebar = document.getElementById('sidebar');
+    const contentWrapper = document.getElementById('contentWrapper');
+    
+    if (menuToggle && sidebar) {
+        menuToggle.addEventListener('click', function() {
+            sidebar.classList.toggle('collapsed');
+            if (contentWrapper) contentWrapper.classList.toggle('expanded');
+        });
     }
-
-    container.innerHTML = items.map((item, i) => {
-      const taux = Math.round(item.taux);
-      const couleur = couleurs[Math.min(i, couleurs.length - 1)];
-      return '<div class="prog-item">' +
-        '<div class="prog-head">' +
-        '<span class="prog-name">' + item.classe + '</span>' +
-        '<span class="prog-pct">' + taux + '%</span>' +
-        '</div>' +
-        '<div class="prog-track">' +
-        '<div class="prog-fill" style="width:' + taux + '%;background:' + couleur + '"></div>' +
-        '</div>' +
-        '</div>';
-    }).join('');
-  }).catch(e => {
-    // Données de démo si pas de table NOTES
-    const demo = [
-      { classe: '6ème A', taux: 88 }, { classe: '5ème A', taux: 82 },
-      { classe: '4ème A', taux: 75 }, { classe: '3ème A', taux: 69 },
-      { classe: '3ème B', taux: 58 },
-    ];
-    const couleurs = [C.forest, C.forestLight, C.gold, C.terra, C.danger];
-    const container = document.getElementById('reussiteContainer');
-    if (container)
-      container.innerHTML = demo.map((item, i) =>
-        '<div class="prog-item">' +
-        '<div class="prog-head"><span class="prog-name">' + item.classe + '</span>' +
-        '<span class="prog-pct">' + item.taux + '%</span></div>' +
-        '<div class="prog-track"><div class="prog-fill" style="width:' + item.taux +
-        '%;background:' + couleurs[i] + '"></div></div></div>'
-      ).join('');
-    console.warn('Réussite (démo):', e);
-  });
-}
-
-// ════════════════════════════════════════════════════════════
-//  FRAIS SCOLAIRES
-// ════════════════════════════════════════════════════════════
-function chargerFrais() {
-  return apiFetch('frais').then(d => {
-    const ctx = document.getElementById('chartFrais');
-    if (!ctx) return;
-
-    if (chartFrais) chartFrais.destroy();
-    chartFrais = new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: d.labels,
-        datasets: [
-          { label: 'Payé',   data: d.payes,   backgroundColor: C.forestLight, borderRadius: 5, barPercentage: 0.7 },
-          { label: 'Impayé', data: d.impayes, backgroundColor: C.paidLight,   borderRadius: 5, barPercentage: 0.7 },
-        ],
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          x: { grid: { display: false }, ticks: { color: C.inkMuted, font: { size: 10 }, autoSkip: false } },
-          y: { grid: { color: '#e8e0d0' }, border: { display: false }, ticks: { color: C.inkMuted, font: { size: 10 } } },
-        },
-      },
-    });
-  }).catch(e => console.warn('Frais:', e));
-}
-
-// ════════════════════════════════════════════════════════════
-//  ABSENCES
-// ════════════════════════════════════════════════════════════
-function chargerAbsences() {
-  return apiFetch('absences').then(rows => {
-    const tbody = document.getElementById('tbodyAbsences');
-    if (!tbody) return;
-
-    if (!rows || rows.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:16px;color:#888070;">Aucune absence ce mois</td></tr>';
-      return;
+    
+    // Notifications
+    const notifToggle = document.getElementById('notifToggle');
+    const notifDropdown = document.getElementById('notifDropdown');
+    
+    if (notifToggle && notifDropdown) {
+        notifToggle.addEventListener('click', function(e) {
+            e.stopPropagation();
+            notifDropdown.classList.toggle('show');
+        });
+        
+        document.addEventListener('click', function() {
+            notifDropdown.classList.remove('show');
+        });
     }
-
-    tbody.innerHTML = rows.map(r => {
-      let classeNb, classeBadge;
-      if (r.statut === 'Critique') {
-        classeNb = 'abs-nb-critique'; classeBadge = 'badge-critique';
-      } else if (r.statut === 'Surveiller') {
-        classeNb = 'abs-nb-surveiller'; classeBadge = 'badge-surveiller';
-      } else {
-        classeNb = 'abs-nb-normal'; classeBadge = 'badge-normal';
-      }
-      const libStatut = r.statut === 'Surveiller' ? 'À surveiller' : r.statut;
-      return '<tr>' +
-        '<td><strong>' + r.nom + '</strong></td>' +
-        '<td>' + r.classe + '</td>' +
-        '<td class="' + classeNb + '">' + r.nb + '</td>' +
-        '<td><span class="badge-statut ' + classeBadge + '">' + libStatut + '</span></td>' +
-        '</tr>';
-    }).join('');
-  }).catch(e => console.warn('Absences:', e));
+    
+    // Fullscreen
+    const fullscreenToggle = document.getElementById('fullscreenToggle');
+    if (fullscreenToggle) {
+        fullscreenToggle.addEventListener('click', function() {
+            if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen();
+            } else {
+                document.exitFullscreen();
+            }
+        });
+    }
 }
 
-// ════════════════════════════════════════════════════════════
-//  ACTIVITÉ RÉCENTE
-// ════════════════════════════════════════════════════════════
-function chargerActivite() {
-  return apiFetch('activite').then(items => {
-    const feed = document.getElementById('activityFeed');
-    if (!feed) return;
+// ─────────────────────────────────────────────────────────────
+// FONCTIONS GLOBALES POUR LES INTERACTIONS
+// ─────────────────────────────────────────────────────────────
+window.showStudentDetail = function(name) {
+    if (typeof Swal !== 'undefined') {
+        Swal.fire('Élève', `Détails de ${name}`, 'info');
+    } else {
+        alert('Détails de ' + name);
+    }
+};
 
-    const icones = {
-      success: '✓',
-      danger:  '!',
-      warning: '₳',
-      info:    '✎',
+window.selectDate = function(day) {
+    if (typeof Swal !== 'undefined') {
+        Swal.fire('Date', `Vous avez sélectionné le ${day}`, 'info');
+    } else {
+        alert('Date sélectionnée: ' + day);
+    }
+};
+
+window.showKPIDetail = function(type) {
+    const titles = { 
+        eleves: 'Total des élèves', 
+        classes: 'Classes actives', 
+        presence: 'Taux de présence', 
+        impayes: 'Frais impayés' 
     };
+    if (typeof Swal !== 'undefined') {
+        Swal.fire('Détail', titles[type] || 'Information', 'info');
+    }
+};
 
-    feed.innerHTML = items.map(it =>
-      '<div class="act-item">' +
-      '<div class="act-icon ' + it.type + '">' + (icones[it.type] || '•') + '</div>' +
-      '<div>' +
-      '<div class="act-main">' + it.texte + '</div>' +
-      '<div class="act-detail">' + it.detail + '</div>' +
-      '<div class="act-time">' + it.temps + '</div>' +
-      '</div>' +
-      '</div>'
-    ).join('');
-  }).catch(e => console.warn('Activité:', e));
-}
+// Fonctions modales globales
+window.closeModal = function() {
+    const modal = document.getElementById('bulletinModal');
+    if (modal) modal.style.display = 'none';
+};
 
-// ════════════════════════════════════════════════════════════
-//  CALENDRIER
-// ════════════════════════════════════════════════════════════
-const EVENEMENTS = [
-  { jour: 5,  mois: 3, desc: 'Conseil de classe 6ème'    },
-  { jour: 13, mois: 3, desc: 'Remise des bulletins'      },
-  { jour: 26, mois: 3, desc: 'Réunion parents d\'élèves' },
-];
+window.saveBulletin = function() {
+    if (typeof Swal !== 'undefined') {
+        Swal.fire('Info', 'Fonctionnalité à implémenter', 'info');
+    }
+};
 
-function genererCalendrier(date) {
-  const grid = document.getElementById('calendarGrid');
-  if (!grid) return;
+window.closePaymentModal = function() {
+    const modal = document.getElementById('paymentModal');
+    if (modal) modal.style.display = 'none';
+};
 
-  const annee   = date.getFullYear();
-  const mois    = date.getMonth(); // 0-based
-  const today   = new Date();
-  const premier = new Date(annee, mois, 1);
-  const dernier = new Date(annee, mois + 1, 0).getDate();
+window.savePayment = function() {
+    if (typeof Swal !== 'undefined') {
+        Swal.fire('Info', 'Fonctionnalité à implémenter', 'info');
+    }
+};
 
-  // Lundi = 0 ... Dimanche = 6
-  let depart = premier.getDay() - 1;
-  if (depart < 0) depart = 6;
+window.updatePaymentInfo = function() {
+    // À implémenter
+};
 
-  const jours = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
-  let html = jours.map(j => '<div class="cal-hd">' + j + '</div>').join('');
+window.closeAddBulletinModal = function() {
+    const modal = document.getElementById('addBulletinModal');
+    if (modal) modal.style.display = 'none';
+};
 
-  // Cellules vides avant le 1er
-  for (let i = 0; i < depart; i++) html += '<div class="cal-d empty"></div>';
-
-  for (let j = 1; j <= dernier; j++) {
-    const estAujourdhui = j === today.getDate() && mois === today.getMonth() && annee === today.getFullYear();
-    const estEvenement  = EVENEMENTS.some(e => e.jour === j && (e.mois - 1) === mois);
-    let cls = 'cal-d';
-    if (estAujourdhui)  cls += ' today';
-    else if (estEvenement) cls += ' event';
-    html += '<div class="' + cls + '">' + j + '</div>';
-  }
-
-  grid.innerHTML = html;
-
-  // Liste des événements du mois
-  const evList = document.getElementById('eventList');
-  if (!evList) return;
-  const evMois = EVENEMENTS.filter(e => (e.mois - 1) === mois);
-  evList.innerHTML = evMois.map(e =>
-    '<div class="event-list-item">' +
-    '<span class="event-date">' + e.jour + ' ' +
-    date.toLocaleString('fr-FR', { month: 'long' }) + '</span> ' +
-    '<span class="event-desc">— ' + e.desc + '</span>' +
-    '</div>'
-  ).join('');
-}
-
-// ════════════════════════════════════════════════════════════
-//  JAUGES
-// ════════════════════════════════════════════════════════════
-function renderGauges(items) {
-  const c = document.getElementById('gaugeContainer');
-  if (!c) return;
-
-  c.innerHTML = items.map(it => {
-    const val = Math.round(it.val);
-    return '<div class="gauge-item">' +
-      '<div class="gauge-val">' + val + '<span style="font-size:14px">%</span></div>' +
-      '<div class="gauge-bar"><div class="gauge-fill" style="width:' + val + '%;background:' + it.color + '"></div></div>' +
-      '<div class="gauge-lbl">' + it.label + '</div>' +
-      '</div>';
-  }).join('');
-}
-
-// ════════════════════════════════════════════════════════════
-//  UTILITAIRES
-// ════════════════════════════════════════════════════════════
-function setText(id, val) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = val !== null && val !== undefined ? val : '—';
-}
-
-function setPill(id, texte, type) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.textContent = texte;
-  el.className   = 'pill pill-' + (type || 'neu');
-}
-
-function setBarWidth(id, pct) {
-  const el = document.getElementById(id);
-  if (el) {
-    // Déclenche l'animation CSS
-    setTimeout(() => { el.style.width = Math.min(100, Math.max(0, pct)) + '%'; }, 100);
-  }
-}
+window.saveNewBulletin = function() {
+    if (typeof Swal !== 'undefined') {
+        Swal.fire('Info', 'Fonctionnalité à implémenter', 'info');
+    }
+};

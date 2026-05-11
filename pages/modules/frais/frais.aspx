@@ -12,6 +12,7 @@
         <link rel="stylesheet" href="../../_assets/css/fontawesome.css?v=<%=AuthHelper.Version %>">
         <link rel="stylesheet" href="../../_assets/css/fontawesome.min.css?v=<%=AuthHelper.Version %>">
         <link rel="stylesheet" href="../../_assets/css/global.css?v=<%=AuthHelper.Version %>">
+        <link rel="stylesheet" href="css/style.css?v=<%=AuthHelper.Version %>">
     </head>
 
     <body class="hold-transition" data-version="<%=AuthHelper.Version %>">
@@ -249,6 +250,9 @@
                                 <span class="dash-card-title"><i class="fas fa-money-bill-wave"></i> Frais
                                     scolaires</span>
                                 <div class="action-buttons">
+                                    <button class="btn btn-info btn-sm" onclick="openAddPaymentClasseModal()">
+                                        <i class="fas fa-plus"></i> Ajouter Paiement par classe
+                                    </button>
                                     <button class="btn btn-success btn-sm" onclick="openAddPaymentModal()">
                                         <i class="fas fa-plus"></i> Enregistrer un paiement
                                     </button>
@@ -295,7 +299,7 @@
                                         <option value="Payé">Payé</option>
                                         <option value="Partiel">Partiel</option>
                                         <option value="En retard">En retard</option>
-                                        <option value="Impayé">Impayé</option>
+                                        <option value="Statut">Non Payé</option>
                                     </select>
                                     <select class="form-control" id="fraisFilterClasse" onchange="filterFraisTable()"
                                         style="max-width:160px;">
@@ -309,20 +313,23 @@
                                 </div>
 
                                 <!-- Tableau -->
-                                <div style="overflow-x:auto;">
-                                    <table class="dash-table">
+                                <div
+                                    style="overflow-x: auto; width: 100%; border: 1px solid #dee2e6; border-radius: 8px;">
+                                    <table class="dash-table"
+                                        style="table-layout: fixed; width: 1200px; min-width: 100%; border-collapse: collapse;">
                                         <thead>
-                                            <tr>
-                                                <th>Matricule</th>
-                                                <th>Nom</th>
-                                                <th>Classe</th>
-                                                <th>Total</th>
-                                                <th>Payé</th>
-                                                <th>Reste</th>
-                                                <th>Progression</th>
-                                                <th>Statut</th>
-                                                <th>Dernier paiement</th>
-                                                <th>Actions</th>
+                                            <tr style="background-color: #f8f9fa; text-align: center;">
+                                                <th style="width: 120px;">Année</th>
+                                                <th style="width: 120px;">Matricule</th>
+                                                <th style="width: 120px;">Nom</th>
+                                                <th style="width: 120px;">Classe</th>
+                                                <th style="width: 120px;">Total</th>
+                                                <th style="width: 120px;">Payé</th>
+                                                <th style="width: 120px;">Reste</th>
+                                                <th style="width: 120px;">Progression</th>
+                                                <th style="width: 120px;">Statut</th>
+                                                <th style="width: 120px;">Dernier paiement</th>
+                                                <th style="width: 120px;">Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody id="fraisTableBody"></tbody>
@@ -395,10 +402,10 @@
                             <div class="form-group">
                                 <label>Mode de paiement</label>
                                 <select id="paymentMethod" class="form-control">
-                                    <option value="Espèces">Espèces</option>
-                                    <option value="Chèque">Chèque</option>
-                                    <option value="Virement bancaire">Virement bancaire</option>
-                                    <option value="Mobile Money">Mobile Money</option>
+                                    <option value="Especes">Espèces</option>
+                                    <option value="Cheque">Chèque</option>
+                                    <option value="Virement">Virement bancaire</option>
+                                    <option value="MobileMoney">Mobile Money</option>
                                 </select>
                             </div>
                             <div class="form-group">
@@ -425,7 +432,6 @@
 
             <!-- ═══ SCRIPTS ═══ -->
             <script src="js/frais.js?v=<%=AuthHelper.Version %>"></script>
-            <script src="js/script.js?v=<%=AuthHelper.Version %>"></script>
             <script src="../../_assets/js/global.js?v=<%=AuthHelper.Version %>"></script>
         </form>
     </body>

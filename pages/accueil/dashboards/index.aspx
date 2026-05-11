@@ -11,7 +11,7 @@
         <link rel="stylesheet" href="../../_assets/css/all.min.css?v=<%=AuthHelper.Version %>">
         <link rel="stylesheet" href="../../_assets/css/fontawesome.css?v=<%=AuthHelper.Version %>">
         <link rel="stylesheet" href="../../_assets/css/fontawesome.min.css?v=<%=AuthHelper.Version %>">
-        <link rel="stylesheet" href="css/style.css?v=<%=AuthHelper.Version %>">
+        <link rel="stylesheet" href="css/dashboard.css?v=<%=AuthHelper.Version %>">
         <link rel="stylesheet" href="../../_assets/css/global.css?v=<%=AuthHelper.Version %>">
 
     </head>
@@ -176,7 +176,7 @@
                                         <span>Matières</span>
                                     </a>
                                 </li>
-                                
+
                                 <!-- Administration -->
                                 <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin()) { %>
                                     <li class="nav-item">
@@ -188,41 +188,45 @@
                                             <span>Utilitaires</span>
                                         </a>
                                     </li>
-                                <% } %>
-                                
-                                <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin()) { %>
-                                    <li class="nav-item">
-                                        <a href="../../administrations/annee/annee.aspx" class="nav-link">
-                                            <div style="width:30px; text-align:center; margin-right:10px;">
-                                                <i class="fas fa-calendar-alt"></i>
-                                            </div>
-                                            <span>Années</span>
-                                        </a>
-                                    </li>
-                                <% } %>
+                                    <% } %>
 
-                                <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin()) { %>
-                                    <li class="nav-item">
-                                        <a href="../../administrations/utilisateur/utilisateur.aspx" class="nav-link">
-                                            <div style="width:30px; text-align:center; margin-right:10px;">
-                                                <i class="fas fa-user"></i>
-                                            </div>
-                                            <span>Utilisateur</span>
-                                        </a>
-                                    </li>
-                                <% } %>
+                                        <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin()) { %>
+                                            <li class="nav-item">
+                                                <a href="../../administrations/annee/annee.aspx" class="nav-link">
+                                                    <div style="width:30px; text-align:center; margin-right:10px;">
+                                                        <i class="fas fa-calendar-alt"></i>
+                                                    </div>
+                                                    <span>Années</span>
+                                                </a>
+                                            </li>
+                                            <% } %>
 
-                                <% if (AuthHelper.IsSuperAdmin()) { %>
-                                    <li class="nav-item">
-                                        <a href="../../administrations/requete/requetes.aspx" class="nav-link"
-                                            style="display: flex; align-items: center;">
-                                            <div style="width:30px; text-align:center; margin-right:10px;">
-                                                <i class="fas fa-database"></i>
-                                            </div>
-                                            <span>Requetes SQL</span>
-                                        </a>
-                                    </li>
-                                <% } %>
+                                                <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin()) { %>
+                                                    <li class="nav-item">
+                                                        <a href="../../administrations/utilisateur/utilisateur.aspx"
+                                                            class="nav-link">
+                                                            <div
+                                                                style="width:30px; text-align:center; margin-right:10px;">
+                                                                <i class="fas fa-user"></i>
+                                                            </div>
+                                                            <span>Utilisateur</span>
+                                                        </a>
+                                                    </li>
+                                                    <% } %>
+
+                                                        <% if (AuthHelper.IsSuperAdmin()) { %>
+                                                            <li class="nav-item">
+                                                                <a href="../../administrations/requete/requetes.aspx"
+                                                                    class="nav-link"
+                                                                    style="display: flex; align-items: center;">
+                                                                    <div
+                                                                        style="width:30px; text-align:center; margin-right:10px;">
+                                                                        <i class="fas fa-database"></i>
+                                                                    </div>
+                                                                    <span>Requetes SQL</span>
+                                                                </a>
+                                                            </li>
+                                                            <% } %>
                             </ul>
                         </nav>
                     </div>
@@ -1006,8 +1010,13 @@
             </div>
 
             <!-- ═══ SCRIPTS ═══ -->
+            <script>
+                document.addEventListener('DOMContentLoaded', function () {
+                    loadDashboard();
+                });
+            </script>
+            <script src="../../_assets/js/chart.umd.min.js?v=<%=AuthHelper.Version %>"></script>
             <script src="js/dashboard.js?v=<%=AuthHelper.Version %>"></script>
-            <script src="js/script.js?v=<%=AuthHelper.Version %>"></script>
             <script src="../../_assets/js/global.js?v=<%=AuthHelper.Version %>"></script>
         </form>
     </body>

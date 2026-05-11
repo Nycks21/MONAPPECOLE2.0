@@ -1,4 +1,4 @@
-<%@ WebHandler Language="C#" Class="ModifierAbsence" %>
+﻿<%@ WebHandler Language="C#" Class="ModifierAbsence" %>
 
 using System;
 using System.Configuration;

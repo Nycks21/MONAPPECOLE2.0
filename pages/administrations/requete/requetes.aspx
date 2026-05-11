@@ -111,7 +111,7 @@
                                     </a>
                                 </li>
                                 <li class="nav-item">
-                                    <a href="../absences/absences.aspx" class="nav-link">
+                                    <a href="../../modules/absences/absences.aspx" class="nav-link">
                                         <div style="width:30px; text-align:center; margin-right:10px;">
                                             <i class="fas fa-calendar-times"></i>
                                         </div>
@@ -119,7 +119,7 @@
                                     </a>
                                 </li>
                                 <li class="nav-item">
-                                    <a href="../frais/frais.aspx" class="nav-link">
+                                    <a href="../../modules/frais/frais.aspx" class="nav-link">
                                         <div style="width:30px; text-align:center; margin-right:10px;">
                                             <i class="fas fa-money-bill-wave"></i>
                                         </div>
@@ -127,7 +127,7 @@
                                     </a>
                                 </li>
                                 <li class="nav-item">
-                                    <a href="../bulletins/bulletins.aspx" class="nav-link">
+                                    <a href="../../modules/bulletins/bulletins.aspx" class="nav-link">
                                         <div style="width:30px; text-align:center; margin-right:10px;">
                                             <i class="fas fa-file-alt"></i>
                                         </div>

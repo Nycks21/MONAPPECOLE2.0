@@ -1,4 +1,4 @@
-<%@ WebHandler Language="C#" Class="AjouterAbsence" %>
+﻿<%@ WebHandler Language="C#" Class="AjouterAbsence" %>
 
 using System;
 using System.Configuration;

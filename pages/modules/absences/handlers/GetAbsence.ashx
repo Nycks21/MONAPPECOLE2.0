@@ -1,4 +1,4 @@
-<%@ WebHandler Language="C#" Class="GetAbsence" %>
+﻿<%@ WebHandler Language="C#" Class="GetAbsence" %>
 
 using System;
 using System.Collections.Generic;

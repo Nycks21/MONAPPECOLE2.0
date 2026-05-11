@@ -369,14 +369,6 @@ function updateStats() {
     if (elCri) elCri.textContent = totalNonJust;
 }
 
-function updateCounter(count) {
-    var el = document.getElementById('abs-counter');
-    if (el) {
-        el.innerHTML = '<i class="fas fa-database"></i> Affichage de <b>' + count + '</b> enregistrement(s)' +
-            (count !== absencesData.length ? ' sur ' + absencesData.length : '');
-    }
-}
-
 // ─────────────────────────────────────────────────────────────────────────────
 // TRI ET FILTRES
 // ─────────────────────────────────────────────────────────────────────────────
@@ -442,45 +434,6 @@ function resetFilters() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PAGINATION (en bas du tableau)
-// ─────────────────────────────────────────────────────────────────────────────
-function renderPagination() {
-    var container = document.getElementById('abs-pagination');
-    if (!container) return;
-    
-    var totalPages = Math.ceil(filteredAbs.length / absRowsPerPage);
-    if (totalPages <= 1) {
-        container.innerHTML = '';
-        return;
-    }
-    
-    var html = '<div style="display:flex;justify-content:center;align-items:center;gap:5px;flex-wrap:wrap;margin-top:15px;">';
-    html += '<button type="button" class="btn btn-sm btn-light" onclick="window.absencesManager.goToPage(1)" ' + (absPage === 1 ? 'disabled' : '') + '>&laquo;</button>';
-    html += '<button type="button" class="btn btn-sm btn-light" onclick="window.absencesManager.goToPage(' + (absPage - 1) + ')" ' + (absPage === 1 ? 'disabled' : '') + '>&lsaquo;</button>';
-    
-    var start = Math.max(1, absPage - 2);
-    var end = Math.min(totalPages, absPage + 2);
-    for (var i = start; i <= end; i++) {
-        html += '<button type="button" class="btn btn-sm ' + (i === absPage ? 'btn-primary' : 'btn-light') + '" onclick="window.absencesManager.goToPage(' + i + ')">' + i + '</button>';
-    }
-    
-    html += '<button type="button" class="btn btn-sm btn-light" onclick="window.absencesManager.goToPage(' + (absPage + 1) + ')" ' + (absPage === totalPages ? 'disabled' : '') + '>&rsaquo;</button>';
-    html += '<button type="button" class="btn btn-sm btn-light" onclick="window.absencesManager.goToPage(' + totalPages + ')" ' + (absPage === totalPages ? 'disabled' : '') + '>&raquo;</button>';
-    html += '</div>';
-    
-    container.innerHTML = html;
-}
-
-function goToPage(page) {
-    var totalPages = Math.ceil(filteredAbs.length / absRowsPerPage);
-    if (page < 1) page = 1;
-    if (page > totalPages) page = totalPages;
-    if (page === absPage) return;
-    absPage = page;
-    renderTable();
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 // RENDU DU TABLEAU (version modifiée)
 // ─────────────────────────────────────────────────────────────────────────────
 function renderTable() {
@@ -530,139 +483,92 @@ function renderTable() {
                 '</div>' +
             '</td>';
     }
-    
     updateCounter(filteredAbs.length);
-    renderPagination();  // Appel à la pagination
+    createPaginationControls();
 }
 
-// Fonction pour créer le conteneur de pagination s'il n'existe pas
-function ensurePaginationContainer() {
-    var container = document.getElementById('abs-pagination');
-    if (!container) {
-        container = document.createElement('div');
-        container.id = 'abs-pagination';
-        container.style.cssText = 'margin-top:15px;';
-        
-        // Trouver le bon endroit pour insérer
-        var dashCardBody = document.querySelector('.dash-card-body');
-        if (dashCardBody) {
-            dashCardBody.appendChild(container);
-        } else {
-            var tbody = document.getElementById('absencesTableBody');
-            if (tbody && tbody.parentNode && tbody.parentNode.parentNode) {
-                tbody.parentNode.parentNode.parentNode.appendChild(container);
-            }
-        }
-    }
-    return container;
-}
-
-// Fonction renderPagination modifiée
 // ─────────────────────────────────────────────────────────────────────────────
-// RENDU DU TABLEAU (version modifiée)
+// PAGINATION
 // ─────────────────────────────────────────────────────────────────────────────
-function renderTable() {
-    var tbody = document.getElementById('absencesTableBody');
-    if (!tbody) return;
-    
-    if (!filteredAbs || filteredAbs.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:50px;">' +
-            '<i class="fas fa-search" style="font-size:40px;color:#ccc;display:block;margin-bottom:12px;"></i>' +
-            'Aucune absence trouvée</td></tr>';
-        updateCounter(0);
-        // Cacher la pagination
-        var pagContainer = document.getElementById('abs-pagination');
-        if (pagContainer) pagContainer.innerHTML = '';
-        return;
-    }
-    
-    var start = (absPage - 1) * absRowsPerPage;
-    var pageData = filteredAbs.slice(start, start + absRowsPerPage);
-    
-    tbody.innerHTML = '';
-    for (var i = 0; i < pageData.length; i++) {
-        var abs = pageData[i];
-        var row = tbody.insertRow();
-        
-        var btnJustif = '';
-        if (!abs.JUSTIF) {
-            btnJustif = '<button type="button" class="btn btn-sm btn-success" onclick="window.absencesManager.openJustifyModal(\'' + escapeHtml(abs.ID) + '\')" title="Justifier"><i class="fas fa-check"></i></button>';
-        }
-        
-        row.innerHTML =
-            '<td class="text-center">' + escapeHtml(abs.ANNEE_TEXTE || '-') + '</td>' +
-            '<td class="text-center">' + getMatriculeBadge(abs.MATRICULE) + '</td>' +
-            '<td class="text-center">' + getNomBadge(abs.NOM) + '</td>' +
-            '<td class="text-center">' + getClasseBadge(abs.CLASSE_NOM || '-') + '</td>' +
-            '<td class="text-center">' + getTypeBadge(abs.TYPE) + '<tr>' +
-            '<td class="text-center">' + escapeHtml(formatDate(abs.DATE_DEBUT)) + '</td>' +
-            '<td class="text-center">' + escapeHtml(formatDate(abs.DATE_FIN)) + '</td>' +
-            '<td class="text-center"><strong>' + escapeHtml(formatDuree(abs.DUREE)) + '</strong></td>' +
-            '<td class="text-center">' + getJustifiedBadge(abs.JUSTIF) + '</td>' +
-            '<td title="' + escapeHtml(abs.COMMENTAIRES || '') + '">' + truncateText(abs.COMMENTAIRES, 25) + '</td>' +
-            '<td>' +
-                '<div style="display:flex; gap:4px; justify-content:flex-start">' +
-                    '<button type="button" class="btn btn-sm btn-primary" onclick="window.absencesManager.editAbsence(\'' + escapeHtml(abs.ID) + '\')" title="Modifier"><i class="fas fa-edit"></i></button>' +
-                    '<button type="button" class="btn btn-sm btn-danger" onclick="window.absencesManager.deleteAbsence(\'' + escapeHtml(abs.ID) + '\')" title="Supprimer"><i class="fas fa-trash"></i></button>' +
-                    btnJustif +
-                '</div>' +
-            '</td>';
-    }
-    
-    updateCounter(filteredAbs.length);
-    renderPagination();  // Appel à la pagination
-}
-
-// Fonction pour créer le conteneur de pagination s'il n'existe pas
-function ensurePaginationContainer() {
-    var container = document.getElementById('abs-pagination');
-    if (!container) {
-        container = document.createElement('div');
-        container.id = 'abs-pagination';
-        container.style.cssText = 'margin-top:15px;';
-        
-        // Trouver le bon endroit pour insérer
-        var dashCardBody = document.querySelector('.dash-card-body');
-        if (dashCardBody) {
-            dashCardBody.appendChild(container);
-        } else {
-            var tbody = document.getElementById('absencesTableBody');
-            if (tbody && tbody.parentNode && tbody.parentNode.parentNode) {
-                tbody.parentNode.parentNode.parentNode.appendChild(container);
-            }
-        }
-    }
-    return container;
-}
-
-// Fonction renderPagination modifiée
-function renderPagination() {
-    ensurePaginationContainer();
-    
-    var container = document.getElementById('abs-pagination');
-    if (!container) return;
-    
+function createPaginationControls() {
     var totalPages = Math.ceil(filteredAbs.length / absRowsPerPage);
-    if (totalPages <= 1) {
-        container.innerHTML = '';
-        return;
+    var old = document.getElementById('pagination-container');
+    if (old) old.remove();
+    
+    if (totalPages <= 1) return;
+
+    var pc = document.createElement('div');
+    pc.id = 'pagination-container';
+    pc.style.cssText = 'margin:16px 0;display:flex;justify-content:center;align-items:center;gap:5px;flex-wrap:wrap;';
+
+    pc.appendChild(mkPageBtn('«', function() { goToPage(1); }, absPage === 1));
+    pc.appendChild(mkPageBtn('‹', function() { if (absPage > 1) goToPage(absPage - 1); }, absPage === 1));
+
+    var maxV = 5, startP = Math.max(1, absPage - 2), endP = Math.min(totalPages, startP + maxV - 1);
+    if (endP - startP + 1 < maxV) startP = Math.max(1, endP - maxV + 1);
+
+    if (startP > 1) {
+        pc.appendChild(mkPageBtn('1', function() { goToPage(1); }));
+        if (startP > 2) pc.appendChild(mkDots());
     }
-    
-    var html = '<div style="display:flex;justify-content:center;align-items:center;gap:5px;flex-wrap:wrap;">';
-    html += '<button type="button" class="btn btn-sm btn-light" onclick="window.absencesManager.goToPage(1)" ' + (absPage === 1 ? 'disabled' : '') + '>&laquo;</button>';
-    html += '<button type="button" class="btn btn-sm btn-light" onclick="window.absencesManager.goToPage(' + (absPage - 1) + ')" ' + (absPage === 1 ? 'disabled' : '') + '>&lsaquo;</button>';
-    
-    var start = Math.max(1, absPage - 2);
-    var end = Math.min(totalPages, absPage + 2);
-    for (var i = start; i <= end; i++) {
-        html += '<button type="button" class="btn btn-sm ' + (i === absPage ? 'btn-primary' : 'btn-light') + '" onclick="window.absencesManager.goToPage(' + i + ')">' + i + '</button>';
+    for (var i = startP; i <= endP; i++) {
+        (function(page) { pc.appendChild(mkPageBtn(page, function() { goToPage(page); }, page === absPage)); })(i);
     }
-    
-    html += '<button type="button" class="btn btn-sm btn-light" onclick="window.absencesManager.goToPage(' + (absPage + 1) + ')" ' + (absPage === totalPages ? 'disabled' : '') + '>&rsaquo;</button>';
-    html += '<button type="button" class="btn btn-sm btn-light" onclick="window.absencesManager.goToPage(' + totalPages + ')" ' + (absPage === totalPages ? 'disabled' : '') + '>&raquo;</button>';
-    html += '</div>';
-    
-    container.innerHTML = html;
+    if (endP < totalPages) {
+        if (endP < totalPages - 1) pc.appendChild(mkDots());
+        (function(tp) { pc.appendChild(mkPageBtn(tp, function() { goToPage(tp); })); })(totalPages);
+    }
+
+    pc.appendChild(mkPageBtn('›', function() { if (absPage < totalPages) goToPage(absPage + 1); }, absPage === totalPages));
+    pc.appendChild(mkPageBtn('»', function() { goToPage(totalPages); }, absPage === totalPages));
+
+    var table = document.querySelector('.dash-table');
+    if (table) table.after(pc);
+}
+
+function mkPageBtn(text, onClick, isDisabled) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = text;
+    var isActive = (text == absPage && !isNaN(text));
+    btn.style.cssText = 'padding:7px 13px;border:1px solid ' + (isActive || (!isDisabled && !isActive) ? '#007bff' : '#dee2e6') + ';' +
+        'background:' + (isActive ? '#007bff' : isDisabled ? '#e9ecef' : 'white') + ';' +
+        'color:' + (isActive ? 'white' : isDisabled ? '#6c757d' : '#007bff') + ';' +
+        'cursor:' + (isDisabled || isActive ? 'default' : 'pointer') + ';border-radius:6px;font-weight:' + (isActive ? '700' : '500') + ';min-width:38px;transition:all .15s;';
+    if (onClick && !isDisabled && !isActive) {
+        btn.addEventListener('click', onClick);
+        btn.addEventListener('mouseover', function() { btn.style.background = '#007bff'; btn.style.color = 'white'; });
+        btn.addEventListener('mouseout', function() { btn.style.background = 'white'; btn.style.color = '#007bff'; });
+    }
+    if (isDisabled) btn.disabled = true;
+    return btn;
+}
+
+function mkDots() {
+    var s = document.createElement('span');
+    s.textContent = '…';
+    s.style.cssText = 'padding:7px 4px;color:#6c757d;';
+    return s;
+}
+
+function goToPage(page) {
+    absPage = page;
+    renderTable();
+}
+
+// Modifier la fonction renderTable() pour appeler createPaginationControls à la fin :
+// Ajouter cette ligne à la fin de renderTable(), juste avant la dernière accolade :
+// createPaginationControls();
+
+// ─────────────────────────────────────────────────────────────────────────────
+// COMPTEUR
+// ─────────────────────────────────────────────────────────────────────────────
+function updateCounter(count) {
+    var el = document.getElementById('abs-counter');
+    if (el) {
+        el.innerHTML = '<i class="fas fa-database"></i> Affichage de <b>' + count + '</b> enregistrement(s)' +
+            (count !== absencesData.length ? ' sur ' + absencesData.length : '');
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

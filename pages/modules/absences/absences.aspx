@@ -294,15 +294,15 @@
                                             <tr style="background-color: #f8f9fa;">
                                                 <th style="width: 80px;">Année</th>
                                                 <th style="width: 130px;">Matricule</th>
-                                                <th style="width: 180px;">Élève</th>
-                                                <th style="width: 120px;">Classe</th>
+                                                <th style="width: 200px;">Élève</th>
+                                                <th style="width: 100px;">Classe</th>
                                                 <th style="width: 100px;">Type</th>
                                                 <th style="width: 120px;">Date début</th>
                                                 <th style="width: 120px;">Date fin</th>
-                                                <th style="width: 80px;">Durée</th>
+                                                <th style="width: 60px;">Durée</th>
                                                 <th style="width: 100px;">Justifiée</th>
                                                 <th style="width: 200px;">Motifs</th>
-                                                <th style="width: 120px;">Actions</th>
+                                                <th style="width: 130px;">Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody id="absencesTableBody"></tbody>

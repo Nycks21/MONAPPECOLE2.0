@@ -9,9 +9,9 @@
 
         <!-- Font Awesome -->
         <link rel="stylesheet" href="../../_assets/css/all.min.css?v=<%=AuthHelper.Version %>">
-        <link rel="stylesheet" href="../../_assets/css/fontawesome.css?v=<%=AuthHelper.Version %>">
         <link rel="stylesheet" href="../../_assets/css/fontawesome.min.css?v=<%=AuthHelper.Version %>">
         <link rel="stylesheet" href="../../_assets/css/global.css?v=<%=AuthHelper.Version %>">
+        <link rel="stylesheet" href="css/style.css?v=<%=AuthHelper.Version %>">
 
     </head>
 
@@ -103,7 +103,7 @@
                                 <!-- Modules -->
                                 <li class="nav-item">
                                     <div class="nav-section">Modules</div>
-                                    <a href="../eleves/eleves.aspx" class="nav-link active">
+                                    <a href="../eleves/eleves.aspx" class="nav-link">
                                         <div style="width:30px; text-align:center; margin-right:10px;">
                                             <i class="fas fa-users"></i>
                                         </div>
@@ -127,7 +127,7 @@
                                     </a>
                                 </li>
                                 <li class="nav-item">
-                                    <a href="bulletins.aspx" class="nav-link">
+                                    <a href="bulletins.aspx" class="nav-link active">
                                         <div style="width:30px; text-align:center; margin-right:10px;">
                                             <i class="fas fa-file-alt"></i>
                                         </div>
@@ -228,12 +228,12 @@
                         <div class="container-fluid">
                             <div class="row">
                                 <div class="col-lg-6">
-                                    <h1 id="dynPageTitle">Tableau de bord</h1>
+                                    <h1 id="dynPageTitle">Gestion des bulletins</h1>
                                 </div>
                                 <div class="col-lg-6">
                                     <ol class="breadcrumb" style="float: right;">
-                                        <li class="breadcrumb-item">Application</li>
-                                        <li class="breadcrumb-item active" id="dynBreadcrumb">Tableau de bord</li>
+                                        <li class="breadcrumb-item">Modules</li>
+                                        <li class="breadcrumb-item active" id="dynBreadcrumb">Bulletins</li>
                                     </ol>
                                 </div>
                             </div>
@@ -265,19 +265,21 @@
                             </div>
 
                             <div class="dash-card-body">
-                                <div style="overflow-x:auto;">
-                                    <table class="dash-table">
+                                <div
+                                    style="overflow-x: auto; width: 100%; border: 1px solid #dee2e6; border-radius: 8px;">
+                                    <table class="dash-table"
+                                        style="table-layout: fixed; width: 1200px; min-width: 100%; border-collapse: collapse;">
                                         <thead>
-                                            <tr>
-                                                <th>Matricule</th>
-                                                <th>Élève</th>
-                                                <th>Classe</th>
-                                                <th>Matière</th>
-                                                <th>Enseignant</th>
-                                                <th>Note</th>
-                                                <th>Coeff</th>
-                                                <th>Période</th>
-                                                <th>Actions</th>
+                                            <tr style="background-color: #f8f9fa; text-align: center;">
+                                                <th style="width: 120px;">Matricule</th>
+                                                <th style="width: 120px;">Élève</th>
+                                                <th style="width: 120px;">Classe</th>
+                                                <th style="width: 120px;">Matière</th>
+                                                <th style="width: 120px;">Enseignant</th>
+                                                <th style="width: 120px;">Note</th>
+                                                <th style="width: 120px;">Coeff</th>
+                                                <th style="width: 120px;">Période</th>
+                                                <th style="width: 120px;">Actions</th>
                                             </tr>
                                         </thead>
                                         <tbody id="bulletinsTableBody"></tbody>
@@ -300,7 +302,7 @@
 
             <!-- MODAL BULLETIN -->
             <div id="bulletinModal" class="modal">
-                <div class="modal-content">
+                <div class="modal-content modal-bulletin" style="max-width:700px;">
                     <div class="modal-header">
                         <h3>Éditer le bulletin</h3>
                         <button onclick="closeModal()"
@@ -316,7 +318,7 @@
 
             <!-- MODAL AJOUT BULLETIN PAR MATIÈRE -->
             <div id="addBulletinModal" class="modal">
-                <div class="modal-content">
+                <div class="modal-content"  style="max-width:700px;">
                     <div class="modal-header">
                         <h3><i class="fas fa-plus-circle"></i> Ajouter un bulletin</h3>
                         <button onclick="closeAddBulletinModal()"
@@ -379,7 +381,6 @@
 
             <!-- ═══ SCRIPTS ═══ -->
             <script src="js/bulletins.js?v=<%=AuthHelper.Version %>"></script>
-            <script src="js/script.js?v=<%=AuthHelper.Version %>"></script>
             <script src="../../_assets/js/global.js?v=<%=AuthHelper.Version %>"></script>
         </form>
     </body>
