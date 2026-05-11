@@ -24,9 +24,8 @@ public class GetAbsencesFrequentes : IHttpHandler
 
                 string sql = @"
                     SELECT TOP 5
-                        a.MATRICULE,
-                        e.NOM,
-                        c.NOM AS CLASSE,
+                        ISNULL(e.NOM, 'Inconnu') AS NOM,
+                        ISNULL(c.NOM, '-') AS CLASSE,
                         COUNT(*) AS NB_ABSENCES,
                         CASE 
                             WHEN COUNT(*) >= 5 THEN 'Critique'
@@ -37,7 +36,7 @@ public class GetAbsencesFrequentes : IHttpHandler
                     LEFT JOIN ELEVES e ON a.MATRICULE = e.MATRICULE
                     LEFT JOIN CLASSES c ON a.CLASSE = c.ID
                     WHERE a.DATE_DEBUT >= DATEADD(month, -1, GETDATE())
-                    GROUP BY a.MATRICULE, e.NOM, c.NOM
+                    GROUP BY e.NOM, c.NOM
                     ORDER BY NB_ABSENCES DESC";
 
                 using (SqlCommand cmd = new SqlCommand(sql, conn))
@@ -45,17 +44,22 @@ public class GetAbsencesFrequentes : IHttpHandler
                 {
                     while (reader.Read())
                     {
+                        string nom = reader["NOM"] != DBNull.Value ? reader["NOM"].ToString() : "Inconnu";
+                        string classe = reader["CLASSE"] != DBNull.Value ? reader["CLASSE"].ToString() : "-";
+                        int nb = Convert.ToInt32(reader["NB_ABSENCES"]);
+                        string statut = reader["STATUT"].ToString();
+                        
                         data.Add(new
                         {
-                            nom = reader["NOM"]?.ToString() ?? "Inconnu",
-                            classe = reader["CLASSE"]?.ToString() ?? "-",
-                            nb = Convert.ToInt32(reader["NB_ABSENCES"]),
-                            statut = reader["STATUT"].ToString()
+                            nom = nom,
+                            classe = classe,
+                            nb = nb,
+                            statut = statut
                         });
                     }
                 }
 
-                // Si pas de données
+                // Données de démonstration si aucune donnée réelle
                 if (data.Count == 0)
                 {
                     data.Add(new { nom = "RAKOTO Jean", classe = "6ème A", nb = 4, statut = "Surveiller" });
@@ -68,7 +72,10 @@ public class GetAbsencesFrequentes : IHttpHandler
         }
         catch (Exception ex)
         {
-            context.Response.Write(new JavaScriptSerializer().Serialize(new { success = false, message = ex.Message }));
+            var data = new List<object>();
+            data.Add(new { nom = "Exemple Élève", classe = "6ème A", nb = 3, statut = "Surveiller" });
+            var result = new { success = false, message = ex.Message, data = data };
+            context.Response.Write(new JavaScriptSerializer().Serialize(result));
         }
     }
 

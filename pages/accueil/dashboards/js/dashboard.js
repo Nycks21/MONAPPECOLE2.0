@@ -14,13 +14,13 @@ let chartFrais = null;
 
 // URLs des APIs
 const API = {
-    kpi: '/handlers/GetKPI.ashx',
-    presence: '/handlers/GetPresences.ashx',
-    repartition: '/handlers/GetRepartition.ashx',
-    reussite: '/handlers/GetReussite.ashx',
-    frais: '/handlers/GetFrais.ashx',
-    absences: '/handlers/GetAbsencesFrequentes.ashx',
-    activite: '/handlers/GetActivite.ashx'
+    kpi: 'handlers/GetKPI.ashx',
+    presence: 'handlers/GetPresences.ashx',
+    repartition: 'handlers/GetRepartition.ashx',
+    reussite: 'handlers/GetReussite.ashx',
+    frais: 'handlers/GetFrais.ashx',
+    absences: 'handlers/GetAbsencesFrequentes.ashx',
+    activite: 'handlers/GetActivite.ashx'
 };
 
 // Couleurs

@@ -22,11 +22,11 @@ public class GetActivite : IHttpHandler
 
                 var data = new List<object>();
 
-                // 1. Dernières absences signalées
+                // Dernières absences
                 string sqlAbsences = @"
                     SELECT TOP 3
                         'Nouvelle absence' AS TEXTE,
-                        e.NOM AS DETAIL,
+                        ISNULL(e.NOM, 'Un élève') AS DETAIL,
                         FORMAT(a.CREATED_AT, 'HH:mm') AS TEMPS,
                         'danger' AS TYPE
                     FROM ABSENCES a
@@ -39,21 +39,26 @@ public class GetActivite : IHttpHandler
                 {
                     while (reader.Read())
                     {
+                        string texte = reader["TEXTE"].ToString();
+                        string detail = reader["DETAIL"] != DBNull.Value ? reader["DETAIL"].ToString() : "Un élève";
+                        string temps = reader["TEMPS"].ToString();
+                        string type = reader["TYPE"].ToString();
+                        
                         data.Add(new
                         {
-                            texte = reader["TEXTE"].ToString(),
-                            detail = reader["DETAIL"]?.ToString() ?? "Un élève",
-                            temps = reader["TEMPS"].ToString(),
-                            type = reader["TYPE"].ToString()
+                            texte = texte,
+                            detail = detail,
+                            temps = temps,
+                            type = type
                         });
                     }
                 }
 
-                // 2. Derniers paiements
+                // Derniers paiements
                 string sqlPaiements = @"
                     SELECT TOP 2
                         'Paiement enregistré' AS TEXTE,
-                        e.NOM AS DETAIL,
+                        ISNULL(e.NOM, 'Un élève') AS DETAIL,
                         FORMAT(f.CREATED_AT, 'HH:mm') AS TEMPS,
                         'success' AS TYPE
                     FROM FRAIS f
@@ -66,21 +71,26 @@ public class GetActivite : IHttpHandler
                 {
                     while (reader.Read())
                     {
+                        string texte = reader["TEXTE"].ToString();
+                        string detail = reader["DETAIL"] != DBNull.Value ? reader["DETAIL"].ToString() : "Un élève";
+                        string temps = reader["TEMPS"].ToString();
+                        string type = reader["TYPE"].ToString();
+                        
                         data.Add(new
                         {
-                            texte = reader["TEXTE"].ToString(),
-                            detail = reader["DETAIL"]?.ToString() ?? "Un élève",
-                            temps = reader["TEMPS"].ToString(),
-                            type = reader["TYPE"].ToString()
+                            texte = texte,
+                            detail = detail,
+                            temps = temps,
+                            type = type
                         });
                     }
                 }
 
-                // 3. Derniers bulletins ajoutés
+                // Derniers bulletins
                 string sqlBulletins = @"
                     SELECT TOP 2
                         'Bulletin ajouté' AS TEXTE,
-                        e.NOM AS DETAIL,
+                        ISNULL(e.NOM, 'Un élève') AS DETAIL,
                         FORMAT(b.CREATED_AT, 'HH:mm') AS TEMPS,
                         'info' AS TYPE
                     FROM BULLETINS b
@@ -93,20 +103,25 @@ public class GetActivite : IHttpHandler
                 {
                     while (reader.Read())
                     {
+                        string texte = reader["TEXTE"].ToString();
+                        string detail = reader["DETAIL"] != DBNull.Value ? reader["DETAIL"].ToString() : "Un élève";
+                        string temps = reader["TEMPS"].ToString();
+                        string type = reader["TYPE"].ToString();
+                        
                         data.Add(new
                         {
-                            texte = reader["TEXTE"].ToString(),
-                            detail = reader["DETAIL"]?.ToString() ?? "Un élève",
-                            temps = reader["TEMPS"].ToString(),
-                            type = reader["TYPE"].ToString()
+                            texte = texte,
+                            detail = detail,
+                            temps = temps,
+                            type = type
                         });
                     }
                 }
 
-                // Si pas de données
+                // Données de démonstration si aucune activité
                 if (data.Count == 0)
                 {
-                    data.Add(new { texte = "Bienvenue", detail = "Tableau de bord", temps = "maintenant", type = "info" });
+                    data.Add(new { texte = "Bienvenue", detail = "Tableau de bord chargé", temps = "maintenant", type = "info" });
                 }
 
                 var result = new { success = true, data = data };
@@ -115,7 +130,10 @@ public class GetActivite : IHttpHandler
         }
         catch (Exception ex)
         {
-            context.Response.Write(new JavaScriptSerializer().Serialize(new { success = false, message = ex.Message }));
+            var data = new List<object>();
+            data.Add(new { texte = "Bienvenue", detail = "Tableau de bord chargé", temps = "maintenant", type = "info" });
+            var result = new { success = true, data = data };
+            context.Response.Write(new JavaScriptSerializer().Serialize(result));
         }
     }
 

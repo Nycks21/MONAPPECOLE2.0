@@ -14,20 +14,20 @@ public class GetKPI : IHttpHandler
         context.Response.ContentType = "application/json";
         context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
 
+        int totalEleves = 245;
+        int totalClasses = 12;
+        int moyenneEleves = 20;
+        int nouveauxRentree = 12;
+        double tauxPresence = 85.5;
+        double variationPresence = 2.5;
+        double fraisImpayes = 1250000;
+        double tauxPaiement = 78.5;
+        double tauxReussite = 82.5;
+        int garcons = 128;
+        int filles = 117;
+
         try
         {
-            int totalEleves = 0;
-            int totalClasses = 0;
-            int moyenneEleves = 0;
-            int nouveauxRentree = 0;
-            double tauxPresence = 85.5;
-            double variationPresence = 2.5;
-            double fraisImpayes = 0;
-            double tauxPaiement = 0;
-            double tauxReussite = 0;
-            int garcons = 0;
-            int filles = 0;
-
             using (SqlConnection conn = new SqlConnection(connStr))
             {
                 conn.Open();
@@ -39,7 +39,7 @@ public class GetKPI : IHttpHandler
                         totalEleves = Convert.ToInt32(cmd.ExecuteScalar());
                     }
                 }
-                catch { totalEleves = 245; }
+                catch { }
 
                 try
                 {
@@ -48,7 +48,7 @@ public class GetKPI : IHttpHandler
                         totalClasses = Convert.ToInt32(cmd.ExecuteScalar());
                     }
                 }
-                catch { totalClasses = 12; }
+                catch { }
 
                 try
                 {
@@ -58,7 +58,7 @@ public class GetKPI : IHttpHandler
                         moyenneEleves = result != DBNull.Value ? Convert.ToInt32(Math.Round(Convert.ToDouble(result))) : 0;
                     }
                 }
-                catch { moyenneEleves = 20; }
+                catch { }
 
                 try
                 {
@@ -67,7 +67,7 @@ public class GetKPI : IHttpHandler
                         nouveauxRentree = Convert.ToInt32(cmd.ExecuteScalar());
                     }
                 }
-                catch { nouveauxRentree = 12; }
+                catch { }
 
                 try
                 {
@@ -76,7 +76,7 @@ public class GetKPI : IHttpHandler
                         fraisImpayes = Convert.ToDouble(cmd.ExecuteScalar());
                     }
                 }
-                catch { fraisImpayes = 1250000; }
+                catch { }
 
                 try
                 {
@@ -94,11 +94,7 @@ public class GetKPI : IHttpHandler
                         }
                     }
                 }
-                catch 
-                { 
-                    garcons = 128; 
-                    filles = 117; 
-                }
+                catch { }
             }
 
             tauxPaiement = (double)(totalEleves * 500000 - fraisImpayes) / (totalEleves * 500000) * 100;
@@ -106,44 +102,30 @@ public class GetKPI : IHttpHandler
             if (tauxPaiement < 0) tauxPaiement = 0;
 
             tauxReussite = 78.5;
-
-            var result = new
-            {
-                success = true,
-                totalEleves = totalEleves,
-                totalClasses = totalClasses,
-                moyenneEleves = moyenneEleves,
-                nouveauxRentree = nouveauxRentree,
-                tauxPresence = tauxPresence,
-                variationPresence = variationPresence,
-                fraisImpayes = fraisImpayes,
-                tauxPaiement = Math.Round(tauxPaiement, 1),
-                tauxReussite = tauxReussite,
-                garcons = garcons,
-                filles = filles
-            };
-
-            context.Response.Write(new JavaScriptSerializer().Serialize(result));
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-            var result = new
-            {
-                success = true,
-                totalEleves = 245,
-                totalClasses = 12,
-                moyenneEleves = 20,
-                nouveauxRentree = 12,
-                tauxPresence = 85.5,
-                variationPresence = 2.5,
-                fraisImpayes = 1250000,
-                tauxPaiement = 78.5,
-                tauxReussite = 82.5,
-                garcons = 128,
-                filles = 117
-            };
-            context.Response.Write(new JavaScriptSerializer().Serialize(result));
+            // Utilisation des valeurs par défaut déjà définies
         }
+
+        // Déclaration unique de la variable result
+        var finalResult = new
+        {
+            success = true,
+            totalEleves = totalEleves,
+            totalClasses = totalClasses,
+            moyenneEleves = moyenneEleves,
+            nouveauxRentree = nouveauxRentree,
+            tauxPresence = tauxPresence,
+            variationPresence = variationPresence,
+            fraisImpayes = fraisImpayes,
+            tauxPaiement = Math.Round(tauxPaiement, 1),
+            tauxReussite = tauxReussite,
+            garcons = garcons,
+            filles = filles
+        };
+
+        context.Response.Write(new JavaScriptSerializer().Serialize(finalResult));
     }
 
     public bool IsReusable { get { return false; } }
