@@ -59,6 +59,21 @@ public static class AuthHelper
         }
     }
 
+    // NOUVELLE MÉTHODE : Vérifie si l'utilisateur est Professeur (Role 3)
+    public static bool IsProfessor()
+    {
+        var session = HttpContext.Current.Session;
+        if (session["userRole"] == null) return false;
+        try
+        {
+            return Convert.ToInt32(session["userRole"]) == 3;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
     private static bool IsTokenValid()
     {
         var session = HttpContext.Current.Session;

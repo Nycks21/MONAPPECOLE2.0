@@ -244,7 +244,7 @@
                                 </div>
                                 <div class="col-lg-6">
                                     <ol class="breadcrumb" style="float: right;">
-                                        <li class="breadcrumb-item">Application</li>
+                                        <li class="breadcrumb-item">Acceuil</li>
                                         <li class="breadcrumb-item active" id="dynBreadcrumb">Tableau de bord</li>
                                     </ol>
                                 </div>
@@ -282,26 +282,29 @@
                                     <div class="kpi-sub"><span class="pill pill-up" id="pillPresence">+0%</span><span
                                             id="lblMoisPresence">ce mois</span></div>
                                 </div>
-                                <div class="kpi-card" onclick="showKPIDetail('impayes')">
-                                    <div class="kpi-accent" style="background:var(--danger)"></div>
-                                    <div class="kpi-label">Frais impayés</div>
-                                    <div class="kpi-val" id="valImpayes">—</div>
-                                    <div class="kpi-sub"><span class="pill pill-dn" id="pillImpayes">0</span><span>vs
-                                            mois
-                                            dernier</span></div>
-                                </div>
+                                <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin()) { %>
+                                    <div class="kpi-card" onclick="showKPIDetail('impayes')">
+                                        <div class="kpi-accent" style="background:var(--danger)"></div>
+                                        <div class="kpi-label">Frais impayés</div>
+                                        <div class="kpi-val" id="valImpayes">—</div>
+                                        <div class="kpi-sub"><span class="pill pill-dn"
+                                                id="pillImpayes">0</span><span>vs
+                                                mois
+                                                dernier</span></div>
+                                    </div>
+                                    <% } %>
                             </div>
 
                             <!-- Présences + Répartition -->
                             <div class="row mt-1">
-                                <div class="col-lg-8">
+                                <div class="col-lg-10">
                                     <div class="dash-card">
                                         <div class="dash-card-head">
                                             <span class="dash-card-title"><span class="dot-terra"></span>Présences — 7
                                                 derniers jours</span>
                                             <span class="dash-card-meta" id="lblMoisPresence2"></span>
                                         </div>
-                                        <div class="dash-card-body">
+                                        <div class="dash-card-body1">
                                             <div class="chart-legend mb-2">
                                                 <span class="leg-item"><span class="leg-sq"
                                                         style="background:var(--forest)"></span>Présents</span>
@@ -313,14 +316,22 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="col-lg-4">
+                                <div class="col-lg-2">
                                     <div class="dash-card">
                                         <div class="dash-card-head"><span class="dash-card-title"><span
                                                     class="dot-terra"></span>Répartition par niveau</span></div>
-                                        <div class="dash-card-body">
-                                            <div class="donut-wrap">
-                                                <canvas id="chartDonut" width="50" height="50"></canvas>
-                                                <div class="donut-legend" id="donutLegend"></div>
+                                        <div class="dash-card-body1">
+                                            <div
+                                                style="overflow-y: auto; max-height: 250px; display: flex; justify-content: center; width: 100%;">
+                                                <div class="donut-wrap"
+                                                    style="display: flex; flex-direction: column; align-items: center; justify-content: center;">
+
+                                                    <canvas id="chartDonut"
+                                                        style="display: block; margin: 0 auto;"></canvas>
+
+                                                    <div class="donut-legend" id="donutLegend"
+                                                        style="margin-top: 15px; text-align: center;"></div>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
@@ -328,58 +339,64 @@
                             </div>
 
                             <!-- Réussite + Frais + Indicateurs -->
-                            <div class="row mt-1">
+                            <div class="row mt-4">
                                 <div class="col-lg-4">
                                     <div class="dash-card">
                                         <div class="dash-card-head"><span class="dash-card-title"><span
                                                     class="dot-terra"></span>Taux de réussite par classe</span></div>
-                                        <div class="dash-card-body" id="reussiteContainer"></div>
-                                    </div>
-                                </div>
-                                <div class="col-lg-4">
-                                    <div class="dash-card">
-                                        <div class="dash-card-head"><span class="dash-card-title"><span
-                                                    class="dot-terra"></span>Frais scolaires mensuels</span></div>
-                                        <div class="dash-card-body">
-                                            <div class="chart-legend mb-2">
-                                                <span class="leg-item"><span class="leg-sq"
-                                                        style="background:var(--forest-light)"></span>Payé</span>
-                                                <span class="leg-item"><span class="leg-sq"
-                                                        style="background:#f0d4c8"></span>Impayé</span>
-                                            </div>
-                                            <div style="position:relative;height:180px;"><canvas
-                                                    id="chartFrais"></canvas>
-                                            </div>
+                                        <div style="overflow-y: auto; max-height: 250px;">
+                                            <div class="dash-card-body1" id="reussiteContainer"></div>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="col-lg-4">
-                                    <div class="dash-card">
-                                        <div class="dash-card-head"><span class="dash-card-title"><span
-                                                    class="dot-terra"></span>Indicateurs clés</span></div>
-                                        <div class="dash-card-body">
-                                            <div class="gauge-row" id="gaugeContainer"></div>
-                                            <div class="divider-line mt-3 mb-3"></div>
-                                            <div class="prog-item">
-                                                <div class="prog-head"><span class="prog-name">Garçons</span><span
-                                                        class="prog-pct" id="pctGarcons">—%</span></div>
-                                                <div class="prog-track">
-                                                    <div class="prog-fill" id="fillGarcons"
-                                                        style="background:var(--forest)"></div>
+                                <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin()) { %>
+                                    <div class="col-lg-4">
+                                        <div class="dash-card">
+                                            <div class="dash-card-head"><span class="dash-card-title"><span
+                                                        class="dot-terra"></span>Frais scolaires mensuels</span></div>
+                                            <div class="dash-card-body1">
+                                                <div class="chart-legend mb-2">
+                                                    <span class="leg-item"><span class="leg-sq"
+                                                            style="background:var(--forest-light)"></span>Payé</span>
+                                                    <span class="leg-item"><span class="leg-sq"
+                                                            style="background:#f0d4c8"></span>Impayé</span>
+                                                </div>
+                                                <div style="position:relative;height:180px;"><canvas
+                                                        id="chartFrais"></canvas>
                                                 </div>
                                             </div>
-                                            <div class="prog-item">
-                                                <div class="prog-head"><span class="prog-name">Filles</span><span
-                                                        class="prog-pct" id="pctFilles">—%</span></div>
-                                                <div class="prog-track">
-                                                    <div class="prog-fill" id="fillFilles"
-                                                        style="background:var(--terra)">
+                                        </div>
+                                    </div>
+                                    <% } %>
+                                        <div class="col-lg-4">
+                                            <div class="dash-card">
+                                                <div class="dash-card-head"><span class="dash-card-title"><span
+                                                            class="dot-terra"></span>Indicateurs clés</span></div>
+                                                <div class="dash-card-body1">
+                                                    <div class="gauge-row" id="gaugeContainer"></div>
+                                                    <div class="divider-line mt-3 mb-3"></div>
+                                                    <div class="prog-item">
+                                                        <div class="prog-head"><span
+                                                                class="prog-name">Garçons</span><span class="prog-pct"
+                                                                id="pctGarcons">—%</span></div>
+                                                        <div class="prog-track">
+                                                            <div class="prog-fill" id="fillGarcons"
+                                                                style="background: rgb(56, 150, 238)"></div>
+                                                        </div>
+                                                    </div>
+                                                    <div class="prog-item">
+                                                        <div class="prog-head"><span
+                                                                class="prog-name">Filles</span><span class="prog-pct"
+                                                                id="pctFilles">—%</span></div>
+                                                        <div class="prog-track">
+                                                            <div class="prog-fill" id="fillFilles"
+                                                                style="background: rgb(253, 127, 148)">
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
-                                </div>
                             </div>
 
                             <!-- Retards & Absences + Activité récente -->
@@ -392,10 +409,12 @@
                                                 fréquentes</span>
                                             <span class="dash-card-meta">Ce mois</span>
                                         </div>
-                                        <div class="dash-card-body p-0">
-                                            <table class="dash-table">
+                                        <div style="overflow-y: auto; max-height: 250px; border: 1px solid #dee2e6;">
+                                            <table class="dash-table"
+                                                style="table-layout: fixed; max-width: 200px; min-width: 100%; border-collapse: collapse;">
                                                 <thead>
-                                                    <tr>
+                                                    <tr
+                                                        style="background-color: #f8f9fa; text-align: center; position: sticky; top: 0; z-index: 10;">
                                                         <th>Élève</th>
                                                         <th>Classe</th>
                                                         <th>Retards & Absences</th>
@@ -407,12 +426,16 @@
                                         </div>
                                     </div>
                                 </div>
+
                                 <div class="col-lg-6">
                                     <div class="dash-card">
                                         <div class="dash-card-head"><span class="dash-card-title"><span
                                                     class="dot-terra"></span>Activité récente</span></div>
-                                        <div class="dash-card-body" id="activityFeed"></div>
+                                        <div style="overflow-y: auto; max-height: 250px;">
+                                            <div class="dash-card-body1" id="activityFeed"></div>
+                                        </div>
                                     </div>
+
                                 </div>
                             </div>
 
@@ -430,7 +453,7 @@
                                                         style="background:var(--terra)"></span>Événement</span>
                                             </div>
                                         </div>
-                                        <div class="dash-card-body"
+                                        <div class="dash-card-body1"
                                             style="display:flex;gap:30px;align-items:flex-start;flex-wrap:wrap;">
                                             <div style="flex:0 0 260px;max-width:260px;">
                                                 <div id="calendarGrid" class="mini-cal" style="gap:4px;"></div>
