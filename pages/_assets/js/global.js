@@ -298,3 +298,41 @@ function ajax(url, payload) {
         return r.json();
     });
 }
+
+// ════════════════════════════════════════════════════════════════
+// TREE VIEW / ACCORDÉON
+// ════════════════════════════════════════════════════════════════
+
+function initTreeview() {
+    const treeviewToggles = document.querySelectorAll('.treeview-toggle');
+    
+    treeviewToggles.forEach(toggle => {
+        // Supprimer les anciens écouteurs pour éviter les doublons
+        toggle.removeEventListener('click', handleTreeviewClick);
+        toggle.addEventListener('click', handleTreeviewClick);
+    });
+    
+    // Ouvrir l'élément actif
+    const activeLink = document.querySelector('.nav-treeview .nav-link.active');
+    if (activeLink) {
+        const parentTreeview = activeLink.closest('.has-treeview');
+        if (parentTreeview) {
+            parentTreeview.classList.add('open');
+        }
+    }
+}
+
+function handleTreeviewClick(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const parentItem = this.closest('.has-treeview');
+    if (parentItem) {
+        parentItem.classList.toggle('open');
+    }
+}
+
+// Initialiser au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+    initTreeview();
+});

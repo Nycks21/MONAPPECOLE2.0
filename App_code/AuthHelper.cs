@@ -26,52 +26,75 @@ public static class AuthHelper
         if (!page.IsPostBack)
         {
             SetUsername(page);
+            SetRolename(page);
         }
     }
 
-    // NOUVELLE MÉTHODE : Vérifie si l'utilisateur est Admin (Role 0)
+    // Récupère le RoleId depuis la session (défini dans Login.aspx.cs)
+    private static int? GetUserRoleId()
+    {
+        var session = HttpContext.Current.Session;
+        if (session["USERROLE"] == null) return null;
+        try
+        {
+            return Convert.ToInt32(session["USERROLE"]);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    // Récupère le nom du rôle à partir du RoleId
+    public static string GetRoleName()
+    {
+        var roleId = GetUserRoleId();
+        if (!roleId.HasValue) return "Inconnu";
+        
+        switch (roleId.Value)
+        {
+            case 0: return "Super Administrateur";
+            case 1: return "Administrateur";
+            case 3: return "Professeur";
+            case 4: return "Secrétaire";
+            case 5: return "Comptable";
+            default: return "Utilisateur";
+        }
+    }
+
+    // Vérifie si l'utilisateur est SuperAdmin (USERROLE = 0)
     public static bool IsSuperAdmin()
     {
-        var session = HttpContext.Current.Session;
-        if (session["userRole"] == null) return false;
-        try
-        {
-            return Convert.ToInt32(session["userRole"]) == 0;
-        }
-        catch
-        {
-            return false;
-        }
+        var roleId = GetUserRoleId();
+        return roleId.HasValue && roleId.Value == 0;
     }
 
-    // NOUVELLE MÉTHODE : Vérifie si l'utilisateur est Admin (Role 1)
+    // Vérifie si l'utilisateur est Admin (USERROLE = 1)
     public static bool IsAdmin()
     {
-        var session = HttpContext.Current.Session;
-        if (session["userRole"] == null) return false;
-        try
-        {
-            return Convert.ToInt32(session["userRole"]) == 1;
-        }
-        catch
-        {
-            return false;
-        }
+        var roleId = GetUserRoleId();
+        return roleId.HasValue && roleId.Value == 1;
     }
 
-    // NOUVELLE MÉTHODE : Vérifie si l'utilisateur est Professeur (Role 3)
+    // Vérifie si l'utilisateur est Professeur (USERROLE = 3)
     public static bool IsProfessor()
     {
-        var session = HttpContext.Current.Session;
-        if (session["userRole"] == null) return false;
-        try
-        {
-            return Convert.ToInt32(session["userRole"]) == 3;
-        }
-        catch
-        {
-            return false;
-        }
+        var roleId = GetUserRoleId();
+        return roleId.HasValue && roleId.Value == 3;
+    }
+
+    // Vérifie si l'utilisateur est Secrétaire (USERROLE = 4)
+    public static bool IsSecretaire()
+    {
+        var roleId = GetUserRoleId();
+        return roleId.HasValue && roleId.Value == 4;
+    }
+
+    // Vérifie si l'utilisateur est Comptable (USERROLE = 5)
+    public static bool IsComptable()
+    {
+        var roleId = GetUserRoleId();
+        return roleId.HasValue && roleId.Value == 5;
     }
 
     private static bool IsTokenValid()
@@ -100,6 +123,13 @@ public static class AuthHelper
         page.ClientScript.RegisterStartupScript(page.GetType(), "username", script, true);
     }
 
+    private static void SetRolename(Page page)
+    {
+        string roleName = GetRoleName();
+        string script = "var el=document.getElementById('profilUsername'); if(el){el.innerText='" + roleName + "';}";
+        page.ClientScript.RegisterStartupScript(page.GetType(), "rolename", script, true);
+    }
+
     private static void ForceLogout(Page page, bool otherPc)
     {
         HttpContext.Current.Session.Clear();
@@ -110,7 +140,7 @@ public static class AuthHelper
 
     public static string Version
     {
-        get { return System.Configuration.ConfigurationManager.AppSettings["Version"]; }
+        get { return ConfigurationManager.AppSettings["Version"]; }
     }
 
     public static int GetCurrentAnneeId()
@@ -120,7 +150,6 @@ public static class AuthHelper
             return Convert.ToInt32(HttpContext.Current.Session["ID_ANNEE_ACTIVE"]);
         }
 
-        // Sinon, on récupère par défaut la dernière année non clôturée en base
         using (SqlConnection conn = new SqlConnection(connStr))
         {
             string sql = "SELECT TOP 1 ID FROM RANNEE WHERE CLOTURE = 0 ORDER BY DATE_DEBUT DESC";
