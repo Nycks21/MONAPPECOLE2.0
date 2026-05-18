@@ -81,7 +81,7 @@
                                 <span class="status-indicator"></span>
                             </div>
                             <div class="user-info">
-                                <span class="user-role">Profile :</span>
+                                <span id="profilUsername" class="user-role">Profile :</span>
                                 <span id="navbarUsername" class="user-name">Admin Système</span>
                             </div>
                         </div>
@@ -186,11 +186,10 @@
 
                                 <!-- Administration -->
                                 <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin()) { %>
-                                <div class="nav-section">Utilitraires</div>
+                                <div class="nav-section">Utilitaires</div>
                                 <% } %>
                                 <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin()) { %>
                                     <li class="nav-item">
-                                        <div class="nav-section">Administrations</div>
                                         <a href="../utilitaires/utilitaires.aspx" class="nav-link">
                                             <div style="width:30px; text-align:center; margin-right:10px;">
                                                 <i class="fas fa-cogs"></i>
@@ -211,33 +210,30 @@
                                                     <span>Années</span>
                                                 </a>
                                             </li>
-                                            <% } %>
 
-                                                <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin()) { %>
-                                                    <li class="nav-item">
-                                                        <a href="../utilisateur/utilisateur.aspx" class="nav-link">
-                                                            <div
-                                                                style="width:30px; text-align:center; margin-right:10px;">
-                                                                <i class="fas fa-user"></i>
-                                                            </div>
+                                            <li class="nav-item">
+                                                <a href="../utilisateur/utilisateur.aspx" class="nav-link">
+                                                    <div
+                                                        style="width:30px; text-align:center; margin-right:10px;">
+                                                            <i class="fas fa-user"></i>
+                                                    </div>
                                                             <span>Utilisateur</span>
-                                                        </a>
-                                                    </li>
-
-                                                    <% } %>
-
-                                                        <% if (AuthHelper.IsSuperAdmin()) { %>
-                                                            <li class="nav-item">
-                                                                <a href="requetes.aspx" class="nav-link active"
-                                                                    style="display: flex; align-items: center;">
-                                                                    <div
-                                                                        style="width:30px; text-align:center; margin-right:10px;">
-                                                                        <i class="fas fa-database"></i>
-                                                                    </div>
-                                                                    <span>Requetes SQL</span>
-                                                                </a>
-                                                            </li>
-                                                            <% } %>
+                                                </a>
+                                            </li>
+                                        <% } %>
+                                            
+                                        <% if (AuthHelper.IsSuperAdmin()) { %>
+                                            <li class="nav-item">
+                                                <a href="requetes.aspx" class="nav-link active"
+                                                    style="display: flex; align-items: center;">
+                                                    <div
+                                                        style="width:30px; text-align:center; margin-right:10px;">
+                                                            <i class="fas fa-database"></i>
+                                                    </div>
+                                                        <span>Requetes SQL</span>
+                                                </a>
+                                            </li>
+                                        <% } %>
                             </ul>
                         </nav>
                     </div>
