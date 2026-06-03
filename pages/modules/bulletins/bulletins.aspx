@@ -1,4 +1,4 @@
-﻿<%@ Page Language="C#" AutoEventWireup="true" CodeFile="bulletins.cs" Inherits="bulletins" %>
+<%@ Page Language="C#" AutoEventWireup="true" CodeFile="bulletins.cs" Inherits="bulletins" %>
     <!DOCTYPE html>
     <html lang="fr">
 
@@ -7,381 +7,413 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Bulletins — Gestion Scolaire</title>
 
-        <!-- Font Awesome -->
         <link rel="stylesheet" href="../../_assets/css/all.min.css?v=<%=AuthHelper.Version %>">
         <link rel="stylesheet" href="../../_assets/css/fontawesome.min.css?v=<%=AuthHelper.Version %>">
         <link rel="stylesheet" href="../../_assets/css/global.css?v=<%=AuthHelper.Version %>">
         <link rel="stylesheet" href="css/style.css?v=<%=AuthHelper.Version %>">
-
     </head>
 
     <body class="hold-transition" data-version="<%=AuthHelper.Version %>">
         <form id="form1" runat="server">
-            <div class="wrapper">
 
-                <!-- ═══ TOPBAR ═══ -->
-                <nav class="main-header">
-                    <ul class="navbar-nav">
-                        <li class="nav-item">
-                            <a class="nav-link" id="menuToggle" role="button">
-                                <i class="fas fa-bars"></i>
-                            </a>
-                        </li>
-                    </ul>
-                    <ul class="navbar-nav">
-                        <!-- Notifications -->
-                        <li class="nav-item">
-                            <a class="nav-link" id="notifToggle" title="Notifications">
-                                <i class="fas fa-bell"></i>
-                                <span class="badge-notif" id="badgeNotif">3</span>
-                            </a>
-                            <div class="dropdown-menu" id="notifDropdown">
-                                <span class="dropdown-header">3 notifications</span>
-                                <div class="dropdown-divider"></div>
-                                <a href="#" class="dropdown-item">
-                                    <i class="fas fa-user-plus text-success mr-2"></i> Nouvel élève inscrit
-                                    <span style="float: right; color: #6c757d; font-size: 11px;">Il y a 23 min</span>
+            <%-- ═══ HIDDEN FIELDS (doivent être dans <form runat=server>) ═══ --%>
+                <asp:HiddenField ID="hfUserRole" runat="server" />
+                <asp:HiddenField ID="hfUserName" runat="server" />
+                <asp:HiddenField ID="hfProfesseurId" runat="server" />
+                <asp:HiddenField ID="hfClassesAutorisees" runat="server" />
+                <asp:HiddenField ID="hfMatieresAutorisees" runat="server" />
+
+                <div class="wrapper">
+
+                    <!-- ═══ TOPBAR ═══ -->
+                    <nav class="main-header">
+                        <ul class="navbar-nav">
+                            <li class="nav-item">
+                                <a class="nav-link" id="menuToggle" role="button">
+                                    <i class="fas fa-bars"></i>
                                 </a>
-                                <a href="#" class="dropdown-item">
-                                    <i class="fas fa-exclamation-circle text-danger mr-2"></i> Absence signalée
-                                    <span style="float: right; color: #6c757d; font-size: 11px;">Il y a 1h</span>
+                            </li>
+                        </ul>
+                        <ul class="navbar-nav">
+                            <!-- Notifications -->
+                            <li class="nav-item">
+                                <a class="nav-link" id="notifToggle" title="Notifications">
+                                    <i class="fas fa-bell"></i>
+                                    <span class="badge-notif" id="badgeNotif">3</span>
                                 </a>
-                                <a href="#" class="dropdown-item">
-                                    <i class="fas fa-money-bill text-warning mr-2"></i> Paiement reçu
-                                    <span style="float: right; color: #6c757d; font-size: 11px;">Il y a 2h</span>
-                                </a>
-                            </div>
-                        </li>
-                        <li class="nav-item">
-                            <a href="../../../auth/Logout.aspx" class="nav-link" title="Se déconnecter">
-                                <i class="fas fa-sign-out-alt"></i>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" id="fullscreenToggle" title="Plein écran">
-                                <i class="fas fa-expand-arrows-alt"></i>
-                            </a>
-                        </li>
-                    </ul>
-                </nav>
-
-                <!-- ═══ SIDEBAR ═══ -->
-                <aside class="main-sidebar" id="sidebar">
-                    <a href="#" class="brand-link" onclick="loadDashboard()">
-                        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='33' height='33' viewBox='0 0 33 33'%3E%3Ccircle cx='16.5' cy='16.5' r='16.5' fill='%23007bff'/%3E%3Ctext x='16.5' y='22' font-size='16' font-weight='bold' text-anchor='middle' fill='white'%3EGS%3C/text%3E%3C/svg%3E"
-                            alt="Logo" class="brand-image">
-                        <span class="brand-text">Gestion Scolaire</span>
-                    </a>
-
-                    <div class="sidebar">
-                        <!-- Utilisateur -->
-                        <div class="user-profile-nav">
-                            <div class="user-avatar">
-                                <i class="fas fa-user-tie"></i>
-                                <span class="status-indicator"></span>
-                            </div>
-                            <div class="user-info">
-                                <span class="user-role">Profile :</span>
-                                <span id="navbarUsername" class="user-name">Admin Système</span>
-                            </div>
-                        </div>
-
-                        <!-- Navigation -->
-                        <nav>
-                            <ul class="nav-pills">
-                                <!-- Accueil -->
-                                <li class="nav-item">
-                                    <div class="nav-section">Accueil</div>
-                                    <a href="../../accueil/dashboards/index.aspx" class="nav-link">
-                                        <div style="width:30px; text-align:center; margin-right:10px;">
-                                            <i class="fas fa-chalkboard"></i>
-                                        </div>
-                                        <span>Dashboard</span>
+                                <div class="dropdown-menu" id="notifDropdown">
+                                    <span class="dropdown-header">3 notifications</span>
+                                    <div class="dropdown-divider"></div>
+                                    <a href="#" class="dropdown-item">
+                                        <i class="fas fa-user-plus text-success mr-2"></i> Nouvel élève inscrit
+                                        <span style="float: right; color: #6c757d; font-size: 11px;">Il y a 23
+                                            min</span>
                                     </a>
-                                </li>
-
-                                <!-- Modules -->
-                                <li class="nav-item">
-                                    <div class="nav-section">Modules</div>
-                                    <a href="../eleves/eleves.aspx" class="nav-link">
-                                        <div style="width:30px; text-align:center; margin-right:10px;">
-                                            <i class="fas fa-users"></i>
-                                        </div>
-                                        <span>Liste des élèves</span>
+                                    <a href="#" class="dropdown-item">
+                                        <i class="fas fa-exclamation-circle text-danger mr-2"></i> Absence signalée
+                                        <span style="float: right; color: #6c757d; font-size: 11px;">Il y a 1h</span>
                                     </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="../absences/absences.aspx" class="nav-link">
-                                        <div style="width:30px; text-align:center; margin-right:10px;">
-                                            <i class="fas fa-calendar-times"></i>
-                                        </div>
-                                        <span>Retards & Absences</span>
+                                    <a href="#" class="dropdown-item">
+                                        <i class="fas fa-money-bill text-warning mr-2"></i> Paiement reçu
+                                        <span style="float: right; color: #6c757d; font-size: 11px;">Il y a 2h</span>
                                     </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="../frais/frais.aspx" class="nav-link">
-                                        <div style="width:30px; text-align:center; margin-right:10px;">
-                                            <i class="fas fa-money-bill-wave"></i>
-                                        </div>
-                                        <span>Frais scolaires</span>
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="bulletins.aspx" class="nav-link active">
-                                        <div style="width:30px; text-align:center; margin-right:10px;">
-                                            <i class="fas fa-file-alt"></i>
-                                        </div>
-                                        <span>Bulletins</span>
-                                    </a>
-                                </li>
-
-                                <!-- Paramètres -->
-                                <li class="nav-item">
-                                    <div class="nav-section">Paramètres</div>
-                                    <a href="../../parametres/niveaux/niveaux.aspx" class="nav-link">
-                                        <div style="width:30px; text-align:center; margin-right:10px;">
-                                            <i class="fas fa-layer-group"></i>
-                                        </div>
-                                        <span>Niveau</span>
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="../../parametres/salles/salles.aspx" class="nav-link">
-                                        <div style="width:30px; text-align:center; margin-right:10px;">
-                                            <i class="fas fa-door-open"></i>
-                                        </div>
-                                        <span>Salle</span>
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="../../parametres/classes/classes.aspx" class="nav-link">
-                                        <div style="width:30px; text-align:center; margin-right:10px;">
-                                            <i class="fas fa-folder"></i>
-                                        </div>
-                                        <span>Classes</span>
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="../../parametres/matieres/matieres.aspx" class="nav-link">
-                                        <div style="width:30px; text-align:center; margin-right:10px;">
-                                            <i class="fas fa-book"></i>
-                                        </div>
-                                        <span>Matières</span>
-                                    </a>
-                                </li>
-
-                                <!-- Administration -->
-                                <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin()) { %>
-                                    <li class="nav-item">
-                                        <div class="nav-section">Administrations</div>
-                                        <a href="../../administrations/utilitaires/utilitaires.aspx" class="nav-link">
-                                            <div style="width:30px; text-align:center; margin-right:10px;">
-                                                <i class="fas fa-cogs"></i>
-                                            </div>
-                                            <span>Utilitaires</span>
-                                        </a>
-                                    </li>
-                                <% } %>
-                                <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin()) { %>
-                                    <li class="nav-item">
-                                        <a href="../../administrations/annee/annee.aspx" class="nav-link">
-                                            <div style="width:30px; text-align:center; margin-right:10px;">
-                                                <i class="fas fa-calendar-alt"></i>
-                                            </div>
-                                            <span>Années</span>
-                                        </a>
-                                    </li>
-                                <% } %>
-
-                                <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin()) { %>
-                                <li class="nav-item">
-                                    <a href="../../administrations/utilisateur/utilisateur.aspx" class="nav-link">
-                                        <div style="width:30px; text-align:center; margin-right:10px;">
-                                            <i class="fas fa-user"></i>
-                                        </div>
-                                        <span>Utilisateur</span>
-                                    </a>
-                                </li>
-                                <% } %>
-
-                                <% if (AuthHelper.IsSuperAdmin()) { %>
-                                    <li class="nav-item">
-                                        <a href="../../administrations/requete/requetes.aspx" class="nav-link"
-                                            style="display: flex; align-items: center;">
-                                            <div style="width:30px; text-align:center; margin-right:10px;">
-                                                <i class="fas fa-database"></i>
-                                            </div>
-                                            <span>Requetes SQL</span>
-                                        </a>
-                                    </li>
-                                <% } %>
-                            </ul>
-                        </nav>
-                    </div>
-                </aside>
-
-                <!-- ═══ CONTENT WRAPPER ═══ -->
-                <div class="content-wrapper" id="contentWrapper">
-
-                    <!-- En-tête dynamique -->
-                    <div class="content-header">
-                        <div class="container-fluid">
-                            <div class="row">
-                                <div class="col-lg-6">
-                                    <h1 id="dynPageTitle">Gestion des bulletins</h1>
                                 </div>
-                                <div class="col-lg-6">
-                                    <ol class="breadcrumb" style="float: right;">
-                                        <li class="breadcrumb-item">Modules</li>
-                                        <li class="breadcrumb-item active" id="dynBreadcrumb">Bulletins</li>
-                                    </ol>
+                            </li>
+                            <li class="nav-item">
+                                <a href="../../../auth/Logout.aspx" class="nav-link" title="Se déconnecter">
+                                    <i class="fas fa-sign-out-alt"></i>
+                                </a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" id="fullscreenToggle" title="Plein écran">
+                                    <i class="fas fa-expand-arrows-alt"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+
+                    <!-- ═══ SIDEBAR ═══ -->
+                    <aside class="main-sidebar" id="sidebar">
+                        <a href="#" class="brand-link" onclick="loadDashboard()">
+                            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='33' height='33' viewBox='0 0 33 33'%3E%3Ccircle cx='16.5' cy='16.5' r='16.5' fill='%23007bff'/%3E%3Ctext x='16.5' y='22' font-size='16' font-weight='bold' text-anchor='middle' fill='white'%3EGS%3C/text%3E%3C/svg%3E"
+                                alt="Logo" class="brand-image">
+                            <span class="brand-text">Gestion Scolaire</span>
+                        </a>
+
+                        <div class="sidebar">
+                            <!-- Utilisateur -->
+                            <div class="user-profile-nav">
+                                <div class="user-avatar">
+                                    <i class="fas fa-user-tie"></i>
+                                    <span class="status-indicator"></span>
+                                </div>
+                                <div class="user-info">
+                                    <span id="profilUsername" class="user-role">Profile :</span>
+                                    <span id="navbarUsername" class="user-name">Admin Système</span>
                                 </div>
                             </div>
+
+                            <!-- Navigation -->
+                            <nav>
+                                <ul class="nav-pills">
+                                    <!-- Accueil -->
+                                    <li class="nav-item">
+                                        <div class="nav-section">Accueil</div>
+                                        <a href="../../accueil/dashboards/index.aspx" class="nav-link">
+                                            <div style="width:30px; text-align:center; margin-right:10px;">
+                                                <i class="fas fa-chalkboard"></i>
+                                            </div>
+                                            <span>Dashboard</span>
+                                        </a>
+                                    </li>
+
+                                    <!-- Modules -->
+                                    <li class="nav-item">
+                                        <div class="nav-section">Modules</div>
+                                        <a href="../eleves/eleves.aspx" class="nav-link">
+                                            <div style="width:30px; text-align:center; margin-right:10px;">
+                                                <i class="fas fa-users"></i>
+                                            </div>
+                                            <span>Liste des élèves</span>
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="../absences/absences.aspx" class="nav-link">
+                                            <div style="width:30px; text-align:center; margin-right:10px;">
+                                                <i class="fas fa-calendar-times"></i>
+                                            </div>
+                                            <span>Retards & Absences</span>
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="../frais/frais.aspx" class="nav-link">
+                                            <div style="width:30px; text-align:center; margin-right:10px;">
+                                                <i class="fas fa-money-bill-wave"></i>
+                                            </div>
+                                            <span>Frais scolaires</span>
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="bulletins.aspx" class="nav-link active">
+                                            <div style="width:30px; text-align:center; margin-right:10px;">
+                                                <i class="fas fa-file-alt"></i>
+                                            </div>
+                                            <span>Bulletins</span>
+                                        </a>
+                                    </li>
+
+                                    <!-- Paramètres -->
+                                    <li class="nav-item">
+                                        <div class="nav-section">Paramètres</div>
+                                        <a href="../../parametres/niveaux/niveaux.aspx" class="nav-link">
+                                            <div style="width:30px; text-align:center; margin-right:10px;">
+                                                <i class="fas fa-layer-group"></i>
+                                            </div>
+                                            <span>Niveau</span>
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="../../parametres/salles/salles.aspx" class="nav-link">
+                                            <div style="width:30px; text-align:center; margin-right:10px;">
+                                                <i class="fas fa-door-open"></i>
+                                            </div>
+                                            <span>Salle</span>
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="../../parametres/classes/classes.aspx" class="nav-link">
+                                            <div style="width:30px; text-align:center; margin-right:10px;">
+                                                <i class="fas fa-folder"></i>
+                                            </div>
+                                            <span>Classes</span>
+                                        </a>
+                                    </li>
+                                    <li class="nav-item">
+                                        <a href="../../parametres/matieres/matieres.aspx" class="nav-link">
+                                            <div style="width:30px; text-align:center; margin-right:10px;">
+                                                <i class="fas fa-book"></i>
+                                            </div>
+                                            <span>Matières</span>
+                                        </a>
+                                    </li>
+
+                                    <!-- Administration -->
+                                    <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin()) { %>
+                                        <li class="nav-item">
+                                            <div class="nav-section">Administrations</div>
+                                            <a href="../../administrations/utilitaires/utilitaires.aspx"
+                                                class="nav-link">
+                                                <div style="width:30px; text-align:center; margin-right:10px;">
+                                                    <i class="fas fa-cogs"></i>
+                                                </div>
+                                                <span>Utilitaires</span>
+                                            </a>
+                                        </li>
+                                        <% } %>
+                                            <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin()) { %>
+                                                <li class="nav-item">
+                                                    <a href="../../administrations/annee/annee.aspx" class="nav-link">
+                                                        <div style="width:30px; text-align:center; margin-right:10px;">
+                                                            <i class="fas fa-calendar-alt"></i>
+                                                        </div>
+                                                        <span>Années</span>
+                                                    </a>
+                                                </li>
+                                                <% } %>
+                                                    <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin()) { %>
+                                                        <li class="nav-item">
+                                                            <a href="../../administrations/utilisateur/utilisateur.aspx"
+                                                                class="nav-link">
+                                                                <div
+                                                                    style="width:30px; text-align:center; margin-right:10px;">
+                                                                    <i class="fas fa-user"></i>
+                                                                </div>
+                                                                <span>Utilisateur</span>
+                                                            </a>
+                                                        </li>
+                                                        <% } %>
+                                                            <% if (AuthHelper.IsSuperAdmin()) { %>
+                                                                <li class="nav-item">
+                                                                    <a href="../../administrations/requete/requetes.aspx"
+                                                                        class="nav-link"
+                                                                        style="display: flex; align-items: center;">
+                                                                        <div
+                                                                            style="width:30px; text-align:center; margin-right:10px;">
+                                                                            <i class="fas fa-database"></i>
+                                                                        </div>
+                                                                        <span>Requetes SQL</span>
+                                                                    </a>
+                                                                </li>
+                                                                <% } %>
+                                </ul>
+                            </nav>
                         </div>
-                    </div>
+                    </aside>
 
-                    <!-- ═══════════════════════════════════════════════════════════
-                pages/bulletins.html  —  Section Bulletins de notes
-                ═══════════════════════════════════════════════════════════ -->
-                    <section class="content" id="section-bulletins">
+                    <!-- ═══ CONTENT WRAPPER ═══ -->
+                    <div class="content-wrapper" id="contentWrapper">
 
-                        <div class="dash-card">
-                            <div class="dash-card-head">
-                                <span class="dash-card-title"><i class="fas fa-file-alt"></i> Bulletins de notes</span>
-                                <div class="action-buttons">
-                                    <button class="btn btn-success btn-sm" onclick="openAddBulletinModal()">
-                                        <i class="fas fa-plus"></i> + Bulletin
-                                    </button>
-                                    <div class="file-input-wrapper">
-                                        <button class="btn btn-info btn-sm"><i class="fas fa-file-excel"></i> Importer
-                                            Excel</button>
-                                        <input type="file" id="excelImport" accept=".xlsx,.xls,.csv"
-                                            onchange="importExcel(this)">
+                        <!-- En-tête dynamique -->
+                        <div class="content-header">
+                            <div class="container-fluid">
+                                <div class="row">
+                                    <div class="col-lg-6">
+                                        <h1 id="dynPageTitle">Saisie de Bulletin des Élèves</h1>
                                     </div>
-                                    <button class="btn btn-primary btn-sm" onclick="exportBulletins()">
+                                    <div class="col-lg-6">
+                                        <ol class="breadcrumb" style="float: right;">
+                                            <li class="breadcrumb-item">Modules</li>
+                                            <li class="breadcrumb-item active" id="dynBreadcrumb">Bulletins</li>
+                                        </ol>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ═══ SECTION SAISIE DES NOTES ═══ -->
+                        <section class="content" id="section-bulletins">
+
+                            <!-- BARRE DE FILTRES FILTRÉE PAR RÔLE -->
+                            <div class="dash-card" style="margin-bottom:16px;">
+                                <div class="dash-card-body" style="padding:14px 20px;">
+                                    <div style="display:flex; align-items:flex-end; flex-wrap:wrap; gap:14px;">
+
+                                        <div
+                                            style="display:flex; flex-direction:column; gap:5px; min-width:180px; flex:1;">
+                                            <label
+                                                style="font-size:11px; font-weight:600; color:#6c757d; text-transform:uppercase; letter-spacing:.5px;">
+                                                Classe
+                                            </label>
+                                            <%-- Peuplé dynamiquement par Page_Load selon le rôle --%>
+                                                <select id="ddlClasse" runat="server"
+                                                    class="form-control form-control-sm" onchange="onClasseChange()"
+                                                    style="height:36px;">
+                                                </select>
+                                        </div>
+
+                                        <div
+                                            style="display:flex; flex-direction:column; gap:5px; min-width:180px; flex:1;">
+                                            <label
+                                                style="font-size:11px; font-weight:600; color:#6c757d; text-transform:uppercase; letter-spacing:.5px;">
+                                                Matière
+                                            </label>
+                                            <%-- Peuplé dynamiquement par Page_Load selon le rôle --%>
+                                                <select id="ddlMatiere" runat="server"
+                                                    class="form-control form-control-sm" style="height:36px;">
+                                                </select>
+                                        </div>
+
+                                        <div style="display:flex; flex-direction:column; gap:5px; min-width:160px;">
+                                            <label
+                                                style="font-size:11px; font-weight:600; color:#6c757d; text-transform:uppercase; letter-spacing:.5px;">
+                                                Période
+                                            </label>
+                                            <select id="ddlPeriode" class="form-control form-control-sm"
+                                                style="height:36px;">
+                                                <option value="">-- Sélectionner --</option>
+                                                <option value="1">Trimestre 1</option>
+                                                <option value="2">Trimestre 2</option>
+                                                <option value="3">Trimestre 3</option>
+                                            </select>
+                                        </div>
+
+                                        <button class="btn btn-primary btn-sm" id="btnAfficherListe"
+                                            style="height:36px; padding:0 18px; white-space:nowrap;">
+                                            <i class="fas fa-list"></i> Afficher la liste
+                                        </button>
+
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- ÉTAT VIDE -->
+                            <div id="emptyState"
+                                style="text-align:center; padding:60px 20px; color:#6c757d; background:#fff; border:1px dashed #dee2e6; border-radius:8px;">
+                                <i class="fas fa-file-alt"
+                                    style="font-size:48px; margin-bottom:14px; display:block; color:#ced4da;"></i>
+                                <p>Veuillez sélectionner une <strong>classe</strong>, une <strong>matière</strong> et
+                                    une <strong>période</strong> puis cliquer sur <strong>Afficher la liste</strong>.
+                                </p>
+                            </div>
+
+                            <!-- TABLEAU DE SAISIE DES NOTES -->
+                            <div id="tableWrapper" class="dash-card" style="display:none;">
+                                <div class="dash-card-head">
+                                    <span class="dash-card-title">
+                                        <i class="fas fa-edit"></i>
+                                        <span id="tableInfoLabel">Saisie des notes</span>
+                                    </span>
+                                    <span id="countBadge"
+                                        style="background:#e8f4fd; color:#1565c0; font-size:12px; font-weight:600; padding:3px 12px; border-radius:20px; margin-left:10px;"></span>
+                                </div>
+
+                                <div class="dash-card-body" style="padding:0;">
+                                    <div style="overflow-x:auto;">
+                                        <table class="dash-table" id="notesTable"
+                                            style="table-layout:fixed; width:100%; min-width:900px; border-collapse:collapse;">
+                                            <thead>
+                                                <tr style="background:#f8f9fa; text-align:center;">
+                                                    <th style="width:180px; text-align:left; padding:10px 14px;">ID /
+                                                        Nom</th>
+                                                    <th style="width:120px;">
+                                                        Note 1 (Coef 1)<br>
+                                                        <span id="dateEval1"
+                                                            style="font-size:10px; font-weight:400; color:#aaa;"></span>
+                                                    </th>
+                                                    <th style="width:120px;">
+                                                        Note 2 (Coef 2)<br>
+                                                        <span id="dateEval2"
+                                                            style="font-size:10px; font-weight:400; color:#aaa;"></span>
+                                                    </th>
+                                                    <th style="width:120px;">
+                                                        Projet (Coef 1)<br>
+                                                        <span id="dateEvalP"
+                                                            style="font-size:10px; font-weight:400; color:#aaa;"></span>
+                                                    </th>
+                                                    <th style="width:120px;">Moyenne Période</th>
+                                                    <th style="min-width:200px;">Appréciation Générale</th>
+                                                    <th style="width:110px;">Statut</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="notesTableBody"></tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <!-- BOUTONS D'ACTION -->
+                                <div
+                                    style="display:flex; justify-content:flex-end; gap:10px; padding:14px 20px; border-top:1px solid #f0f0f0; background:#fafafa; border-radius:0 0 8px 8px;">
+                                    <button class="btn btn-primary btn-sm" id="btnSauvegarder" onclick="sauvegarder()">
+                                        <i class="fas fa-save"></i> Sauvegarder
+                                    </button>
+                                    <button class="btn btn-success btn-sm" id="btnValider"
+                                        onclick="validerDefinitivement()">
+                                        <i class="fas fa-check-double"></i> Valider Définitivement
+                                    </button>
+                                    <button class="btn btn-secondary btn-sm" id="btnExporter" onclick="exporter()">
                                         <i class="fas fa-download"></i> Exporter
                                     </button>
                                 </div>
                             </div>
 
-                            <div class="dash-card-body">
-                                <div
-                                    style="overflow-x: auto; width: 100%; border: 1px solid #dee2e6; border-radius: 8px;">
-                                    <table class="dash-table"
-                                        style="table-layout: fixed; width: 1200px; min-width: 100%; border-collapse: collapse;">
-                                        <thead>
-                                            <tr style="background-color: #f8f9fa; text-align: center;">
-                                                <th style="width: 120px;">Matricule</th>
-                                                <th style="width: 120px;">Élève</th>
-                                                <th style="width: 120px;">Classe</th>
-                                                <th style="width: 120px;">Matière</th>
-                                                <th style="width: 120px;">Enseignant</th>
-                                                <th style="width: 120px;">Note</th>
-                                                <th style="width: 120px;">Coeff</th>
-                                                <th style="width: 120px;">Période</th>
-                                                <th style="width: 120px;">Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="bulletinsTableBody"></tbody>
-                                    </table>
-                                </div>
-                            </div>
+                        </section>
+
+                    </div><!-- /.content-wrapper -->
+
+                    <!-- ═══ SPINNER ═══ -->
+                    <div id="spinnerOverlay1">
+                        <div class="spinner"></div>
+                    </div>
+
+                </div><!-- /.wrapper -->
+
+                <!-- ═══ MODAL CONFIRMATION ═══ -->
+                <div id="bulletinModal" class="modal">
+                    <div class="modal-content" style="max-width:420px;">
+                        <div class="modal-header">
+                            <h3 id="modalTitle">Confirmation</h3>
+                            <button onclick="closeModal()"
+                                style="background:none; border:none; font-size:24px; cursor:pointer;">&times;</button>
                         </div>
-
-                    </section>
-
-
-                </div>
-
-                <!-- ═══ SPINNER ═══ -->
-                <div id="spinnerOverlay">
-                    <div class="spinner"></div>
-                </div>
-
-            </div>
-
-            <!-- MODAL BULLETIN -->
-            <div id="bulletinModal" class="modal">
-                <div class="modal-content modal-bulletin" style="max-width:700px;">
-                    <div class="modal-header">
-                        <h3>Éditer le bulletin</h3>
-                        <button onclick="closeModal()"
-                            style="background:none; border:none; font-size:24px; cursor:pointer;">&times;</button>
-                    </div>
-                    <div class="modal-body" id="bulletinModalBody"></div>
-                    <div class="modal-footer">
-                        <button class="btn btn-primary" onclick="saveBulletin()">Enregistrer</button>
-                        <button class="btn btn-danger" onclick="closeModal()">Annuler</button>
+                        <div class="modal-body">
+                            <p id="modalMessage" style="color:#555; line-height:1.6;"></p>
+                        </div>
+                        <div class="modal-footer">
+                            <button class="btn btn-danger" id="btnConfirm">Confirmer</button>
+                            <button class="btn btn-secondary" onclick="closeModal()">Annuler</button>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <!-- MODAL AJOUT BULLETIN PAR MATIÈRE -->
-            <div id="addBulletinModal" class="modal">
-                <div class="modal-content"  style="max-width:700px;">
-                    <div class="modal-header">
-                        <h3><i class="fas fa-plus-circle"></i> Ajouter un bulletin</h3>
-                        <button onclick="closeAddBulletinModal()"
-                            style="background:none; border:none; font-size:24px; cursor:pointer;">&times;</button>
-                    </div>
-                    <div class="modal-body">
-                        <form id="addBulletinForm">
-                            <div class="form-group">
-                                <label>Élève *</label>
-                                <select id="bulletinStudent" class="form-control" required>
-                                    <option value="">Sélectionner un élève</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Matière *</label>
-                                <select id="bulletinSubject" class="form-control" required>
-                                    <option value="">Sélectionner une matière</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Enseignant *</label>
-                                <select id="bulletinTeacher" class="form-control" required>
-                                    <option value="">Sélectionner un enseignant</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Note (0-20) *</label>
-                                <input type="number" id="bulletinGrade" class="form-control" step="0.5" min="0" max="20"
-                                    required>
-                            </div>
-                            <div class="form-group">
-                                <label>Coefficient</label>
-                                <input type="number" id="bulletinCoeff" class="form-control" value="1" step="0.5"
-                                    min="0.5">
-                            </div>
-                            <div class="form-group">
-                                <label>Période / Trimestre</label>
-                                <select id="bulletinPeriod" class="form-control">
-                                    <option value="T1">1er Trimestre</option>
-                                    <option value="T2">2ème Trimestre</option>
-                                    <option value="T3">3ème Trimestre</option>
-                                    <option value="Sem1">1er Semestre</option>
-                                    <option value="Sem2">2ème Semestre</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Commentaire</label>
-                                <textarea id="bulletinComment" class="form-control" rows="2"
-                                    placeholder="Observations..."></textarea>
-                            </div>
-                        </form>
-                    </div>
-                    <div class="modal-footer">
-                        <button class="btn btn-primary" onclick="saveNewBulletin()"><i class="fas fa-save"></i>
-                            Enregistrer</button>
-                        <button class="btn btn-danger" onclick="closeAddBulletinModal()">Annuler</button>
-                    </div>
+                <!-- ═══ TOAST ═══ -->
+                <div id="toastContainer"
+                    style="position:fixed; bottom:24px; right:24px; display:flex; flex-direction:column; gap:10px; z-index:9999;">
                 </div>
-            </div>
 
-            <!-- ═══ SCRIPTS ═══ -->
-            <script src="js/bulletins.js?v=<%=AuthHelper.Version %>"></script>
-            <script src="../../_assets/js/global.js?v=<%=AuthHelper.Version %>"></script>
+                <!-- ═══ SCRIPTS ═══ -->
+                <script src="js/bulletins.js?v=<%=AuthHelper.Version %>"></script>
+                <script src="../../_assets/js/global.js?v=<%=AuthHelper.Version %>"></script>
+
         </form>
     </body>
 

@@ -273,9 +273,9 @@
                                             <tr style="background-color: #f8f9fa; text-align: center;">
                                                 <th style="width: 120px;">Matière</th>
                                                 <th style="width: 120px;">Enseignant</th>
+                                                <th style="width: 120px;">Niveau</th>
                                                 <th style="width: 120px;">Coefficient</th>
                                                 <th style="width: 120px;">Heures/sem.</th>
-                                                <th style="width: 120px;">Niveau</th>
                                                 <th style="width: 120px;">Créé le</th>
                                                 <th style="width: 120px;">Actions</th>
                                             </tr>

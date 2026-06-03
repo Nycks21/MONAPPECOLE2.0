@@ -3,100 +3,67 @@
 using System;
 using System.Configuration;
 using System.Data.SqlClient;
-using System.IO;
 using System.Web;
 using System.Web.Script.Serialization;
 using System.Web.SessionState;
 
 public class AjouterMatiere : IHttpHandler, IRequiresSessionState
 {
-    public void ProcessRequest(HttpContext ctx)
+    private static readonly string connStr = ConfigurationManager.ConnectionStrings["MaConnexion"].ConnectionString;
+
+    public void ProcessRequest(HttpContext context)
     {
-        ctx.Response.ContentType = "application/json";
-        ctx.Response.Charset     = "utf-8";
-        ctx.Response.Cache.SetNoStore();
-
-        JavaScriptSerializer ser = new JavaScriptSerializer();
-
-        if (ctx.Session["authenticated"] == null || !(bool)ctx.Session["authenticated"])
-        {
-            ctx.Response.StatusCode = 401;
-            ctx.Response.Write("{\"success\":false,\"message\":\"Non authentifié\"}");
-            return;
-        }
-
-        if (ctx.Request.HttpMethod != "POST")
-        {
-            ctx.Response.StatusCode = 405;
-            ctx.Response.Write("{\"success\":false,\"message\":\"Méthode non autorisée\"}");
-            return;
-        }
+        context.Response.ContentType = "application/json";
+        context.Response.Charset = "utf-8";
 
         try
         {
-            string body;
-            using (var reader = new StreamReader(ctx.Request.InputStream))
-                body = reader.ReadToEnd();
+            // Lire le corps de la requête
+            string jsonBody = new System.IO.StreamReader(context.Request.InputStream).ReadToEnd();
+            var serializer = new JavaScriptSerializer();
+            var data = serializer.Deserialize<dynamic>(jsonBody);
 
-            var payload = ser.Deserialize<MatierePayload>(body);
+            string nom = Convert.ToString(data["NOM"]);
+            int enseignantId = Convert.ToInt32(data["ENSEIGNANT_ID"]);
+            decimal coefficient = Convert.ToDecimal(data["COEFFICIENT"]);
+            int heuresSemaine = Convert.ToInt32(data["HEURES_SEMAINE"]);
+            string niveauId = Convert.ToString(data["NIVEAU_ID"]);
 
-            if (payload == null)
-                throw new ArgumentException("Données invalides.");
-
-            if (string.IsNullOrWhiteSpace(payload.NOM))
-                throw new ArgumentException("Le nom de la matière est obligatoire.");
-
-            // Validation ENSEIGNANT_ID (int > 0)
-            if (payload.ENSEIGNANT_ID <= 0)
-                throw new ArgumentException("Veuillez sélectionner un enseignant valide.");
-
-            // Validation NIVEAU (GUID)
-            Guid niveauGuid;
-            if (!Guid.TryParse(payload.NIVEAU_ID, out niveauGuid))
-                throw new ArgumentException("Le niveau sélectionné est invalide.");
-
-            string connStr = ConfigurationManager.ConnectionStrings["MaConnexion"].ConnectionString;
-
-            using (var conn = new SqlConnection(connStr))
-            using (var cmd  = new SqlCommand(
-                @"INSERT INTO [dbo].[MATIERES]
-                    (ID, NOM, ENSEIGNANT, COEFFICIENT, HEURES_SEMAINE, NIVEAU, CREATED_AT)
-                  VALUES
-                    (NEWID(), @nom, @ens, @coeff, @heures, @niveau, GETDATE())", conn))
+            using (SqlConnection conn = new SqlConnection(connStr))
             {
-                cmd.Parameters.Add("@nom",    System.Data.SqlDbType.NVarChar).Value        = payload.NOM.Trim();
-                cmd.Parameters.Add("@ens",    System.Data.SqlDbType.Int).Value             = payload.ENSEIGNANT_ID;
-                cmd.Parameters.Add("@coeff",  System.Data.SqlDbType.Decimal).Value         = payload.COEFFICIENT;
-                cmd.Parameters.Add("@heures", System.Data.SqlDbType.Int).Value             = payload.HEURES_SEMAINE;
-                cmd.Parameters.Add("@niveau", System.Data.SqlDbType.UniqueIdentifier).Value = niveauGuid;
-
                 conn.Open();
-                cmd.ExecuteNonQuery();
-            }
 
-            ctx.Response.Write("{\"success\":true}");
-        }
-        catch (ArgumentException ex)
-        {
-            ctx.Response.StatusCode = 400;
-            ctx.Response.Write("{\"success\":false,\"message\":" + ser.Serialize(ex.Message) + "}");
+                string sql = @"INSERT INTO MATIERES (ID, NOM, ENSEIGNANT, COEFFICIENT, HEURES_SEMAINE, NIVEAU, CREATED_AT) 
+                               VALUES (NEWID(), @nom, @enseignantId, @coefficient, @heuresSemaine, @niveauId, GETDATE())";
+
+                using (SqlCommand cmd = new SqlCommand(sql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@nom", nom);
+                    cmd.Parameters.AddWithValue("@enseignantId", enseignantId);
+                    cmd.Parameters.AddWithValue("@coefficient", coefficient);
+                    cmd.Parameters.AddWithValue("@heuresSemaine", heuresSemaine);
+                    cmd.Parameters.AddWithValue("@niveauId", niveauId);
+
+                    int rowsAffected = cmd.ExecuteNonQuery();
+                    
+                    context.Response.Write(new JavaScriptSerializer().Serialize(new
+                    {
+                        success = rowsAffected > 0,
+                        message = rowsAffected > 0 ? "Matière ajoutée avec succès" : "Erreur lors de l'insertion"
+                    }));
+                }
+            }
         }
         catch (Exception ex)
         {
-            ctx.Response.StatusCode = 500;
-            string msg = ex.Message.Contains("UNIQUE") ? "Cette matière existe déjà." : ex.Message;
-            ctx.Response.Write("{\"success\":false,\"message\":" + ser.Serialize(msg) + "}");
+            context.Response.StatusCode = 500;
+            context.Response.Write(new JavaScriptSerializer().Serialize(new
+            {
+                success = false,
+                message = "Erreur: " + ex.Message
+            }));
         }
     }
 
     public bool IsReusable { get { return false; } }
-
-    private class MatierePayload
-    {
-        public string  NOM            { get; set; }
-        public int     ENSEIGNANT_ID  { get; set; }
-        public decimal COEFFICIENT    { get; set; }
-        public int     HEURES_SEMAINE { get; set; }
-        public string  NIVEAU_ID      { get; set; }
-    }
 }

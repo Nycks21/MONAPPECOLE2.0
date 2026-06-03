@@ -10,6 +10,8 @@ using System.Web.SessionState;
 
 public class AjouterBulletin : IHttpHandler, IRequiresSessionState
 {
+    private static readonly string connStr = ConfigurationManager.ConnectionStrings["MaConnexion"].ConnectionString;
+
     public void ProcessRequest(HttpContext ctx)
     {
         ctx.Response.ContentType = "application/json";
@@ -36,62 +38,57 @@ public class AjouterBulletin : IHttpHandler, IRequiresSessionState
 
             if (string.IsNullOrEmpty(payload.MATRICULE)) throw new ArgumentException("Le matricule est obligatoire.");
             if (string.IsNullOrEmpty(payload.MATIERE_ID)) throw new ArgumentException("La matière est obligatoire.");
-            if (payload.NOTE < 0 || payload.NOTE > 20) throw new ArgumentException("La note doit être entre 0 et 20.");
             if (string.IsNullOrEmpty(payload.PERIODE)) throw new ArgumentException("La période est obligatoire.");
 
-            string connStr = ConfigurationManager.ConnectionStrings["MaConnexion"].ConnectionString;
-            
             using (var conn = new SqlConnection(connStr))
             {
-                // Récupérer les informations de l'élève
-                string getEleveSql = "SELECT NOM, CLASSE, ANNEE_ID FROM ELEVES WHERE MATRICULE = @matricule";
-                string eleveNom = "";
-                int classeId = 0;
-                int anneeId = 0;
+                conn.Open();
+
+                // Vérifier si un bulletin existe déjà pour cet élève, cette matière et cette période
+                string checkSql = @"SELECT COUNT(*) FROM BULLETINS 
+                                    WHERE ELEVE_MATRICULE = @matricule 
+                                    AND MATIERE_ID = @matiereId 
+                                    AND PERIODE = @periode";
                 
-                using (var cmd = new SqlCommand(getEleveSql, conn))
+                using (var checkCmd = new SqlCommand(checkSql, conn))
                 {
-                    cmd.Parameters.Add("@matricule", System.Data.SqlDbType.NVarChar, 20).Value = payload.MATRICULE;
-                    conn.Open();
-                    using (var reader = cmd.ExecuteReader())
+                    checkCmd.Parameters.AddWithValue("@matricule", payload.MATRICULE);
+                    checkCmd.Parameters.AddWithValue("@matiereId", new Guid(payload.MATIERE_ID));
+                    checkCmd.Parameters.AddWithValue("@periode", payload.PERIODE);
+                    
+                    int existing = Convert.ToInt32(checkCmd.ExecuteScalar());
+                    if (existing > 0)
                     {
-                        if (reader.Read())
-                        {
-                            eleveNom = reader.IsDBNull(0) ? "" : reader.GetString(0);
-                            classeId = reader.IsDBNull(1) ? 0 : reader.GetInt32(1);
-                            anneeId = reader.IsDBNull(2) ? 0 : reader.GetInt32(2);
-                        }
-                        else
-                        {
-                            throw new Exception("Élève non trouvé.");
-                        }
+                        ctx.Response.Write("{\"success\":false,\"message\":\"Un bulletin existe déjà pour cet élève dans cette matière et période\"}");
+                        return;
                     }
                 }
-                
-                // Récupérer le coefficient de la matière
-                decimal coefficient = payload.COEFFICIENT > 0 ? payload.COEFFICIENT : 1;
-                
-                // Insérer le bulletin
+
+                // Insérer le bulletin avec les 3 notes
                 string insertSql = @"INSERT INTO BULLETINS 
-                    (ANNEE_ID, MATRICULE, NOM, CLASSE, MATIERE_ID, NOTE, PERIODE, COMMENTAIRE, CREATED_AT, UPDATED_AT) 
-                    VALUES (@anneeId, @matricule, @nom, @classe, @matiereId, @note, @periode, @commentaire, GETDATE(), GETDATE())";
+                    (ELEVE_MATRICULE, MATIERE_ID, NOTE1, NOTE2, NOTE_PROJET, APPRECIATION, PERIODE, STATUT, CREATED_AT, UPDATED_AT) 
+                    VALUES (@matricule, @matiereId, @note1, @note2, @noteProjet, @appreciation, @periode, 'Non saisi', GETDATE(), GETDATE())";
                 
                 using (var cmd = new SqlCommand(insertSql, conn))
                 {
-                    cmd.Parameters.Add("@anneeId", System.Data.SqlDbType.Int).Value = anneeId;
-                    cmd.Parameters.Add("@matricule", System.Data.SqlDbType.NVarChar, 20).Value = payload.MATRICULE;
-                    cmd.Parameters.Add("@nom", System.Data.SqlDbType.NVarChar, 100).Value = eleveNom;
-                    cmd.Parameters.Add("@classe", System.Data.SqlDbType.Int).Value = classeId;
-                    cmd.Parameters.Add("@matiereId", System.Data.SqlDbType.UniqueIdentifier).Value = new Guid(payload.MATIERE_ID);
-                    cmd.Parameters.Add("@note", System.Data.SqlDbType.Decimal).Value = payload.NOTE;
-                    cmd.Parameters.Add("@periode", System.Data.SqlDbType.NVarChar, 10).Value = payload.PERIODE;
-                    cmd.Parameters.Add("@commentaire", System.Data.SqlDbType.NVarChar).Value = string.IsNullOrEmpty(payload.COMMENTAIRE) ? (object)DBNull.Value : payload.COMMENTAIRE;
+                    cmd.Parameters.AddWithValue("@matricule", payload.MATRICULE);
+                    cmd.Parameters.AddWithValue("@matiereId", new Guid(payload.MATIERE_ID));
+                    cmd.Parameters.AddWithValue("@note1", payload.NOTE1.HasValue ? (object)payload.NOTE1.Value : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@note2", payload.NOTE2.HasValue ? (object)payload.NOTE2.Value : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@noteProjet", payload.NOTE_PROJET.HasValue ? (object)payload.NOTE_PROJET.Value : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@appreciation", string.IsNullOrEmpty(payload.APPRECIATION) ? (object)DBNull.Value : payload.APPRECIATION);
+                    cmd.Parameters.AddWithValue("@periode", payload.PERIODE);
                     
                     cmd.ExecuteNonQuery();
                 }
             }
 
             ctx.Response.Write("{\"success\":true,\"message\":\"Bulletin ajouté avec succès.\"}");
+        }
+        catch (SqlException ex)
+        {
+            ctx.Response.StatusCode = 500;
+            ctx.Response.Write("{\"success\":false,\"message\":\"Erreur base de données: " + ser.Serialize(ex.Message) + "\"}");
         }
         catch (Exception ex)
         {
@@ -106,9 +103,10 @@ public class AjouterBulletin : IHttpHandler, IRequiresSessionState
     {
         public string MATRICULE { get; set; }
         public string MATIERE_ID { get; set; }
-        public decimal NOTE { get; set; }
-        public decimal COEFFICIENT { get; set; }
+        public decimal? NOTE1 { get; set; }
+        public decimal? NOTE2 { get; set; }
+        public decimal? NOTE_PROJET { get; set; }
+        public string APPRECIATION { get; set; }
         public string PERIODE { get; set; }
-        public string COMMENTAIRE { get; set; }
     }
 }
