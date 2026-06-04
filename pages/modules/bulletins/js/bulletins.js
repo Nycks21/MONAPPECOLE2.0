@@ -10,18 +10,18 @@
 // CONFIGURATION ET ÉTAT GLOBAL
 // ============================================================
 
-// URLs des handlers (API)
+// URLs des handlers (API) — chemins ABSOLUS (compatibles mode SPA depuis /_shell/)
 const API_BULLETINS = {
-    getBulletins: 'handlers/GetBulletins.ashx',
-    getEleves: '../eleves/handlers/GetEleve.ashx',
-    getClasses: '../../parametres/classes/handlers/GetClasse.ashx',
-    getMatieres: '../../parametres/matieres/handlers/GetMatieres.ashx',
-    getAnnees: '../../administrations/annee/handlers/GetAnnee.ashx',
-    ajouter: 'handlers/AjouterBulletin.ashx',
-    modifier: 'handlers/ModifierBulletin.ashx',
-    supprimer: 'handlers/SupprimerBulletin.ashx',
-    sauvegarderNotes: 'handlers/SauvegarderNotes.ashx',
-    validerDefinitivement: 'handlers/ValiderDefinitivement.ashx'
+    getBulletins         : '/pages/modules/bulletins/handlers/GetBulletins.ashx',
+    getEleves            : '/pages/modules/eleves/handlers/GetEleve.ashx',
+    getClasses           : '/pages/parametres/classes/handlers/GetClasse.ashx',
+    getMatieres          : '/pages/parametres/matieres/handlers/GetMatieres.ashx',
+    getAnnees            : '/pages/administrations/annee/handlers/GetAnnee.ashx',
+    ajouter              : '/pages/modules/bulletins/handlers/AjouterBulletin.ashx',
+    modifier             : '/pages/modules/bulletins/handlers/ModifierBulletin.ashx',
+    supprimer            : '/pages/modules/bulletins/handlers/SupprimerBulletin.ashx',
+    sauvegarderNotes     : '/pages/modules/bulletins/handlers/SauvegarderNotes.ashx',
+    validerDefinitivement: '/pages/modules/bulletins/handlers/ValiderDefinitivement.ashx'
 };
 
 // État global de l'application
@@ -115,20 +115,24 @@ function classBadgeStatut(s) {
 // ============================================================
 
 function showSpinner(show) {
-    const s = document.getElementById('spinnerOverlay');
+    // Cherche spinnerOverlay ou spinnerOverlay1 (selon la version du ASPX)
+    const s = document.getElementById('spinnerOverlay') || document.getElementById('spinnerOverlay1');
     if (s) {
         if (show) {
-            s.style.display = 'flex';
+            s.style.display    = 'flex';
             s.style.visibility = 'visible';
-            s.style.opacity = '1';
-            console.log('[SPINNER] ✅ Affiché');
+            s.style.opacity    = '1';
         } else {
-            s.style.display = 'none';
+            s.style.display    = 'none';
             s.style.visibility = 'hidden';
-            s.style.opacity = '0';
-            console.log('[SPINNER] ❌ Masqué');
+            s.style.opacity    = '0';
         }
     }
+}
+
+// Masque le spinner dès le chargement de la page pour éviter qu'il reste affiché
+function forceHideSpinner() {
+    showSpinner(false);
 }
 
 // ============================================================
@@ -187,7 +191,22 @@ function setText(id, text) {
 
 function show(id) {
     const el = document.getElementById(id);
-    if (el) el.style.display = '';
+    if (!el) return;
+    // Restaure le display original stocké ou supprime le display:none inline.
+    // Ne force pas 'block' car certains conteneurs sont display:flex (dash-card).
+    const original = el.getAttribute('data-display') || '';
+    el.style.display = original;
+}
+
+// Mémorise le display naturel de chaque section avant masquage
+function memorizeDisplays() {
+    ['tableWrapper', 'emptyState'].forEach(function(id) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        const computed = window.getComputedStyle(el).display;
+        const natural = (computed === 'none') ? 'flex' : computed;
+        el.setAttribute('data-display', natural);
+    });
 }
 
 function hide(id) {
@@ -408,6 +427,8 @@ async function afficherListe() {
             showToast(response?.message || 'Erreur lors du chargement', 'error');
             show('emptyState');
             APP.isSaisieActive = false;
+            APP.isLoading = false;
+            showSpinner(false);
             return;
         }
 
@@ -417,6 +438,8 @@ async function afficherListe() {
             showToast('Aucun élève trouvé pour cette sélection.', 'warning');
             show('emptyState');
             APP.isSaisieActive = false;
+            APP.isLoading = false;
+            showSpinner(false);
             return;
         }
 
@@ -786,8 +809,13 @@ async function loadClassesAndMatieresOnly() {
             APP.matieresList = [];
         }
 
-        populateClassSelect();
-        populateMatiereSelect();
+        // Ne repeupler les selects QUE si la saisie n'est pas active.
+        // Si afficherListe() est en cours ou terminé, repeupler les selects
+        // efface la sélection en cours (classe/matière/période choisies).
+        if (!APP.isSaisieActive) {
+            populateClassSelect();
+            populateMatiereSelect();
+        }
 
     } catch (err) {
         console.error('[ADMIN] ❌ Erreur chargement selects:', err);
@@ -1047,9 +1075,14 @@ function exporter() {
 function init() {
     console.log('[INIT] 🚀 Démarrage de bulletins.js');
 
+    forceHideSpinner();   // masque immédiatement le spinner au cas où il serait visible
+    memorizeDisplays();   // mémorise le display naturel de tableWrapper et emptyState
+
     lireContexteServeur();
     afficherUsernameNavbar();
-    loadBulletins();
+
+    // Charge uniquement les selects au démarrage
+    loadClassesAndMatieresOnly();
 
     document.addEventListener('keydown', (e) => {
         if (e.key === 'Escape') {
@@ -1085,25 +1118,12 @@ function init() {
         document.addEventListener('click', () => notifDropdown.classList.remove('show'));
     }
 
-    // Attacher l'événement au bouton par ID - CORRECTION ICI
+    // Attacher le bouton Afficher la liste
     const btnAfficher = document.getElementById('btnAfficherListe');
     if (btnAfficher) {
-        // Supprimer l'ancien onclick s'il existe
         btnAfficher.removeAttribute('onclick');
         btnAfficher.addEventListener('click', afficherListe);
-        console.log('[INIT] ✅ Événement du bouton Afficher attaché par ID');
-    } else {
-        console.log('[INIT] ⚠️ Bouton btnAfficherListe non trouvé, recherche alternative...');
-        // Recherche alternative par texte
-        const buttons = document.querySelectorAll('button');
-        for (let btn of buttons) {
-            if (btn.textContent.includes('Afficher la liste')) {
-                btn.id = 'btnAfficherListe';
-                btn.addEventListener('click', afficherListe);
-                console.log('[INIT] ✅ Bouton trouvé et événement attaché');
-                break;
-            }
-        }
+        console.log('[INIT] ✅ Événement du bouton Afficher attaché');
     }
 
     console.log('[INIT] ✅ Initialisation terminée');

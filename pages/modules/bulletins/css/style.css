@@ -33,3 +33,271 @@
     background-color: #dc3545;
     color: white;
 }
+
+/* ============================================
+   STYLES MODERNES POUR LE TABLEAU DES BULLETINS
+   ============================================ */
+
+/* Tableau moderne */
+.dash-table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+}
+
+.dash-table thead th {
+    background: linear-gradient(135deg, #1e3a2f 0%, #2d5a48 100%);
+    color: white;
+    padding: 16px 12px;
+    font-weight: 600;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: none;
+}
+
+.dash-table tbody tr {
+    transition: all 0.2s ease;
+}
+
+.dash-table tbody tr:hover {
+    background: #f0f7f4 !important;
+    transform: translateX(4px);
+}
+
+.table-row-even {
+    background: #ffffff;
+}
+
+.table-row-odd {
+    background: #f8faf8;
+}
+
+/* Cellule élève */
+.cell-eleve {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+}
+
+.eleve-avatar {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #e8f4fd 0%, #d4eaf6 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #1e3a2f;
+    font-size: 18px;
+}
+
+.eleve-info {
+    display: flex;
+    flex-direction: column;
+}
+
+.eleve-nom {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1a2e3a;
+}
+
+.eleve-numero {
+    font-size: 11px;
+    color: #8898aa;
+}
+
+/* Cellule note */
+.cell-note {
+    text-align: center;
+    padding: 8px;
+    vertical-align: middle;
+}
+
+.note-input-modern {
+    width: 80px;
+    padding: 8px 6px;
+    text-align: center;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    background: white;
+}
+
+.note-input-modern:focus {
+    border-color: #1e3a2f;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(30,58,47,0.1);
+}
+
+.note-input-modern:read-only {
+    background: #f1f3f5;
+    border-color: #dee2e6;
+    cursor: not-allowed;
+}
+
+.note-coef {
+    display: block;
+    font-size: 10px;
+    color: #94a3b8;
+    margin-top: 4px;
+}
+
+/* Cellule moyenne */
+.cell-moyenne {
+    text-align: center;
+    vertical-align: middle;
+}
+
+.moyenne-circle {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    transition: all 0.3s ease;
+}
+
+.moyenne-value {
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.moyenne-excellent {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(40,167,69,0.3);
+}
+
+.moyenne-tres-bien {
+    background: linear-gradient(135deg, #17a2b8 0%, #20c997 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(23,162,184,0.3);
+}
+
+.moyenne-bien {
+    background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+    color: #2c3e2f;
+    box-shadow: 0 4px 15px rgba(255,193,7,0.3);
+}
+
+.moyenne-passable {
+    background: linear-gradient(135deg, #fd7e14 0%, #ffc107 100%);
+    color: #2c3e2f;
+    box-shadow: 0 4px 15px rgba(253,126,20,0.3);
+}
+
+.moyenne-insuffisant {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: white;
+    box-shadow: 0 4px 15px rgba(220,53,69,0.3);
+}
+
+/* Cellule appréciation */
+.cell-appreciation {
+    padding: 8px;
+}
+
+.appreciation-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    font-size: 12px;
+    resize: vertical;
+    font-family: inherit;
+    transition: all 0.2s ease;
+}
+
+.appreciation-input:focus {
+    border-color: #1e3a2f;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(30,58,47,0.1);
+}
+
+.appreciation-input:read-only {
+    background: #f1f3f5;
+    border-color: #dee2e6;
+    cursor: not-allowed;
+}
+
+/* Badges statut */
+.statut-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 30px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.statut-valide {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+}
+
+.statut-en-cours {
+    background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+    color: #2c3e2f;
+}
+
+.statut-enregistre {
+    background: linear-gradient(135deg, #17a2b8 0%, #20c997 100%);
+    color: white;
+}
+
+.statut-non-saisi {
+    background: #e9ecef;
+    color: #6c757d;
+}
+
+.statut-icon {
+    font-style: normal;
+    font-size: 12px;
+}
+
+/* En-tête du tableau */
+.dash-card-head {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    padding: 16px 20px;
+    border-bottom: 2px solid #1e3a2f;
+}
+
+.dash-card-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1e3a2f;
+}
+
+/* Boutons d'action modernes */
+.btn-modern {
+    padding: 8px 18px;
+    border-radius: 30px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.btn-modern:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* Animation de chargement */
+@keyframes pulse {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.05); opacity: 0.8; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+.moyenne-circle {
+    animation: pulse 0.5s ease;
+}

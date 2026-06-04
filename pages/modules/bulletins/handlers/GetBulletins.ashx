@@ -34,7 +34,7 @@ public class GetBulletins : IHttpHandler, IRequiresSessionState
                 var serializer = new JavaScriptSerializer();
                 var data = serializer.Deserialize<Dictionary<string, object>>(jsonBody);
 
-                string classeId = data.ContainsKey("classeId") ? data["classeId"].ToString() : null;
+                string classeId  = data.ContainsKey("classeId")  ? data["classeId"].ToString()  : null;
                 string matiereId = data.ContainsKey("matiereId") ? data["matiereId"].ToString() : null;
                 string periodeId = data.ContainsKey("periodeId") ? data["periodeId"].ToString() : null;
 
@@ -77,20 +77,21 @@ public class GetBulletins : IHttpHandler, IRequiresSessionState
                     ROW_NUMBER() OVER (ORDER BY e.NOM) AS NUMERO,
                     e.MATRICULE,
                     e.NOM,
-                    ISNULL(b.NOTE1, NULL) AS NOTE1,
-                    ISNULL(b.NOTE2, NULL) AS NOTE2,
-                    ISNULL(b.NOTE_PROJET, NULL) AS NOTE_PROJET,
+                    b.NOTE1,
+                    b.NOTE2,
+                    b.NOTE_PROJET,
                     ISNULL(b.APPRECIATION, '') AS APPRECIATION,
                     ISNULL(b.STATUT, 'Non saisi') AS STATUT,
                     b.ID AS NOTE_ID,
-                    CONVERT(VARCHAR(10), b.DATE_EVAL1, 103) AS DATE_EVAL1,
-                    CONVERT(VARCHAR(10), b.DATE_EVAL2, 103) AS DATE_EVAL2,
-                    CONVERT(VARCHAR(10), b.DATE_EVAL_PROJET, 103) AS DATE_EVAL_PROJET
+                    CONVERT(VARCHAR(10), b.DATE_EVAL1,        103) AS DATE_EVAL1,
+                    CONVERT(VARCHAR(10), b.DATE_EVAL2,        103) AS DATE_EVAL2,
+                    CONVERT(VARCHAR(10), b.DATE_EVAL_PROJET,  103) AS DATE_EVAL_PROJET
                 FROM ELEVES e
                 LEFT JOIN BULLETINS b ON e.MATRICULE = b.ELEVE_MATRICULE 
                     AND b.MATIERE_ID = @matiereId 
-                    AND b.PERIODE = @periodeId
+                    AND b.PERIODE    = @periodeId
                 WHERE e.CLASSE = @classeId
+                  AND e.STATUT = 'actif'
                 ORDER BY e.NOM ASC";
 
             using (SqlCommand cmd = new SqlCommand(sql, conn))

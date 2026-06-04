@@ -109,7 +109,24 @@ async function loadEleves() {
                 hideSpinner();
                 showInitialFilterModal();
             } else {
-                applyFilters();
+                // Rechargement sans perdre les filtres
+                var searchValue = document.getElementById('search-filter')?.value || '';
+                var statusValue = document.getElementById('status-filter')?.value || '';
+                
+                baseFilteredData = [...elevesData];
+                filteredEleves = baseFilteredData.filter(function (eleve) {
+                    var matchSearch = !searchValue || (
+                        eleve.NOM?.toLowerCase().includes(searchValue.toLowerCase()) ||
+                        eleve.MATRICULE?.toLowerCase().includes(searchValue.toLowerCase()) ||
+                        eleve.EMAIL?.toLowerCase().includes(searchValue.toLowerCase())
+                    );
+                    var matchStatus = !statusValue || (eleve.STATUT?.toLowerCase() === statusValue);
+                    return matchSearch && matchStatus;
+                });
+                
+                currentPage = 1;
+                renderSimpleTable();
+                updateCounter();
             }
         } else {
             Swal.fire('Erreur', dataEleves.message || 'Impossible de charger les élèves.', 'error');
@@ -631,16 +648,20 @@ async function saveEleve(event) {
 
     // --- Validation côté client ---
     if (!body.NOM.trim()) {
-        Swal.fire('Attention', 'Le nom complet est obligatoire.', 'warning'); return false;
+        Swal.fire('Attention', 'Le nom complet est obligatoire.', 'warning'); 
+        return false;
     }
     if (!body.MATRICULE.trim()) {
-        Swal.fire('Attention', 'Le matricule est obligatoire.', 'warning'); return false;
+        Swal.fire('Attention', 'Le matricule est obligatoire.', 'warning'); 
+        return false;
     }
     if (!body.CLASSE) {
-        Swal.fire('Attention', 'Veuillez sélectionner une classe.', 'warning'); return false;
+        Swal.fire('Attention', 'Veuillez sélectionner une classe.', 'warning'); 
+        return false;
     }
     if (!body.ANNEE_ID) {
-        Swal.fire('Attention', 'Veuillez sélectionner une année scolaire.', 'warning'); return false;
+        Swal.fire('Attention', 'Veuillez sélectionner une année scolaire.', 'warning'); 
+        return false;
     }
 
     // --- Sécurité : Vérifier si l'année sélectionnée est clôturée ---
@@ -670,19 +691,17 @@ async function saveEleve(event) {
                 timer: 1500, 
                 showConfirmButton: false 
             });
+            
             setTimeout(function () { 
                 closeEleveModal(); 
-                if (typeof loadEleves === "function") loadEleves(); 
+                // FORCER LE RECHARGEMENT COMPLET DES DONNÉES
+                reloadElevesAfterModification();
             }, 1500);
         } else {
-            // --- GESTION DES MESSAGES D'ERREUR CLAIRS ---
             var msg = data.message || 'Erreur inconnue.';
-
-            // Détection du doublon de matricule (Violation de clé unique SQL)
             if (msg.includes("PRIMARY KEY") || msg.includes("UQ_") || msg.includes("duplicate key")) {
                 msg = "Ce matricule existe déjà. Veuillez attribuer un matricule unique à cet élève.";
             }
-
             Swal.fire({
                 icon: 'error',
                 title: 'Erreur d\'enregistrement',
@@ -696,6 +715,79 @@ async function saveEleve(event) {
         if (typeof hideSpinner === "function") hideSpinner();
     }
     return false;
+}
+
+// Nouvelle fonction pour recharger les données après modification
+async function reloadElevesAfterModification() {
+    console.log('[RELOAD] Rechargement des données...');
+    showSpinner();
+    
+    try {
+        // Recharger toutes les données
+        const [dataEleves, dataClasses, dataAnnees] = await Promise.all([
+            fetchJson(API.getEleves),
+            fetchJson(API.getClasses),
+            fetchJson(API.getAnnees)
+        ]);
+
+        // Mettre à jour les classes
+        if (dataClasses.success) {
+            classesData = dataClasses.Classes || dataClasses.niveaux || [];
+            peuplerSelectClasses();
+        }
+
+        // Mettre à jour les années
+        if (dataAnnees.success) {
+            anneesData = dataAnnees.Annees || [];
+            peuplerSelectAnnees();
+        }
+
+        // Mettre à jour les élèves
+        if (dataEleves.success) {
+            elevesData = dataEleves.Eleves || [];
+            
+            // Re-appliquer les filtres existants
+            if (baseFilteredData.length > 0 || !isInitialLoad) {
+                // Conserver les critères de filtre actuels
+                var searchValue = document.getElementById('search-filter')?.value || '';
+                var statusValue = document.getElementById('status-filter')?.value || '';
+                
+                baseFilteredData = elevesData.filter(function (eleve) {
+                    // Reconstruire baseFilteredData avec les mêmes critères initiaux
+                    // Pour simplifier, on garde tous les élèves et on réapplique les filtres
+                    return true;
+                });
+                baseFilteredData = [...elevesData];
+                
+                // Réappliquer les filtres de recherche
+                filteredEleves = baseFilteredData.filter(function (eleve) {
+                    var matchSearch = !searchValue || (
+                        eleve.NOM?.toLowerCase().includes(searchValue.toLowerCase()) ||
+                        eleve.MATRICULE?.toLowerCase().includes(searchValue.toLowerCase()) ||
+                        eleve.EMAIL?.toLowerCase().includes(searchValue.toLowerCase())
+                    );
+                    var matchStatus = !statusValue || (eleve.STATUT?.toLowerCase() === statusValue);
+                    return matchSearch && matchStatus;
+                });
+            } else {
+                baseFilteredData = [...elevesData];
+                filteredEleves = [...elevesData];
+            }
+            
+            currentPage = 1;
+            renderSimpleTable();
+            
+            console.log('[RELOAD] Données rechargées:', elevesData.length, 'élèves');
+        } else {
+            Swal.fire('Erreur', dataEleves.message || 'Impossible de recharger les élèves.', 'error');
+        }
+
+    } catch (err) {
+        console.error('reloadElevesAfterModification:', err);
+        Swal.fire('Erreur réseau', err.message || 'Connexion au serveur échouée.', 'error');
+    } finally {
+        hideSpinner();
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -730,7 +822,7 @@ async function supprimerEleve(id, nom) {
         Swal.fire('Blocage', 'Impossible de supprimer un élève rattaché à une année clôturée.', 'error');
         return;
     }
-    // Note : escHtml(nom) fonctionnera maintenant car elle est définie plus haut
+
     var result = await Swal.fire({
         title: 'Supprimer cet élève ?',
         html: '<strong>' + escHtml(nom) + '</strong> sera supprimé définitivement.',
@@ -752,17 +844,11 @@ async function supprimerEleve(id, nom) {
             body: JSON.stringify({ ID: id })
         });
 
-        // Utilisation de safeJson définie plus haut
         var data = await safeJson(res);
 
         if (data.success) {
-            // Mise à jour des données locales
-            elevesData = elevesData.filter(function (e) { return e.ID !== id; });
-            baseFilteredData = baseFilteredData.filter(function (e) { return e.ID !== id; });
-            filteredEleves = filteredEleves.filter(function (e) { return e.ID !== id; });
-
-            // Redessiner le tableau
-            if (typeof renderSimpleTable === "function") renderSimpleTable();
+            // Recharger complètement les données
+            await reloadElevesAfterModification();
 
             Swal.fire({
                 icon: 'success',

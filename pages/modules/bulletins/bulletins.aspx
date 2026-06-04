@@ -264,10 +264,11 @@
                                                 style="font-size:11px; font-weight:600; color:#6c757d; text-transform:uppercase; letter-spacing:.5px;">
                                                 Classe
                                             </label>
-                                            <%-- Peuplé dynamiquement par Page_Load selon le rôle --%>
-                                                <select id="ddlClasse" runat="server"
+                                            <%-- Peuplé dynamiquement par JS via l'API --%>
+                                                <select id="ddlClasse"
                                                     class="form-control form-control-sm" onchange="onClasseChange()"
                                                     style="height:36px;">
+                                                    <option value="">-- Sélectionner une classe --</option>
                                                 </select>
                                         </div>
 
@@ -277,9 +278,10 @@
                                                 style="font-size:11px; font-weight:600; color:#6c757d; text-transform:uppercase; letter-spacing:.5px;">
                                                 Matière
                                             </label>
-                                            <%-- Peuplé dynamiquement par Page_Load selon le rôle --%>
-                                                <select id="ddlMatiere" runat="server"
+                                            <%-- Peuplé dynamiquement par JS via l'API --%>
+                                                <select id="ddlMatiere"
                                                     class="form-control form-control-sm" style="height:36px;">
+                                                    <option value="">-- Sélectionner une matière --</option>
                                                 </select>
                                         </div>
 
@@ -291,9 +293,11 @@
                                             <select id="ddlPeriode" class="form-control form-control-sm"
                                                 style="height:36px;">
                                                 <option value="">-- Sélectionner --</option>
-                                                <option value="1">Trimestre 1</option>
-                                                <option value="2">Trimestre 2</option>
-                                                <option value="3">Trimestre 3</option>
+                                                <option value="T1">Trimestre 1</option>
+                                                <option value="T2">Trimestre 2</option>
+                                                <option value="T3">Trimestre 3</option>
+                                                <option value="Sem1">Semestre 1</option>
+                                                <option value="Sem2">Semestre 2</option>
                                             </select>
                                         </div>
 
@@ -320,7 +324,6 @@
                             <div id="tableWrapper" class="dash-card" style="display:none;">
                                 <div class="dash-card-head">
                                     <span class="dash-card-title">
-                                        <i class="fas fa-edit"></i>
                                         <span id="tableInfoLabel">Saisie des notes</span>
                                     </span>
                                     <span id="countBadge"
@@ -381,7 +384,7 @@
                     </div><!-- /.content-wrapper -->
 
                     <!-- ═══ SPINNER ═══ -->
-                    <div id="spinnerOverlay1">
+                    <div id="spinnerOverlay">
                         <div class="spinner"></div>
                     </div>
 
@@ -392,7 +395,7 @@
                     <div class="modal-content" style="max-width:420px;">
                         <div class="modal-header">
                             <h3 id="modalTitle">Confirmation</h3>
-                            <button onclick="closeModal()"
+                            <button onclick="closeModal('bulletinModal')"
                                 style="background:none; border:none; font-size:24px; cursor:pointer;">&times;</button>
                         </div>
                         <div class="modal-body">
@@ -400,7 +403,7 @@
                         </div>
                         <div class="modal-footer">
                             <button class="btn btn-danger" id="btnConfirm">Confirmer</button>
-                            <button class="btn btn-secondary" onclick="closeModal()">Annuler</button>
+                            <button class="btn btn-secondary" onclick="closeModal('bulletinModal')">Annuler</button>
                         </div>
                     </div>
                 </div>
@@ -411,7 +414,7 @@
                 </div>
 
                 <!-- ═══ SCRIPTS ═══ -->
-                <script src="js/bulletins.js?v=<%=AuthHelper.Version %>"></script>
+                <script src="js/bulletins-simple.js?v=<%=AuthHelper.Version %>"></script>
                 <script src="../../_assets/js/global.js?v=<%=AuthHelper.Version %>"></script>
 
         </form>
