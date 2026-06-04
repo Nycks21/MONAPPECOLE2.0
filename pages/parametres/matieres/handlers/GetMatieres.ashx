@@ -36,13 +36,13 @@ public class GetMatieres : IHttpHandler, IRequiresSessionState
                          u.NOM                AS ENSEIGNANT_NOM,
                          m.COEFFICIENT,
                          m.HEURES_SEMAINE,
-                         m.NIVEAU             AS NIVEAU_ID,
-                         n.NOM                AS NIVEAU_NOM,
+                         m.CLASSE_ID,
+                         c.NOM                AS CLASSE_NOM,
                          m.CREATED_AT
                   FROM   [dbo].[MATIERES] m
                   LEFT JOIN [dbo].[USERS]   u ON u.IDUSER = m.ENSEIGNANT
-                  LEFT JOIN [dbo].[NIVEAUX] n ON n.ID     = m.NIVEAU
-                  ORDER  BY m.NOM ASC", conn))
+                  LEFT JOIN [dbo].[CLASSES] c ON c.ID     = m.CLASSE_ID
+                  ORDER  BY c.NOM ASC, m.NOM ASC", conn))
             {
                 conn.Open();
                 using (var reader = cmd.ExecuteReader())
@@ -54,18 +54,14 @@ public class GetMatieres : IHttpHandler, IRequiresSessionState
                             ID             = reader.IsDBNull(0) ? "" : reader.GetGuid(0).ToString(),
                             NOM            = reader.IsDBNull(1) ? "" : reader.GetString(1),
 
-                            // ID int — pour pré-remplir le select Enseignant en mode édition
                             ENSEIGNANT_ID  = reader.IsDBNull(2) ? 0  : reader.GetInt32(2),
-                            // Nom lisible — affiché dans le tableau
                             ENSEIGNANT     = reader.IsDBNull(3) ? "" : reader.GetString(3),
 
                             COEFFICIENT    = reader.IsDBNull(4) ? 0m : reader.GetDecimal(4),
                             HEURES_SEMAINE = reader.IsDBNull(5) ? 0  : reader.GetInt32(5),
 
-                            // GUID brut — pour pré-remplir le select Niveau en mode édition
-                            NIVEAU_ID      = reader.IsDBNull(6) ? "" : reader.GetGuid(6).ToString(),
-                            // Nom lisible — affiché dans le tableau
-                            NIVEAU         = reader.IsDBNull(7) ? "" : reader.GetString(7),
+                            CLASSE_ID      = reader.IsDBNull(6) ? 0  : reader.GetInt32(6),
+                            CLASSE_NOM     = reader.IsDBNull(7) ? "" : reader.GetString(7),
 
                             CREATED_AT     = reader.IsDBNull(8) ? null
                                            : reader.GetDateTime(8).ToString("yyyy-MM-dd HH:mm:ss")

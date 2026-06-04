@@ -1,259 +1,115 @@
-﻿/**
- * bulletins.js — Gestion complète des bulletins
- * Fusion de la saisie des notes et de la gestion des bulletins
- * Compatible AdminLTE + ASP.NET WebForms
+/**
+ * bulletins.js - Version moderne avec design amélioré
+ * La liste des matières affiche : NomMatière (NomClasse)
+ * La classe est automatiquement définie par la matière sélectionnée
  */
 
-'use strict';
-
 // ============================================================
-// CONFIGURATION ET ÉTAT GLOBAL
+// FONCTIONS REQUISES PAR LE HTML
 // ============================================================
 
-// URLs des handlers (API) — chemins ABSOLUS (compatibles mode SPA depuis /_shell/)
-const API_BULLETINS = {
-    getBulletins         : '/pages/modules/bulletins/handlers/GetBulletins.ashx',
-    getEleves            : '/pages/modules/eleves/handlers/GetEleve.ashx',
-    getClasses           : '/pages/parametres/classes/handlers/GetClasse.ashx',
-    getMatieres          : '/pages/parametres/matieres/handlers/GetMatieres.ashx',
-    getAnnees            : '/pages/administrations/annee/handlers/GetAnnee.ashx',
-    ajouter              : '/pages/modules/bulletins/handlers/AjouterBulletin.ashx',
-    modifier             : '/pages/modules/bulletins/handlers/ModifierBulletin.ashx',
-    supprimer            : '/pages/modules/bulletins/handlers/SupprimerBulletin.ashx',
-    sauvegarderNotes     : '/pages/modules/bulletins/handlers/SauvegarderNotes.ashx',
-    validerDefinitivement: '/pages/modules/bulletins/handlers/ValiderDefinitivement.ashx'
-};
-
-// État global de l'application
-const APP = {
-    userRole: '',
-    userName: '',
-    professeurId: 0,
-    classesAutorisees: [],
-    matieresAutorisees: [],
-    classeId: null,
-    matiereId: null,
-    periodeId: null,
-    eleves: [],
-    modifiedRows: new Set(),
-    validees: false,
-    bulletinsData: [],
-    filteredBulletins: [],
-    elevesList: [],
-    classesList: [],
-    matieresList: [],
-    anneesList: [],
-    currentPage: 1,
-    rowsPerPage: 10,
-    currentSortCol: 'ELEVE_NOM',
-    currentSortDir: 'ASC',
-    currentBulletinId: null,
-    currentMode: 'add',
-    isLoading: false,
-    isSaisieActive: false
-};
-
-// ============================================================
-// FONCTIONS UTILITAIRES
-// ============================================================
-
-function escapeHtml(str) {
-    if (!str) return '';
-    return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-}
-
-function formatNote(note) {
-    if (note === null || note === undefined) return '-';
-    return parseFloat(note).toFixed(1) + '/20';
-}
-
-function getNoteClass(note) {
-    if (note >= 16) return 'note-excellent';
-    if (note >= 14) return 'note-bien';
-    if (note >= 12) return 'note-assez-bien';
-    if (note >= 10) return 'note-passable';
-    return 'note-insuffisant';
-}
-
-function fmtNote(v) {
-    return (v === null || v === undefined) ? '' : parseFloat(v).toFixed(1);
-}
-
-function badgeMoyenneStyle(moy) {
-    let bg = '#e9ecef', color = '#6c757d';
-    if (moy !== null) {
-        if (moy >= 14) { bg = '#d4edda'; color = '#155724'; }
-        else if (moy >= 10) { bg = '#fff3cd'; color = '#856404'; }
-        else { bg = '#f8d7da'; color = '#721c24'; }
+function onMatiereChange() {
+    console.log('[UI] Matière changée');
+    
+    const matiereSelect = document.getElementById('ddlMatiere');
+    const selectedOption = matiereSelect.options[matiereSelect.selectedIndex];
+    const classeId = selectedOption?.getAttribute('data-classe-id');
+    const classeNom = selectedOption?.getAttribute('data-classe-nom');
+    
+    // Mettre à jour le select des classes (lecture seule)
+    const classeSelect = document.getElementById('ddlClasse');
+    if (classeSelect && classeId) {
+        classeSelect.innerHTML = '';
+        const opt = document.createElement('option');
+        opt.value = classeId;
+        opt.textContent = classeNom || 'Classe';
+        classeSelect.appendChild(opt);
+        classeSelect.disabled = true; // Désactiver car la classe est liée à la matière
     }
-    return `display:inline-block; min-width:52px; padding:3px 10px; border-radius:20px; font-size:13px; font-weight:700; text-align:center; background:${bg}; color:${color};`;
+    
+    const coeff = getMatiereCoefficient();
+    const maxNote = 20 * coeff;
+    showToast(`Coefficient ${coeff} → Note maximale: ${maxNote}/20`, 'info');
+    
+    // Recharger le tableau
+    afficherListe();
 }
 
-function iconStatut(s) {
-    const icons = { 'Enregistré': '✅', 'En cours': '⏳', 'Validé': '✅', 'Non saisi': '○', 'Saisi': '○' };
-    return icons[s] || '○';
-}
-
-function classBadgeStatut(s) {
-    const classes = {
-        'Enregistré': 'badge badge-success',
-        'Validé': 'badge badge-success',
-        'En cours': 'badge badge-warning',
-        'Non saisi': 'badge badge-secondary',
-        'Saisi': 'badge badge-secondary'
-    };
-    return classes[s] || 'badge badge-secondary';
-}
-
-// ============================================================
-// SPINNER
-// ============================================================
-
-function showSpinner(show) {
-    // Cherche spinnerOverlay ou spinnerOverlay1 (selon la version du ASPX)
-    const s = document.getElementById('spinnerOverlay') || document.getElementById('spinnerOverlay1');
-    if (s) {
-        if (show) {
-            s.style.display    = 'flex';
-            s.style.visibility = 'visible';
-            s.style.opacity    = '1';
-        } else {
-            s.style.display    = 'none';
-            s.style.visibility = 'hidden';
-            s.style.opacity    = '0';
-        }
-    }
-}
-
-// Masque le spinner dès le chargement de la page pour éviter qu'il reste affiché
-function forceHideSpinner() {
-    showSpinner(false);
-}
-
-// ============================================================
-// CONTEXTE UTILISATEUR
-// ============================================================
-
-function lireContexteServeur() {
-    console.log('[CONTEXTE] 📋 Lecture du contexte serveur...');
-
-    APP.userRole = getHiddenFieldValue('hfUserRole');
-    APP.userName = getHiddenFieldValue('hfUserName');
-    APP.professeurId = parseInt(getHiddenFieldValue('hfProfesseurId')) || 0;
-
-    try {
-        APP.classesAutorisees = JSON.parse(getHiddenFieldValue('hfClassesAutorisees')) || [];
-    } catch (e) { APP.classesAutorisees = []; }
-
-    try {
-        APP.matieresAutorisees = JSON.parse(getHiddenFieldValue('hfMatieresAutorisees')) || [];
-    } catch (e) { APP.matieresAutorisees = []; }
-
-    console.log('[CONTEXTE] 👤 UserRole:', APP.userRole || '(non défini)');
-    console.log('[CONTEXTE] 👤 UserName:', APP.userName || '(non défini)');
-}
-
-function getHiddenFieldValue(id) {
-    const el = document.getElementById(id);
-    return el ? el.value : '';
-}
-
-function afficherUsernameNavbar() {
-    const el = document.getElementById('navbarUsername');
-    if (el && APP.userName) {
-        el.textContent = APP.userName;
-    }
-}
-
-// ============================================================
-// UI HELPERS
-// ============================================================
-
-function getSelectVal(id) {
-    const el = document.getElementById(id);
-    return el ? el.value : '';
-}
-
-function getSelectText(id) {
-    const el = document.getElementById(id);
-    return el ? (el.options[el.selectedIndex]?.text || '') : '';
-}
-
-function setText(id, text) {
-    const el = document.getElementById(id);
-    if (el) el.textContent = text;
-}
-
-function show(id) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    // Restaure le display original stocké ou supprime le display:none inline.
-    // Ne force pas 'block' car certains conteneurs sont display:flex (dash-card).
-    const original = el.getAttribute('data-display') || '';
-    el.style.display = original;
-}
-
-// Mémorise le display naturel de chaque section avant masquage
-function memorizeDisplays() {
-    ['tableWrapper', 'emptyState'].forEach(function(id) {
-        const el = document.getElementById(id);
-        if (!el) return;
-        const computed = window.getComputedStyle(el).display;
-        const natural = (computed === 'none') ? 'flex' : computed;
-        el.setAttribute('data-display', natural);
-    });
-}
-
-function hide(id) {
-    const el = document.getElementById(id);
-    if (el) el.style.display = 'none';
-}
-
-// ============================================================
-// MODALES
-// ============================================================
-
-function openModal(id) {
-    const modal = document.getElementById(id);
-    if (modal) {
-        modal.style.display = 'flex';
-        document.body.style.overflow = 'hidden';
-    }
+function onClasseChange() {
+    // La classe ne peut plus être changée manuellement
+    console.log('[UI] Classe changée (désactivé)');
 }
 
 function closeModal(id) {
-    const modal = document.getElementById(id);
-    if (modal) {
-        modal.style.display = 'none';
-        document.body.style.overflow = '';
+    const modal = document.getElementById(id || 'bulletinModal');
+    if (modal) modal.style.display = 'none';
+}
+
+// ============================================================
+// VARIABLES GLOBALES
+// ============================================================
+
+let currentUser = {
+    role: null,
+    userName: null,
+    professeurId: null,
+    classesAutorisees: [],
+    matieresAutorisees: []
+};
+
+let allMatieres = [];
+let currentEleves = [];
+
+// ============================================================
+// RÉCUPÉRATION DU CONTEXTE UTILISATEUR
+// ============================================================
+
+function getUserContext() {
+    console.log('[CONTEXTE] Lecture du contexte utilisateur...');
+    
+    currentUser.role = document.getElementById('hfUserRole')?.value || '';
+    currentUser.userName = document.getElementById('hfUserName')?.value || '';
+    currentUser.professeurId = document.getElementById('hfProfesseurId')?.value || '';
+    
+    const classesAutoriseesStr = document.getElementById('hfClassesAutorisees')?.value || '[]';
+    const matieresAutoriseesStr = document.getElementById('hfMatieresAutorisees')?.value || '[]';
+    
+    try {
+        currentUser.classesAutorisees = JSON.parse(classesAutoriseesStr);
+        currentUser.matieresAutorisees = JSON.parse(matieresAutoriseesStr);
+    } catch(e) {
+        console.error('[CONTEXTE] Erreur parsing JSON:', e);
+        currentUser.classesAutorisees = [];
+        currentUser.matieresAutorisees = [];
     }
-}
-
-function closeAddBulletinModal() {
-    closeModal('addBulletinModal');
-    APP.currentMode = 'add';
-    APP.currentBulletinId = null;
-}
-
-function ouvrirModal(titre, message, onConfirm) {
-    setText('modalTitle', titre);
-    setText('modalMessage', message);
-    const modal = document.getElementById('bulletinModal');
-    if (modal) modal.style.display = 'flex';
-
-    const confirmBtn = document.getElementById('btnConfirm');
-    const oldBtn = confirmBtn.cloneNode(true);
-    confirmBtn.parentNode.replaceChild(oldBtn, confirmBtn);
-
-    oldBtn.onclick = () => {
-        closeModal('bulletinModal');
-        if (onConfirm) onConfirm();
-    };
+    
+    const navbarUsername = document.getElementById('navbarUsername');
+    if (navbarUsername && currentUser.userName) {
+        navbarUsername.textContent = currentUser.userName;
+    }
+    
+    const profilUsername = document.getElementById('profilUsername');
+    if (profilUsername) {
+        let roleName = '';
+        switch(currentUser.role) {
+            case '0': roleName = 'Super Admin'; break;
+            case '1': roleName = 'Admin'; break;
+            case '3': roleName = 'Professeur'; break;
+            case '4': roleName = 'Secrétaire'; break;
+            case '5': roleName = 'Comptable'; break;
+            default: roleName = 'Utilisateur';
+        }
+        profilUsername.textContent = `Profil : ${roleName}`;
+    }
+    
+    console.log('[CONTEXTE] Utilisateur:', {
+        role: currentUser.role,
+        userName: currentUser.userName,
+        classesAutorisees: currentUser.classesAutorisees.length,
+        matieresAutorisees: currentUser.matieresAutorisees.length
+    });
+    
+    return currentUser;
 }
 
 // ============================================================
@@ -261,842 +117,638 @@ function ouvrirModal(titre, message, onConfirm) {
 // ============================================================
 
 function showToast(message, type = 'info') {
-    if (typeof Swal !== 'undefined') {
-        const icon = type === 'error' ? 'error' : type === 'success' ? 'success' : type === 'warning' ? 'warning' : 'info';
-        Swal.fire({ icon: icon, title: message, timer: 2000, showConfirmButton: false });
-        return;
-    }
-
     const container = document.getElementById('toastContainer');
     if (!container) {
-        alert(message);
+        console.log(message);
         return;
     }
-
+    
     const colors = {
-        success: '#d4edda;color:#155724',
-        error: '#f8d7da;color:#721c24',
-        warning: '#fff3cd;color:#856404',
-        info: '#d1ecf1;color:#0c5460'
+        success: '#d4edda;color:#155724;border-left:4px solid #28a745',
+        error: '#f8d7da;color:#721c24;border-left:4px solid #dc3545',
+        warning: '#fff3cd;color:#856404;border-left:4px solid #ffc107',
+        info: '#d1ecf1;color:#0c5460;border-left:4px solid #17a2b8'
     };
-
+    
+    const icons = {
+        success: 'fa-check-circle',
+        error: 'fa-exclamation-circle',
+        warning: 'fa-exclamation-triangle',
+        info: 'fa-info-circle'
+    };
+    
     const toast = document.createElement('div');
-    toast.style.cssText = `background:${(colors[type] || colors.info).split(';')[0]}; ${(colors[type] || colors.info).split(';')[1]}; padding:12px 18px; border-radius:6px; font-size:13px; font-weight:500; min-width:240px; box-shadow:0 4px 12px rgba(0,0,0,.15); opacity:0; transition:opacity .3s; margin-bottom:10px;`;
-    toast.textContent = message;
+    toast.style.cssText = `background:${(colors[type] || colors.info).split(';')[0]}; ${(colors[type] || colors.info).split(';')[1]}; padding:12px 18px; border-radius:8px; font-size:13px; font-weight:500; min-width:280px; box-shadow:0 4px 12px rgba(0,0,0,.15); opacity:0; transition:opacity .3s; margin-bottom:10px; cursor:pointer; z-index:9999;`;
+    
+    toast.innerHTML = `
+        <div style="display:flex; align-items:center; gap:10px;">
+            <i class="fas ${icons[type] || icons.info}" style="font-size:18px;"></i>
+            <span style="flex:1;">${message}</span>
+            <i class="fas fa-times" style="cursor:pointer; opacity:0.6;"></i>
+        </div>
+    `;
+    
     container.appendChild(toast);
-
-    requestAnimationFrame(() => { toast.style.opacity = '1'; });
-    setTimeout(() => {
+    
+    setTimeout(() => { toast.style.opacity = '1'; }, 10);
+    
+    toast.addEventListener('click', () => {
         toast.style.opacity = '0';
         setTimeout(() => toast.remove(), 350);
+    });
+    
+    setTimeout(() => {
+        if (toast.parentNode) {
+            toast.style.opacity = '0';
+            setTimeout(() => toast.remove(), 350);
+        }
     }, 4000);
 }
 
 // ============================================================
-// APPELS AJAX
+// CHARGEMENT DES MATIÈRES
 // ============================================================
 
-async function callApi(url, method = 'GET', data = null) {
-    console.log(`[API] 🌐 Appel ${method} vers ${url}`);
+// Dans getUserContext(), le rôle est déjà récupéré depuis hfUserRole
+// Pas besoin de logique supplémentaire car le C# a déjà filtré les données
 
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
-
+async function chargerMatieres() {
     try {
-        const options = {
-            method: method,
-            headers: { 'Content-Type': 'application/json' },
-            signal: controller.signal
-        };
-        if (data && method !== 'GET') options.body = JSON.stringify(data);
-
-        const response = await fetch(url, options);
-        clearTimeout(timeoutId);
-
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        console.log('[LOAD] Début chargement des matières...');
+        console.log('[LOAD] Rôle utilisateur (depuis C#):', currentUser.role);
+        
+        const response = await fetch('../../parametres/matieres/handlers/GetMatieres.ashx');
+        const data = await response.json();
+        
+        const select = document.getElementById('ddlMatiere');
+        if (!select) return;
+        
+        select.innerHTML = '<option value="">-- Sélectionner une matière --</option>';
+        
+        allMatieres = [];
+        if (data.matieres) allMatieres = data.matieres;
+        else if (data.data) allMatieres = data.data;
+        
+        console.log('[LOAD] Matières totales:', allMatieres.length);
+        
+        // ============================================================
+        // FILTRAGE PAR RÔLE - LE C# A DÉJÀ PRÉPARÉ LES DONNÉES
+        // ============================================================
+        let matieresToShow = [];
+        const isSuperAdmin = (currentUser.role === '0');
+        
+        if (isSuperAdmin) {
+            // SuperAdmin voit TOUTES les matières
+            matieresToShow = allMatieres;
+            console.log('[FILTRE] SuperAdmin - Affichage de toutes les matières');
+        } 
+        else if (currentUser.matieresAutorisees && currentUser.matieresAutorisees.length > 0) {
+            // Professeur - ne voit que ses matières autorisées
+            const autoriseesIds = currentUser.matieresAutorisees.map(m => {
+                if (typeof m === 'object' && m !== null) {
+                    return (m.ID || m.id).toString();
+                }
+                return m.toString();
+            });
+            
+            matieresToShow = allMatieres.filter(m => {
+                const matiereId = (m.ID || m.id).toString();
+                return autoriseesIds.includes(matiereId);
+            });
+            
+            console.log('[FILTRE] Professeur - Matières autorisées:', matieresToShow.length);
+        } 
+        else {
+            // Autres rôles ou aucune matière autorisée
+            matieresToShow = [];
+            console.log('[FILTRE] Aucune matière autorisée');
         }
-
-        const result = await response.json();
-        console.log(`[API] ✅ Succès ${url}`);
-        return result;
-    } catch (error) {
-        clearTimeout(timeoutId);
-        console.error(`[API] ❌ Erreur ${url}:`, error);
-        if (error.name === 'AbortError') {
-            return { success: false, error: 'Timeout - Le serveur ne répond pas' };
+        
+        if (matieresToShow.length === 0) {
+            select.innerHTML = '<option value="">-- Aucune matière disponible --</option>';
+            if (!isSuperAdmin) {
+                showToast('Vous n\'êtes affecté à aucune matière. Veuillez contacter l\'administrateur.', 'warning');
+            }
+            return;
         }
-        return { success: false, error: error.message };
+        
+        // Peupler le select
+        for (let m of matieresToShow) {
+            let opt = document.createElement('option');
+            opt.value = m.ID || m.id;
+            
+            let displayText = m.NOM || m.nom;
+            if (m.CLASSE_NOM) {
+                displayText = `${displayText} (${m.CLASSE_NOM})`;
+            }
+            opt.textContent = displayText;
+            
+            const coeff = m.COEFFICIENT || 1;
+            opt.setAttribute('data-coeff', coeff);
+            opt.setAttribute('data-classe-id', m.CLASSE_ID);
+            opt.setAttribute('data-classe-nom', m.CLASSE_NOM || '');
+            
+            select.appendChild(opt);
+        }
+        
+        console.log('[LOAD] Matières chargées:', matieresToShow.length);
+        
+        if (matieresToShow.length === 1) {
+            select.value = matieresToShow[0].ID;
+            onMatiereChange();
+        }
+        
+    } catch(e) {
+        console.error('Erreur matières:', e);
+        showToast('Erreur lors du chargement des matières', 'error');
     }
 }
 
-// ============================================================
-// PEUPLEMENT DES SELECTS
-// ============================================================
-
-function populateClassSelect() {
-    const sel = document.getElementById('ddlClasse');
-    if (!sel) return;
-
-    sel.innerHTML = '<option value="">-- Sélectionner une classe --</option>';
-
-    if (APP.classesList && APP.classesList.length > 0) {
-        APP.classesList.forEach(classe => {
-            const opt = document.createElement('option');
-            opt.value = classe.ID || classe.id || '';
-            opt.textContent = classe.NOM || classe.nom || 'Classe';
-            if (opt.value) sel.appendChild(opt);
-        });
-    }
-}
-
-function populateMatiereSelect() {
-    const sel = document.getElementById('ddlMatiere');
-    if (!sel) return;
-
-    sel.innerHTML = '<option value="">-- Sélectionner une matière --</option>';
-
-    if (APP.matieresList && APP.matieresList.length > 0) {
-        APP.matieresList.forEach(matiere => {
-            const opt = document.createElement('option');
-            opt.value = matiere.ID || matiere.id || '';
-            const coeff = matiere.COEFFICIENT || 1;
-            opt.textContent = `${matiere.NOM || 'Matière'} (Coeff: ${coeff})`;
-            if (opt.value) sel.appendChild(opt);
-        });
-    }
-}
-
-function populateStudentSelect() {
-    const sel = document.getElementById('bulletinStudent');
-    if (!sel) return;
-    sel.innerHTML = '<option value="">Sélectionner un élève...</option>';
-    APP.elevesList.forEach(e => {
-        const matricule = e.MATRICULE || e.matricule;
-        const nom = e.NOM || e.nom;
-        if (matricule) {
-            const opt = document.createElement('option');
-            opt.value = matricule;
-            opt.textContent = `${matricule} — ${nom || ''}`;
-            sel.appendChild(opt);
-        }
-    });
+function getMatiereCoefficient() {
+    const matiereSelect = document.getElementById('ddlMatiere');
+    const selectedOption = matiereSelect.options[matiereSelect.selectedIndex];
+    const coeff = selectedOption?.getAttribute('data-coeff') || 1;
+    return parseFloat(coeff);
 }
 
 // ============================================================
-// SECTION 1: SAISIE DES NOTES
+// AFFICHAGE DE LA LISTE
 // ============================================================
-
-function onClasseChange() {
-    const classeId = getSelectVal('ddlClasse');
-    console.log('[SAISIE] 📚 Changement de classe:', classeId);
-}
 
 async function afficherListe() {
-    console.log('[SAISIE] 🔍 afficherListe() appelé');
-
-    if (APP.isLoading) return;
-
-    APP.classeId = getSelectVal('ddlClasse');
-    APP.matiereId = getSelectVal('ddlMatiere');
-    APP.periodeId = getSelectVal('ddlPeriode');
-
-    if (!APP.classeId || !APP.matiereId || !APP.periodeId) {
-        showToast('Veuillez sélectionner une classe, une matière et une période.', 'warning');
+    console.log('[ACTION] afficherListe() appelé');
+    
+    const matiereId = document.getElementById('ddlMatiere').value;
+    const classeId = document.getElementById('ddlClasse').value;
+    const periodeId = document.getElementById('ddlPeriode').value;
+    
+    if (!matiereId || !classeId || !periodeId) {
+        showToast('Veuillez sélectionner une matière, une classe et une période', 'warning');
         return;
     }
-
-    APP.modifiedRows.clear();
-    APP.validees = false;
-    APP.isLoading = true;
-    APP.isSaisieActive = true;
-
-    showSpinner(true);
-
+    
+    const spinner = document.getElementById('spinnerOverlay');
+    if (spinner) spinner.style.display = 'flex';
+    
     try {
-        hide('emptyState');
-        hide('tableWrapper');
-
-        const response = await callApi(API_BULLETINS.getBulletins, 'POST', {
-            classeId: APP.classeId,
-            matiereId: APP.matiereId,
-            periodeId: APP.periodeId
+        const response = await fetch('handlers/GetBulletins.ashx', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                classeId: classeId,
+                matiereId: matiereId,
+                periodeId: periodeId
+            })
         });
-
-        if (!response || !response.success) {
-            showToast(response?.message || 'Erreur lors du chargement', 'error');
-            show('emptyState');
-            APP.isSaisieActive = false;
-            APP.isLoading = false;
-            showSpinner(false);
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+            showToast(data.message || 'Erreur de chargement', 'error');
             return;
         }
-
-        APP.eleves = response.eleves || [];
-
-        if (APP.eleves.length === 0) {
-            showToast('Aucun élève trouvé pour cette sélection.', 'warning');
-            show('emptyState');
-            APP.isSaisieActive = false;
-            APP.isLoading = false;
-            showSpinner(false);
+        
+        const eleves = data.eleves || [];
+        currentEleves = eleves;
+        
+        if (eleves.length === 0) {
+            showToast('Aucun élève trouvé', 'warning');
             return;
         }
-
-        const e0 = APP.eleves[0];
-        setText('dateEval1', e0.DateEval1 ? `[${e0.DateEval1}]` : '');
-        setText('dateEval2', e0.DateEval2 ? `[${e0.DateEval2}]` : '');
-        setText('dateEvalP', e0.DateEvalP ? `[${e0.DateEvalP}]` : '');
-
-        const nomClasse = getSelectText('ddlClasse');
-        const nomMatiere = getSelectText('ddlMatiere');
-        const nomPeriode = getSelectText('ddlPeriode');
-        setText('tableInfoLabel', `${nomClasse} — ${nomMatiere} — ${nomPeriode}`);
-        setText('countBadge', `${APP.eleves.length} élève(s)`);
-
-        renderSaisieTable();
-        show('tableWrapper');
-
-    } catch (error) {
-        console.error('[SAISIE] ❌ Erreur:', error);
-        showToast('Erreur de connexion au serveur', 'error');
-        show('emptyState');
-        APP.isSaisieActive = false;
+        
+        // Mettre à jour l'en-tête - sans la classe en double
+        const selectedMatiere = document.getElementById('ddlMatiere').options[document.getElementById('ddlMatiere').selectedIndex];
+        const nomMatiere = selectedMatiere?.textContent || '';
+        // NE PLUS utiliser nomClasse dans l'en-tête car il est déjà dans nomMatiere
+        const nomPeriode = document.getElementById('ddlPeriode').options[document.getElementById('ddlPeriode').selectedIndex]?.text || '';
+        
+        // Afficher uniquement Matière et Période (la classe est déjà dans le nom de la matière)
+        document.getElementById('tableInfoLabel').innerHTML = `<i class="fas fa-graduation-cap"></i> ${nomMatiere} — ${nomPeriode}`;
+        document.getElementById('countBadge').textContent = `${eleves.length} élève(s)`;
+        
+        renderModernTable(eleves);
+        
+        document.getElementById('emptyState').style.display = 'none';
+        document.getElementById('tableWrapper').style.display = 'block';
+        
+        const coeff = getMatiereCoefficient();
+        const maxNote = 20 * coeff;
+        showToast(`Coefficient ${coeff} - Note max: ${maxNote}/20`, 'info');
+        
+    } catch(e) {
+        console.error('Erreur:', e);
+        showToast('Erreur: ' + e.message, 'error');
     } finally {
-        showSpinner(false);
-        APP.isLoading = false;
+        if (spinner) spinner.style.display = 'none';
     }
 }
 
-function renderSaisieTable() {
+// ============================================================
+// RENDU DU TABLEAU MODERNE
+// ============================================================
+
+function renderModernTable(eleves) {
     const tbody = document.getElementById('notesTableBody');
     if (!tbody) return;
-
-    tbody.innerHTML = '';
-
-    APP.eleves.forEach((eleve, idx) => {
-        const tr = document.createElement('tr');
-        tr.setAttribute('data-idx', idx);
-        tr.setAttribute('data-eleve-id', eleve.EleveId);
-        tr.setAttribute('data-note-id', eleve.NoteId || '');
-        tr.innerHTML = buildSaisieLigne(eleve, idx);
-        tbody.appendChild(tr);
-    });
-
-    tbody.querySelectorAll('.note-input').forEach(inp => {
-        inp.addEventListener('input', (ev) => {
-            onNoteChange(ev.target, parseInt(ev.target.closest('tr').dataset.idx));
-        });
-        inp.addEventListener('blur', (ev) => {
-            validateNoteInput(ev.target, parseInt(ev.target.closest('tr').dataset.idx));
-        });
-    });
-
-    tbody.querySelectorAll('.apprec-input').forEach(ta => {
-        ta.addEventListener('input', (ev) => {
-            markModified(parseInt(ev.target.closest('tr').dataset.idx));
-        });
-    });
-}
-
-function buildSaisieLigne(eleve, idx) {
-    const n1 = fmtNote(eleve.Note1);
-    const n2 = fmtNote(eleve.Note2);
-    const np = fmtNote(eleve.NoteProjet);
-    const moy = calculateAverage(eleve.Note1, eleve.Note2, eleve.NoteProjet);
-    const statut = eleve.Statut || 'Non saisi';
-    const verrou = (statut === 'Enregistré' || statut === 'Validé');
-
-    const inputStyle = `style="width:75px; text-align:center; height:30px; border:1px solid #ced4da; border-radius:4px; font-size:13px; font-weight:500; padding:2px 6px; background:${verrou ? '#f4f6fb' : '#fff'};"`;
-    const disabledAttr = verrou ? 'readonly' : '';
-
-    return `
-        <td style="padding:7px 14px; font-weight:500; color:#212529;">
-            <span style="background:#e8f4fd; color:#1565c0; font-size:11px; font-weight:700; padding:1px 6px; border-radius:4px; margin-right:6px;">${eleve.Numero || idx + 1}</span>
-            ${escapeHtml(eleve.Nom || '')}
-        </td>
-        <td style="text-align:center; padding:6px 8px;">
-            <input type="text" class="note-input" data-col="note1" data-idx="${idx}"
-                   value="${n1}" maxlength="5" placeholder="--" ${disabledAttr} ${inputStyle}>
-        </td>
-        <td style="text-align:center; padding:6px 8px;">
-            <input type="text" class="note-input" data-col="note2" data-idx="${idx}"
-                   value="${n2}" maxlength="5" placeholder="--" ${disabledAttr} ${inputStyle}>
-        </td>
-        <td style="text-align:center; padding:6px 8px;">
-            <input type="text" class="note-input" data-col="noteprojet" data-idx="${idx}"
-                   value="${np}" maxlength="5" placeholder="--" ${disabledAttr} ${inputStyle}>
-        </td>
-        <td style="text-align:center; padding:6px 8px;">
-            <span id="moy-${idx}" style="${badgeMoyenneStyle(moy)}">
-                ${moy !== null ? moy.toFixed(2) : '--'}
-            </span>
-        </td>
-        <td style="padding:6px 10px;">
-            <textarea class="apprec-input" data-idx="${idx}" rows="2" ${disabledAttr}
-                style="width:100%; font-size:12px; border:1px solid #ced4da; border-radius:4px; padding:4px 7px; resize:vertical; background:${verrou ? '#f4f6fb' : '#fff'};">${escapeHtml(eleve.Appreciation || '')}</textarea>
-        </td>
-        <td style="text-align:center; padding:6px 8px;">
-            <span id="statut-${idx}" class="${classBadgeStatut(statut)}">
-                ${iconStatut(statut)} ${statut}
-            </span>
-        </td>
-    `;
-}
-
-function calculateAverage(n1, n2, np) {
-    let sum = 0, coef = 0;
-    if (n1 !== null && !isNaN(n1)) { sum += n1 * 1; coef += 1; }
-    if (n2 !== null && !isNaN(n2)) { sum += n2 * 2; coef += 2; }
-    if (np !== null && !isNaN(np)) { sum += np * 1; coef += 1; }
-    return coef > 0 ? sum / coef : null;
-}
-
-function onNoteChange(input, idx) {
-    updateAverage(idx);
-    markModified(idx);
-}
-
-function validateNoteInput(input, idx) {
-    const val = input.value.trim();
-    if (val === '' || val.toLowerCase() === 'ab') {
-        input.style.borderColor = '#ced4da';
-        return;
-    }
-    const num = parseFloat(val.replace(',', '.'));
-    if (isNaN(num) || num < 0 || num > 20) {
-        input.style.borderColor = '#dc3545';
-        input.style.background = '#fff5f5';
-        showToast(`Note invalide : "${val}". Entrez 0-20 ou "Ab".`, 'error');
+    
+    const coeff = getMatiereCoefficient();
+    const maxNote = 20 * coeff;
+    
+    let placeholder = '0-20';
+    if (coeff === 1) {
+        placeholder = '0-20';
+    } else if (coeff === 2) {
+        placeholder = '0-40';
+    } else if (coeff === 3) {
+        placeholder = '0-60';
     } else {
-        input.style.borderColor = '#28a745';
-        input.style.background = '#fff';
-        input.value = num.toFixed(1);
-        updateAverage(idx);
+        placeholder = `0-${maxNote}`;
+    }
+    
+    tbody.innerHTML = '';
+    
+    eleves.forEach((eleve, idx) => {
+        const isReadonly = (eleve.Statut === 'Enregistré' || eleve.Statut === 'Validé');
+        const bgColor = isReadonly ? '#f8f9fa' : '#fff';
+        const rowClass = idx % 2 === 0 ? 'table-row-even' : 'table-row-odd';
+        
+        let moyenne = '-';
+        let moyenneClass = '';
+        let somme = 0, coef = 0;
+        
+        if (eleve.Note1) { somme += parseFloat(eleve.Note1) * 1; coef += 1; }
+        if (eleve.Note2) { somme += parseFloat(eleve.Note2) * 2; coef += 2; }
+        if (eleve.NoteProjet) { somme += parseFloat(eleve.NoteProjet) * 1; coef += 1; }
+        
+        if (coef > 0) {
+            moyenne = (somme / coef).toFixed(1);
+            if (moyenne >= 16) moyenneClass = 'moyenne-excellent';
+            else if (moyenne >= 14) moyenneClass = 'moyenne-tres-bien';
+            else if (moyenne >= 12) moyenneClass = 'moyenne-bien';
+            else if (moyenne >= 10) moyenneClass = 'moyenne-passable';
+            else moyenneClass = 'moyenne-insuffisant';
+        }
+        
+        let statutClass = 'statut-non-saisi';
+        let statutIcon = '○';
+        if (eleve.Statut === 'Validé') {
+            statutClass = 'statut-valide';
+            statutIcon = '✓';
+        } else if (eleve.Statut === 'En cours') {
+            statutClass = 'statut-en-cours';
+            statutIcon = '⏳';
+        } else if (eleve.Statut === 'Enregistré') {
+            statutClass = 'statut-enregistre';
+            statutIcon = '📝';
+        }
+        
+        const row = tbody.insertRow();
+        row.className = rowClass;
+        row.dataset.idx = idx;
+        row.dataset.eleveId = eleve.EleveId;
+        
+        const coeffHint = coeff > 1 ? `<small style="display:block; font-size:9px; color:#856404;">max:${maxNote}</small>` : '';
+        
+        row.innerHTML = `
+            <td class="cell-eleve">
+                <div class="eleve-avatar">
+                    <i class="fas fa-user-graduate"></i>
+                </div>
+                <div class="eleve-info">
+                    <strong class="eleve-nom">${escapeHtml(eleve.Nom || '')}</strong>
+                    <span class="eleve-numero">#${idx + 1}</span>
+                </div>
+            </td>
+            <td class="cell-note">
+                <input type="number" class="note-input note-input-modern" data-field="note1" 
+                       value="${eleve.Note1 || ''}" step="0.5" min="0" max="${maxNote}" 
+                       ${isReadonly ? 'readonly' : ''}
+                       placeholder="${placeholder}">
+                ${coeffHint}
+            </td>
+            <td class="cell-note">
+                <input type="number" class="note-input note-input-modern" data-field="note2" 
+                       value="${eleve.Note2 || ''}" step="0.5" min="0" max="${maxNote}" 
+                       ${isReadonly ? 'readonly' : ''}
+                       placeholder="${placeholder}">
+                ${coeffHint}
+            </td>
+            <td class="cell-note">
+                <input type="number" class="note-input note-input-modern" data-field="projet" 
+                       value="${eleve.NoteProjet || ''}" step="0.5" min="0" max="${maxNote}" 
+                       ${isReadonly ? 'readonly' : ''}
+                       placeholder="${placeholder}">
+                ${coeffHint}
+            </td>
+            <td class="cell-moyenne">
+                <div class="moyenne-circle ${moyenneClass}">
+                    <span class="moyenne-value">${moyenne}</span>
+                </div>
+            </td>
+            <td class="cell-appreciation">
+                <textarea class="appreciation-input" rows="2" ${isReadonly ? 'readonly' : ''}
+                          placeholder="Appréciation...">${escapeHtml(eleve.Appreciation || '')}</textarea>
+            </td>
+            <td class="cell-statut">
+                <span class="statut-badge ${statutClass}">
+                    <i class="statut-icon">${statutIcon}</i> ${eleve.Statut || 'Non saisi'}
+                </span>
+            </tr>
+        `;
+    });
+    
+    document.querySelectorAll('.note-input-modern').forEach(input => {
+        input.removeEventListener('input', handleNoteInput);
+        input.addEventListener('input', handleNoteInput);
+    });
+    
+    document.querySelectorAll('.appreciation-input').forEach(ta => {
+        ta.removeEventListener('input', handleAppreciationInput);
+        ta.addEventListener('input', handleAppreciationInput);
+    });
+}
+
+function handleNoteInput(e) {
+    const input = e.target;
+    const row = input.closest('tr');
+    const idx = parseInt(row.dataset.idx);
+    const field = input.getAttribute('data-field');
+    const value = parseFloat(input.value);
+    
+    let fieldName = '';
+    if (field === 'note1') fieldName = 'Note 1';
+    else if (field === 'note2') fieldName = 'Note 2';
+    else if (field === 'projet') fieldName = 'Projet';
+    
+    if (input.value !== '' && !isNaN(value)) {
+        const coeff = getMatiereCoefficient();
+        const maxAllowed = 20 * coeff;
+        
+        if (value < 0) {
+            showToast(`${fieldName} ne peut pas être négative`, 'error');
+            input.value = '';
+            return;
+        }
+        
+        if (value > maxAllowed) {
+            showToast(`⚠️ ${fieldName} = ${value}/${maxAllowed} dépasse la limite ! (Coeff ${coeff} → max ${maxAllowed})`, 'error');
+            input.value = '';
+            return;
+        }
+    }
+    
+    if (currentEleves && currentEleves[idx]) {
+        if (field === 'note1') currentEleves[idx].Note1 = value || null;
+        if (field === 'note2') currentEleves[idx].Note2 = value || null;
+        if (field === 'projet') currentEleves[idx].NoteProjet = value || null;
+    }
+    
+    updateMoyenneModerne(input);
+    marquerModification(input);
+}
+
+function handleAppreciationInput(e) {
+    const input = e.target;
+    const row = input.closest('tr');
+    const idx = parseInt(row.dataset.idx);
+    const value = input.value;
+    
+    if (currentEleves && currentEleves[idx]) {
+        currentEleves[idx].Appreciation = value;
+    }
+    marquerModification(input);
+}
+
+function updateMoyenneModerne(input) {
+    const row = input.closest('tr');
+    const idx = row.dataset.idx;
+    
+    const note1 = parseFloat(row.querySelector('[data-field="note1"]')?.value) || 0;
+    const note2 = parseFloat(row.querySelector('[data-field="note2"]')?.value) || 0;
+    const projet = parseFloat(row.querySelector('[data-field="projet"]')?.value) || 0;
+    
+    let somme = 0, coef = 0;
+    if (note1) { somme += note1 * 1; coef += 1; }
+    if (note2) { somme += note2 * 2; coef += 2; }
+    if (projet) { somme += projet * 1; coef += 1; }
+    
+    const moyenne = coef > 0 ? (somme / coef).toFixed(1) : '-';
+    const moyenneCircle = row.querySelector('.moyenne-circle');
+    const moyenneValue = row.querySelector('.moyenne-value');
+    
+    if (moyenneValue) moyenneValue.textContent = moyenne;
+    
+    if (moyenneCircle) {
+        moyenneCircle.classList.remove('moyenne-excellent', 'moyenne-tres-bien', 'moyenne-bien', 'moyenne-passable', 'moyenne-insuffisant');
+        if (moyenne !== '-') {
+            const m = parseFloat(moyenne);
+            if (m >= 16) moyenneCircle.classList.add('moyenne-excellent');
+            else if (m >= 14) moyenneCircle.classList.add('moyenne-tres-bien');
+            else if (m >= 12) moyenneCircle.classList.add('moyenne-bien');
+            else if (m >= 10) moyenneCircle.classList.add('moyenne-passable');
+            else moyenneCircle.classList.add('moyenne-insuffisant');
+        }
     }
 }
 
-function updateAverage(idx) {
-    const tr = document.querySelector(`tr[data-idx="${idx}"]`);
-    if (!tr) return;
-
-    const n1 = getNoteFromInput(tr, 'note1');
-    const n2 = getNoteFromInput(tr, 'note2');
-    const np = getNoteFromInput(tr, 'noteprojet');
-    const moy = calculateAverage(n1, n2, np);
-
-    const span = document.getElementById(`moy-${idx}`);
-    if (span) {
-        span.textContent = moy !== null ? moy.toFixed(2) : '--';
-        span.setAttribute('style', badgeMoyenneStyle(moy));
-    }
-
-    if (APP.eleves[idx]) {
-        APP.eleves[idx].Note1 = n1;
-        APP.eleves[idx].Note2 = n2;
-        APP.eleves[idx].NoteProjet = np;
+function marquerModification(element) {
+    const row = element.closest('tr');
+    if (!row) return;
+    
+    const statutSpan = row.querySelector('.statut-badge');
+    if (statutSpan && !statutSpan.textContent.includes('Validé')) {
+        statutSpan.className = 'statut-badge statut-en-cours';
+        statutSpan.innerHTML = '<i class="statut-icon">⏳</i> En cours';
     }
 }
 
-function getNoteFromInput(tr, col) {
-    const inp = tr.querySelector(`input[data-col="${col}"]`);
-    if (!inp) return null;
-    const v = inp.value.trim();
-    if (v === '' || v.toLowerCase() === 'ab') return null;
-    const n = parseFloat(v.replace(',', '.'));
-    return isNaN(n) ? null : n;
-}
+// ============================================================
+// SAUVEGARDE
+// ============================================================
 
-function markModified(idx) {
-    APP.modifiedRows.add(idx);
-    const span = document.getElementById(`statut-${idx}`);
-    if (span && !span.textContent.includes('Enregistré') && !span.textContent.includes('Validé')) {
-        span.className = 'badge badge-warning';
-        span.innerHTML = `${iconStatut('En cours')} En cours`;
-        if (APP.eleves[idx]) APP.eleves[idx].Statut = 'En cours';
+window.sauvegarder = async function() {
+    const rows = document.querySelectorAll('#notesTableBody tr');
+    const modifications = [];
+    const matiereId = document.getElementById('ddlMatiere').value;
+    const periodeId = document.getElementById('ddlPeriode').value;
+    
+    for (let row of rows) {
+        const eleveId = row.dataset.eleveId;
+        const note1 = row.querySelector('[data-field="note1"]')?.value;
+        const note2 = row.querySelector('[data-field="note2"]')?.value;
+        const projet = row.querySelector('[data-field="projet"]')?.value;
+        const appreciation = row.querySelector('.appreciation-input')?.value;
+        
+        modifications.push({
+            ELEVE_MATRICULE: eleveId,
+            NOTE1: note1 || null,
+            NOTE2: note2 || null,
+            NOTE_PROJET: projet || null,
+            APPRECIATION: appreciation || '',
+            MATIERE_ID: matiereId,
+            PERIODE: periodeId
+        });
     }
-}
-
-async function sauvegarder() {
-    if (APP.validees) {
-        showToast('Notes déjà validées définitivement.', 'warning');
+    
+    if (modifications.length === 0) {
+        showToast('Aucune donnée à sauvegarder', 'warning');
         return;
     }
-    if (APP.modifiedRows.size === 0) {
-        showToast('Aucune modification à sauvegarder.', 'info');
-        return;
-    }
-
-    showSpinner(true);
-    let errors = 0;
-    let saved = 0;
-
+    
+    const spinner = document.getElementById('spinnerOverlay');
+    if (spinner) spinner.style.display = 'flex';
+    
     try {
-        for (const idx of APP.modifiedRows) {
-            const eleve = APP.eleves[idx];
-            if (!eleve) continue;
-
-            const tr = document.querySelector(`tr[data-idx="${idx}"]`);
-            const appreciation = tr?.querySelector('.apprec-input')?.value || '';
-
-            const result = await callApi(API_BULLETINS.sauvegarderNotes, 'POST', {
-                ELEVE_MATRICULE: eleve.EleveId,
-                MATIERE_ID: APP.matiereId,
-                PERIODE: APP.periodeId,
-                NOTE1: eleve.Note1,
-                NOTE2: eleve.Note2,
-                NOTE_PROJET: eleve.NoteProjet,
-                APPRECIATION: appreciation
+        let successCount = 0;
+        for (let mod of modifications) {
+            const response = await fetch('handlers/SauvegarderNotes.ashx', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(mod)
             });
-
-            if (result && result.success) saved++;
-            else errors++;
+            const result = await response.json();
+            if (result.success) successCount++;
         }
-
-        if (errors === 0) {
-            showToast(`${saved} note(s) sauvegardée(s) avec succès !`, 'success');
-            APP.modifiedRows.clear();
-            await afficherListe();
-        } else {
-            showToast(`${errors} erreur(s) sur ${saved + errors} note(s).`, 'error');
-        }
-    } catch (error) {
-        console.error('[SAISIE] ❌ Erreur sauvegarde:', error);
+        
+        showToast(`${successCount} note(s) sauvegardée(s) avec succès`, 'success');
+        await afficherListe();
+    } catch(e) {
+        console.error('Erreur:', e);
         showToast('Erreur lors de la sauvegarde', 'error');
     } finally {
-        showSpinner(false);
+        if (spinner) spinner.style.display = 'none';
     }
-}
+};
 
-async function validerDefinitivement() {
-    if (APP.validees) {
-        showToast('Déjà validé définitivement.', 'warning');
-        return;
-    }
-
-    ouvrirModal(
-        'Validation Définitive',
-        'Cette action est irréversible. Toutes les notes seront verrouillées. Confirmer ?',
-        async () => {
-            showSpinner(true);
-            try {
-                const result = await callApi(API_BULLETINS.validerDefinitivement, 'POST', {
-                    classeId: APP.classeId,
-                    matiereId: APP.matiereId,
-                    periodeId: APP.periodeId
-                });
-
-                if (!result || !result.success) {
-                    showToast(result?.message || 'Erreur lors de la validation', 'error');
-                    return;
-                }
-
-                APP.validees = true;
-                APP.modifiedRows.clear();
-
-                document.querySelectorAll('.note-input, .apprec-input').forEach(el => {
-                    el.setAttribute('readonly', true);
-                    el.style.background = '#f4f6fb';
-                    el.style.cursor = 'not-allowed';
-                });
-
-                document.querySelectorAll('[id^="statut-"]').forEach(span => {
-                    span.className = 'badge badge-success';
-                    span.innerHTML = `${iconStatut('Validé')} Validé`;
-                });
-
-                showToast(`${result.updated || 0} note(s) validée(s) définitivement.`, 'success');
-            } catch (error) {
-                console.error('[SAISIE] ❌ Erreur validation:', error);
-                showToast('Erreur lors de la validation', 'error');
-            } finally {
-                showSpinner(false);
-            }
-        }
-    );
-}
-
-// ============================================================
-// SECTION 2: GESTION DES BULLETINS
-// ============================================================
-
-async function loadBulletins() {
-    console.log('[ADMIN] 📊 loadBulletins() appelé');
-
-    if (APP.isSaisieActive) {
-        console.log('[ADMIN] ⏳ Mode saisie actif - Chargement des selects uniquement');
-        await loadClassesAndMatieresOnly();
-        return;
-    }
-
-    if (APP.isLoading) {
-        console.log('[ADMIN] ⏳ Déjà en chargement, ignoré');
-        return;
-    }
-
-    APP.isLoading = true;
-    showSpinner(true);
-
+window.validerDefinitivement = async function() {
+    if (!confirm('⚠️ Validation définitive irréversible. Confirmer ?')) return;
+    
+    const classeId = document.getElementById('ddlClasse').value;
+    const matiereId = document.getElementById('ddlMatiere').value;
+    const periodeId = document.getElementById('ddlPeriode').value;
+    
+    const spinner = document.getElementById('spinnerOverlay');
+    if (spinner) spinner.style.display = 'flex';
+    
     try {
-        console.log('[ADMIN] 🌐 Appel API...');
-        const [bulletinsRes, elevesRes, classesRes, matieresRes] = await Promise.all([
-            callApi(API_BULLETINS.getBulletins),
-            callApi(API_BULLETINS.getEleves),
-            callApi(API_BULLETINS.getClasses),
-            callApi(API_BULLETINS.getMatieres)
-        ]);
-
-        if (bulletinsRes && bulletinsRes.success) {
-            APP.bulletinsData = bulletinsRes.data || [];
-            console.log('[ADMIN] 📋 Bulletins chargés:', APP.bulletinsData.length);
+        const response = await fetch('handlers/ValiderDefinitivement.ashx', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ classeId, matiereId, periodeId })
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+            showToast(`${result.updated || 0} note(s) validée(s) définitivement`, 'success');
+            await afficherListe();
         } else {
-            APP.bulletinsData = [];
+            showToast(result.message || 'Erreur lors de la validation', 'error');
         }
-
-        if (elevesRes && elevesRes.success) {
-            APP.elevesList = elevesRes.Eleves || elevesRes.data || [];
-            populateStudentSelect();
-        } else {
-            APP.elevesList = [];
-        }
-
-        if (classesRes && classesRes.success) {
-            APP.classesList = classesRes.Classes || classesRes.data || [];
-        } else {
-            APP.classesList = [];
-        }
-
-        if (matieresRes && matieresRes.success) {
-            APP.matieresList = matieresRes.matieres || matieresRes.data || [];
-        } else {
-            APP.matieresList = [];
-        }
-
-        populateClassSelect();
-        populateMatiereSelect();
-
-        APP.filteredBulletins = [...APP.bulletinsData];
-        applySort();
-        renderBulletinsTable();
-
-    } catch (err) {
-        console.error('[ADMIN] ❌ Erreur loadBulletins:', err);
-        showToast('Impossible de charger les données.', 'error');
+    } catch(e) {
+        console.error('Erreur:', e);
+        showToast('Erreur de connexion', 'error');
     } finally {
-        showSpinner(false);
-        APP.isLoading = false;
+        if (spinner) spinner.style.display = 'none';
     }
-}
+};
 
-async function loadClassesAndMatieresOnly() {
-    console.log('[ADMIN] 📋 Chargement des selects uniquement');
-
-    try {
-        const [classesRes, matieresRes] = await Promise.all([
-            callApi(API_BULLETINS.getClasses),
-            callApi(API_BULLETINS.getMatieres)
-        ]);
-
-        if (classesRes && classesRes.success) {
-            APP.classesList = classesRes.Classes || classesRes.data || [];
-        } else {
-            APP.classesList = [];
-        }
-
-        if (matieresRes && matieresRes.success) {
-            APP.matieresList = matieresRes.matieres || matieresRes.data || [];
-        } else {
-            APP.matieresList = [];
-        }
-
-        // Ne repeupler les selects QUE si la saisie n'est pas active.
-        // Si afficherListe() est en cours ou terminé, repeupler les selects
-        // efface la sélection en cours (classe/matière/période choisies).
-        if (!APP.isSaisieActive) {
-            populateClassSelect();
-            populateMatiereSelect();
-        }
-
-    } catch (err) {
-        console.error('[ADMIN] ❌ Erreur chargement selects:', err);
-    }
-}
-
-function applySort() {
-    APP.filteredBulletins.sort((a, b) => {
-        let valA = a[APP.currentSortCol] || '';
-        let valB = b[APP.currentSortCol] || '';
-
-        if (typeof valA === 'number' && typeof valB === 'number') {
-            return APP.currentSortDir === 'ASC' ? valA - valB : valB - valA;
-        }
-
-        const strA = String(valA).toLowerCase();
-        const strB = String(valB).toLowerCase();
-
-        if (strA < strB) return APP.currentSortDir === 'ASC' ? -1 : 1;
-        if (strA > strB) return APP.currentSortDir === 'ASC' ? 1 : -1;
-        return 0;
-    });
-}
-
-function sortBy(column) {
-    if (APP.currentSortCol === column) {
-        APP.currentSortDir = APP.currentSortDir === 'ASC' ? 'DESC' : 'ASC';
-    } else {
-        APP.currentSortCol = column;
-        APP.currentSortDir = 'ASC';
-    }
-    applySort();
-    renderBulletinsTable();
-}
-
-function renderBulletinsTable() {
-    const tbody = document.getElementById('bulletinsTableBody');
-    if (!tbody) return;
-
-    if (!APP.filteredBulletins || APP.filteredBulletins.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:50px;">Aucun bulletin trouvé</td></tr>';
-        updatePaginationInfo();
+window.exporter = function() {
+    const rows = document.querySelectorAll('#notesTableBody tr');
+    if (rows.length === 0) {
+        showToast('Aucune donnée à exporter', 'warning');
         return;
     }
-
-    const start = (APP.currentPage - 1) * APP.rowsPerPage;
-    const pageData = APP.filteredBulletins.slice(start, start + APP.rowsPerPage);
-
-    tbody.innerHTML = '';
-    for (const b of pageData) {
-        const noteClass = getNoteClass(b.NOTE);
-        const row = tbody.insertRow();
-        row.innerHTML = `
-            <td class="text-center"><span class="badge badge-secondary">${escapeHtml(b.MATRICULE || '-')}</span></td>
-            <td class="text-center"><strong>${escapeHtml(b.ELEVE_NOM || '-')}</strong></td>
-            <td class="text-center"><span class="badge badge-info">${escapeHtml(b.CLASSE_NOM || '-')}</span></td>
-            <td class="text-center"><span class="badge badge-primary">${escapeHtml(b.MATIERE_NOM || '-')}</span></td>
-            <td class="text-center">${escapeHtml(b.ENSEIGNANT_NOM || '-')}</td>
-            <td class="text-center"><span class="${noteClass}">${formatNote(b.NOTE)}</span></td>
-            <td class="text-center">${b.COEFFICIENT || 1}</td>
-            <td class="text-center"><span class="badge badge-warning">${escapeHtml(b.PERIODE || '-')}</span></td>
-            <td class="text-center">
-                <button class="btn btn-sm btn-primary" onclick="editBulletin('${escapeHtml(b.ID)}')"><i class="fas fa-edit"></i></button>
-                <button class="btn btn-sm btn-danger" onclick="deleteBulletin('${escapeHtml(b.ID)}', '${escapeHtml(b.ELEVE_NOM)}', '${escapeHtml(b.MATIERE_NOM)}')"><i class="fas fa-trash"></i></button>
-            </td>
-        `;
+    
+    const selectedMatiere = document.getElementById('ddlMatiere').options[document.getElementById('ddlMatiere').selectedIndex];
+    const nomMatiere = selectedMatiere?.textContent || '';
+    const nomClasse = document.getElementById('ddlClasse').options[document.getElementById('ddlClasse').selectedIndex]?.text || '';
+    const nomPeriode = document.getElementById('ddlPeriode').options[document.getElementById('ddlPeriode').selectedIndex]?.text || '';
+    
+    let csv = `Matière;${nomMatiere}\nClasse;${nomClasse}\nPériode;${nomPeriode}\n\n`;
+    csv += 'N°;Élève;Note1;Note2;Projet;Moyenne;Appréciation;Statut\n';
+    
+    for (let row of rows) {
+        const idx = row.dataset.idx;
+        const nom = row.querySelector('.eleve-nom')?.textContent || '';
+        const note1 = row.querySelector('[data-field="note1"]')?.value || 'Ab';
+        const note2 = row.querySelector('[data-field="note2"]')?.value || 'Ab';
+        const projet = row.querySelector('[data-field="projet"]')?.value || 'Ab';
+        const moyenne = row.querySelector('.moyenne-value')?.textContent || '-';
+        const appreciation = row.querySelector('.appreciation-input')?.value || '';
+        const statut = row.querySelector('.statut-badge')?.textContent.trim() || 'Non saisi';
+        
+        csv += `${parseInt(idx)+1};"${nom}";${note1};${note2};${projet};${moyenne};"${appreciation.replace(/"/g, '""')}";${statut}\n`;
     }
-
-    updatePaginationInfo();
-}
-
-function updatePaginationInfo() {
-    const total = APP.filteredBulletins.length;
-    const infoSpan = document.getElementById('bulletinPaginationInfo');
-    if (infoSpan) {
-        infoSpan.textContent = total === 0 ? 'Aucun enregistrement' : `${total} bulletin(s)`;
-    }
-}
-
-function openAddBulletinModal() {
-    APP.currentMode = 'add';
-    APP.currentBulletinId = null;
-
-    const studentSelect = document.getElementById('bulletinStudent');
-    const subjectSelect = document.getElementById('bulletinSubject');
-    const periodSelect = document.getElementById('bulletinPeriod');
-
-    if (studentSelect) studentSelect.value = '';
-    if (subjectSelect) subjectSelect.value = '';
-    if (periodSelect) periodSelect.value = 'T1';
-
-    openModal('addBulletinModal');
-}
-
-async function saveNewBulletin() {
-    const matricule = document.getElementById('bulletinStudent')?.value;
-    const matiereId = document.getElementById('bulletinSubject')?.value;
-    const periode = document.getElementById('bulletinPeriod')?.value;
-
-    if (!matricule) { showToast('Sélectionnez un élève', 'warning'); return; }
-    if (!matiereId) { showToast('Sélectionnez une matière', 'warning'); return; }
-    if (!periode) { showToast('Sélectionnez une période', 'warning'); return; }
-
-    showSpinner(true);
-
-    try {
-        const payload = {
-            MATRICULE: matricule,
-            MATIERE_ID: matiereId,
-            NOTE1: null,
-            NOTE2: null,
-            NOTE_PROJET: null,
-            APPRECIATION: '',
-            PERIODE: periode
-        };
-
-        const result = await callApi(API_BULLETINS.ajouter, 'POST', payload);
-
-        if (result && result.success) {
-            closeAddBulletinModal();
-            showToast('Bulletin ajouté avec succès', 'success');
-            loadBulletins();
-        } else {
-            showToast(result?.message || 'Erreur lors de l\'ajout', 'error');
-        }
-    } catch (err) {
-        console.error('saveNewBulletin error:', err);
-        showToast('Erreur de connexion au serveur', 'error');
-    } finally {
-        showSpinner(false);
-    }
-}
-
-async function editBulletin(id) {
-    const bulletin = APP.bulletinsData.find(b => b.ID === id);
-    if (!bulletin) { showToast('Bulletin non trouvé', 'error'); return; }
-
-    const result = await Swal.fire({
-        title: 'Modifier la note',
-        html: `
-            <div>
-                <p><strong>Élève:</strong> ${escapeHtml(bulletin.ELEVE_NOM)}</p>
-                <p><strong>Matière:</strong> ${escapeHtml(bulletin.MATIERE_NOM)}</p>
-                <div class="form-group">
-                    <label>Note (0-20)</label>
-                    <input type="number" id="edit-note" class="form-control" step="0.5" min="0" max="20" value="${bulletin.NOTE}">
-                </div>
-            </div>
-        `,
-        confirmButtonText: 'Enregistrer',
-        cancelButtonText: 'Annuler',
-        showCancelButton: true,
-        preConfirm: () => {
-            const note = parseFloat(document.getElementById('edit-note').value);
-            if (isNaN(note) || note < 0 || note > 20) {
-                Swal.showValidationMessage('La note doit être entre 0 et 20');
-                return false;
-            }
-            return { note: note };
-        }
-    });
-
-    if (result.isConfirmed) {
-        showSpinner(true);
-        try {
-            const res = await callApi(API_BULLETINS.modifier, 'POST', {
-                ID: id,
-                NOTE: result.value.note,
-                COMMENTAIRE: ''
-            });
-
-            if (res && res.success) {
-                showToast('Note modifiée avec succès', 'success');
-                loadBulletins();
-            } else {
-                showToast(res?.message || 'Erreur lors de la modification', 'error');
-            }
-        } catch (err) {
-            console.error('editBulletin:', err);
-            showToast('Erreur réseau', 'error');
-        } finally {
-            showSpinner(false);
-        }
-    }
-}
-
-async function deleteBulletin(id, eleveNom, matiereNom) {
-    const result = await Swal.fire({
-        title: 'Supprimer ce bulletin ?',
-        html: `<strong>${escapeHtml(eleveNom)}</strong> - <strong>${escapeHtml(matiereNom)}</strong>`,
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#d33',
-        confirmButtonText: 'Oui, supprimer',
-        cancelButtonText: 'Annuler'
-    });
-
-    if (!result.isConfirmed) return;
-
-    showSpinner(true);
-    try {
-        const res = await callApi(API_BULLETINS.supprimer, 'POST', { ID: id });
-
-        if (res && res.success) {
-            APP.bulletinsData = APP.bulletinsData.filter(b => b.ID !== id);
-            APP.filteredBulletins = APP.filteredBulletins.filter(b => b.ID !== id);
-            renderBulletinsTable();
-            showToast('Bulletin supprimé', 'success');
-        } else {
-            showToast(res?.message || 'Erreur lors de la suppression', 'error');
-        }
-    } catch (err) {
-        console.error('deleteBulletin:', err);
-        showToast('Erreur réseau', 'error');
-    } finally {
-        showSpinner(false);
-    }
-}
-
-function exporter() {
-    if (!APP.eleves.length) return;
-
-    const nomClasse = getSelectText('ddlClasse');
-    const nomMatiere = getSelectText('ddlMatiere');
-    const nomPeriode = getSelectText('ddlPeriode');
-
-    const csvRows = [`Classe;${nomClasse}`, `Matière;${nomMatiere}`, `Période;${nomPeriode}`, ''];
-    csvRows.push('ID/Nom;Note1;Note2;Projet;Moyenne;Appréciation;Statut');
-
-    for (let idx = 0; idx < APP.eleves.length; idx++) {
-        const e = APP.eleves[idx];
-        const tr = document.querySelector(`tr[data-idx="${idx}"]`);
-        const app = tr ? tr.querySelector('.apprec-input')?.value || '' : '';
-        const moy = calculateAverage(e.Note1, e.Note2, e.NoteProjet);
-        csvRows.push([
-            `${e.Numero || idx + 1} - ${e.Nom || ''}`,
-            e.Note1 ?? 'Ab', e.Note2 ?? 'Ab', e.NoteProjet ?? 'Ab',
-            moy !== null ? moy.toFixed(2) : '--',
-            `"${app.replace(/"/g, '""')}"`,
-            e.Statut || ''
-        ].join(';'));
-    }
-
-    const blob = new Blob(['\uFEFF' + csvRows.join('\r\n')], { type: 'text/csv;charset=utf-8' });
+    
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Bulletin_${nomClasse}_${nomMatiere}_${nomPeriode}.csv`.replace(/\s/g, '_');
+    a.download = `Bulletin_${nomMatiere}_${nomClasse}_${nomPeriode}.csv`.replace(/\s/g, '_');
     a.click();
     URL.revokeObjectURL(url);
+    
+    showToast('Export terminé', 'success');
+};
+
+// ============================================================
+// UTILITAIRES
+// ============================================================
+
+function escapeHtml(str) {
+    if (!str) return '';
+    return String(str).replace(/[&<>]/g, function(m) {
+        if (m === '&') return '&amp;';
+        if (m === '<') return '&lt;';
+        if (m === '>') return '&gt;';
+        return m;
+    });
 }
 
 // ============================================================
 // INITIALISATION
 // ============================================================
 
-function init() {
-    console.log('[INIT] 🚀 Démarrage de bulletins.js');
-
-    forceHideSpinner();   // masque immédiatement le spinner au cas où il serait visible
-    memorizeDisplays();   // mémorise le display naturel de tableWrapper et emptyState
-
-    lireContexteServeur();
-    afficherUsernameNavbar();
-
-    // Charge uniquement les selects au démarrage
-    loadClassesAndMatieresOnly();
-
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            closeModal('addBulletinModal');
-            closeModal('bulletinModal');
-        }
-    });
-
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('[INIT] DOM chargé');
+    
+    getUserContext();
+    
+    // Charger uniquement les matières (elles contiennent déjà CLASSE_ID et CLASSE_NOM)
+    chargerMatieres();
+    
+    // Désactiver le select des classes (sera rempli automatiquement)
+    const classeSelect = document.getElementById('ddlClasse');
+    if (classeSelect) {
+        classeSelect.disabled = true;
+        classeSelect.innerHTML = '<option value="">-- Choisissez une matière d\'abord --</option>';
+    }
+    
+    const btn = document.getElementById('btnAfficherListe');
+    if (btn) {
+        const newBtn = btn.cloneNode(true);
+        btn.parentNode.replaceChild(newBtn, btn);
+        
+        newBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            afficherListe();
+            return false;
+        });
+        console.log('[INIT] Bouton attaché');
+    }
+    
+    const matiereSelect = document.getElementById('ddlMatiere');
+    if (matiereSelect) {
+        matiereSelect.addEventListener('change', onMatiereChange);
+    }
+    
     const menuToggle = document.getElementById('menuToggle');
     const sidebar = document.getElementById('sidebar');
     if (menuToggle && sidebar) {
         menuToggle.addEventListener('click', () => sidebar.classList.toggle('collapsed'));
     }
-
+    
     const fullscreenToggle = document.getElementById('fullscreenToggle');
     if (fullscreenToggle) {
         fullscreenToggle.addEventListener('click', () => {
@@ -1107,7 +759,7 @@ function init() {
             }
         });
     }
-
+    
     const notifToggle = document.getElementById('notifToggle');
     const notifDropdown = document.getElementById('notifDropdown');
     if (notifToggle && notifDropdown) {
@@ -1117,43 +769,6 @@ function init() {
         });
         document.addEventListener('click', () => notifDropdown.classList.remove('show'));
     }
-
-    // Attacher le bouton Afficher la liste
-    const btnAfficher = document.getElementById('btnAfficherListe');
-    if (btnAfficher) {
-        btnAfficher.removeAttribute('onclick');
-        btnAfficher.addEventListener('click', afficherListe);
-        console.log('[INIT] ✅ Événement du bouton Afficher attaché');
-    }
-
-    console.log('[INIT] ✅ Initialisation terminée');
-}
-
-function loadAdminView() {
-    APP.isSaisieActive = false;
-    loadBulletins();
-}
-
-// ============================================================
-// EXPOSITION GLOBALE
-// ============================================================
-
-window.loadAdminView = loadAdminView;
-window.onClasseChange = onClasseChange;
-window.afficherListe = afficherListe;
-window.sauvegarder = sauvegarder;
-window.validerDefinitivement = validerDefinitivement;
-window.exporter = exporter;
-window.openAddBulletinModal = openAddBulletinModal;
-window.closeAddBulletinModal = closeAddBulletinModal;
-window.saveNewBulletin = saveNewBulletin;
-window.editBulletin = editBulletin;
-window.deleteBulletin = deleteBulletin;
-window.sortBy = sortBy;
-window.closeModal = closeModal;
-
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-} else {
-    init();
-}
+    
+    console.log('[INIT] Terminé');
+});

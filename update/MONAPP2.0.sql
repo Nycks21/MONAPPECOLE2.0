@@ -132,6 +132,7 @@ GO
 -- =====================================================
 -- TABLE MATIÈRES
 -- =====================================================
+-- Vérifier si la table MATIERES n'existe pas
 IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'MATIERES')
 BEGIN
     CREATE TABLE MATIERES (
@@ -140,14 +141,18 @@ BEGIN
         ENSEIGNANT INT NOT NULL,
         COEFFICIENT DECIMAL(3,1) DEFAULT 1.0,
         HEURES_SEMAINE INT DEFAULT 3,
-        NIVEAU UNIQUEIDENTIFIER NOT NULL, -- Correction : Ajout du 'NULL' manquant
-        CREATED_AT DATETIME DEFAULT GETDATE(), -- Correction : Ajout d'une virgule ici
+        CLASSE_ID INT NOT NULL,
+        CREATED_AT DATETIME DEFAULT GETDATE(),
+        UPDATED_AT DATETIME NULL,
 
-        CONSTRAINT FK_MATIERES_NIVEAU FOREIGN KEY (NIVEAU) 
-            REFERENCES NIVEAUX(ID),
-
+        CONSTRAINT FK_MATIERES_CLASSES FOREIGN KEY (CLASSE_ID) 
+            REFERENCES CLASSES(ID),
+        
         CONSTRAINT FK_MATIERES_USERS FOREIGN KEY (ENSEIGNANT) 
-            REFERENCES USERS(IDUSER) -- Vérifié : IDUSER est bien la clé primaire 
+            REFERENCES USERS(IDUSER),
+        
+        -- Contrainte d'unicité: une matière ne peut être enseignée qu'une fois par classe et enseignant
+        CONSTRAINT UQ_MATIERE_CLASSE_ENSEIGNANT UNIQUE (NOM, CLASSE_ID, ENSEIGNANT)
     );
 END
 GO

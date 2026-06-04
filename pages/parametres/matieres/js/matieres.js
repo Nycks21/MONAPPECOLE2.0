@@ -2,9 +2,9 @@
  * matieres.js — Gestion Scolaire
  * Adapté à la table SQL Server : [dbo].[MATIERES]
  * Colonnes : ID (GUID), NOM, ENSEIGNANT (int FK→USERS.IDUSER),
- *            COEFFICIENT, HEURES_SEMAINE, NIVEAU (GUID FK→NIVEAUX.ID), CREATED_AT
+ *            COEFFICIENT, HEURES_SEMAINE, CLASSE_ID (INT FK→CLASSES.ID), CREATED_AT
  * 
- * Modification : Permet d'avoir la même matière pour le même professeur dans différents niveaux
+ * Modification : La matière dépend de la classe (pas du niveau)
  */
 
 'use strict';
@@ -17,7 +17,7 @@ var API_MATIERES = {
     ajouter: '/pages/parametres/matieres/handlers/AjouterMatiere.ashx',
     modifier: '/pages/parametres/matieres/handlers/ModifierMatiere.ashx',
     supprimer: '/pages/parametres/matieres/handlers/SupprimerMatiere.ashx',
-    niveaux: '/pages/parametres/niveaux/handlers/GetNiveaux.ashx',
+    classes: '/pages/parametres/classes/handlers/GetClasse.ashx',
     users: '/pages/administrations/utilisateur/handlers/GetUsers.ashx'
 };
 
@@ -173,13 +173,13 @@ function resetMatiereForm() {
     var enseignantSelect = document.getElementById('matiereEnseignant');
     var coeffInput = document.getElementById('matiereCoeff');
     var heuresInput = document.getElementById('matiereHeures');
-    var niveauSelect = document.getElementById('matiereNiveau');
+    var classeSelect = document.getElementById('matiereClasse');
     
     if (nomInput) nomInput.value = '';
     if (enseignantSelect) enseignantSelect.value = '';
     if (coeffInput) coeffInput.value = '1';
     if (heuresInput) heuresInput.value = '3';
-    if (niveauSelect) niveauSelect.value = '';
+    if (classeSelect) classeSelect.value = '';
     
     clearFormErrors();
 }
@@ -239,9 +239,9 @@ function validateMatiereForm() {
         ok = false;
     }
 
-    var niveauEl = document.getElementById('matiereNiveau');
-    if (!niveauEl || !niveauEl.value) {
-        showFieldError('matiereNiveau', 'Le niveau est obligatoire.');
+    var classeEl = document.getElementById('matiereClasse');
+    if (!classeEl || !classeEl.value) {
+        showFieldError('matiereClasse', 'La classe est obligatoire.');
         ok = false;
     }
 
@@ -268,28 +268,28 @@ function ajax(url, payload) {
 // CHARGEMENT DES DONNÉES
 // ============================================================
 
-async function chargerNiveaux() {
+async function chargerClasses() {
     try {
-        var response = await fetch(API_MATIERES.niveaux);
+        var response = await fetch(API_MATIERES.classes);
         var data = await response.json();
 
         if (data.success) {
-            var select = document.getElementById('matiereNiveau');
+            var select = document.getElementById('matiereClasse');
             if (!select) return;
-            select.innerHTML = '<option value="">-- Sélectionner un niveau --</option>';
+            select.innerHTML = '<option value="">-- Sélectionner une classe --</option>';
 
-            var niveauxList = data.niveaux || data.data || [];
-            for (var i = 0; i < niveauxList.length; i++) {
-                var niv = niveauxList[i];
+            var classesList = data.Classes || data.data || [];
+            for (var i = 0; i < classesList.length; i++) {
+                var cls = classesList[i];
                 var opt = document.createElement('option');
-                opt.value = niv.ID || niv.id;
-                opt.textContent = niv.NOM || niv.nom;
+                opt.value = cls.ID || cls.id;
+                opt.textContent = cls.NOM || cls.nom;
                 select.appendChild(opt);
             }
-            console.log('[NIVEAUX] Chargés:', niveauxList.length);
+            console.log('[CLASSES] Chargées:', classesList.length);
         }
     } catch (err) {
-        console.error("Erreur lors du chargement des niveaux:", err);
+        console.error("Erreur lors du chargement des classes:", err);
     }
 }
 
@@ -354,19 +354,19 @@ function renderMatiereStats() {
     var total = matieresData.length;
     var totalCoeff = 0;
     var totalH = 0;
-    var niveauxVus = {};
+    var classesVues = {};
 
     for (var i = 0; i < matieresData.length; i++) {
         totalCoeff += parseFloat(matieresData[i].COEFFICIENT) || 0;
         totalH += parseInt(matieresData[i].HEURES_SEMAINE, 10) || 0;
-        if (matieresData[i].NIVEAU) niveauxVus[matieresData[i].NIVEAU] = true;
+        if (matieresData[i].CLASSE_NOM) classesVues[matieresData[i].CLASSE_NOM] = true;
     }
 
     var stats = [
         { label: 'Matières', value: total, icon: 'fas fa-book', color: '#007bff' },
         { label: 'Coeff. total', value: totalCoeff.toFixed(1), icon: 'fas fa-balance-scale', color: '#28a745' },
         { label: 'Heures / sem.', value: totalH + 'h', icon: 'fas fa-clock', color: '#ffc107' },
-        { label: 'Niveaux couverts', value: Object.keys(niveauxVus).length, icon: 'fas fa-layer-group', color: '#17a2b8' }
+        { label: 'Classes couvertes', value: Object.keys(classesVues).length, icon: 'fas fa-folder', color: '#17a2b8' }
     ];
 
     container.innerHTML = stats.map(function (s) {
@@ -402,7 +402,8 @@ function renderMatieresTable() {
             '<tr><td colspan="7" style="text-align:center;padding:10px;">' +
             '<button class="btn btn-primary" onclick="openAddMatiereModal()">' +
             '<i class="fas fa-plus"></i> Ajouter une matière</button>' +
-            '</td></tr>';
+            '</td>' +
+            '</tr>';
         return;
     }
 
@@ -424,12 +425,12 @@ function renderMatieresTable() {
         cellEnseignant.innerHTML = '<span style="background-color: #fce4ec; color: #d32f2f; padding: 3px 12px; border-radius: 15px; font-size: 11px; font-weight: 600; display: inline-block; border: 1px solid #ffcdd2; min-width: 130px;">' +
             '<i class="fas fa-user-tie mr-1"></i> ' + escHtml(m.ENSEIGNANT || '—') + '</span>';
 
-        // 2. Niveau
-        var cellNiveau = row.insertCell(2);
-        cellNiveau.style.textAlign = 'center';
-        cellNiveau.style.verticalAlign = 'middle';
-        cellNiveau.innerHTML = '<span style="background-color: #e1f5fe; color: #01579b; padding: 3px 12px; border-radius: 15px; font-size: 11px; font-weight: 600; display: inline-block; border: 1px solid #b3e5fc; min-width: 90px;">' +
-            '<i class="fas fa-layer-group mr-1"></i> ' + escHtml(m.NIVEAU || '—') + '</span>';
+        // 2. Classe
+        var cellClasse = row.insertCell(2);
+        cellClasse.style.textAlign = 'center';
+        cellClasse.style.verticalAlign = 'middle';
+        cellClasse.innerHTML = '<span style="background-color: #e1f5fe; color: #01579b; padding: 3px 12px; border-radius: 15px; font-size: 11px; font-weight: 600; display: inline-block; border: 1px solid #b3e5fc; min-width: 90px;">' +
+            '<i class="fas fa-folder mr-1"></i> ' + escHtml(m.CLASSE_NOM || '—') + '</span>';
 
         // 3. Coefficient
         var cellCoeff = row.insertCell(3);
@@ -554,7 +555,7 @@ async function saveMatiere() {
     var enseignantId = document.getElementById('matiereEnseignant')?.value;
     var coefficient = document.getElementById('matiereCoeff')?.value;
     var heuresSemaine = document.getElementById('matiereHeures')?.value;
-    var niveauId = document.getElementById('matiereNiveau')?.value;
+    var classeId = document.getElementById('matiereClasse')?.value;
 
     // Validations
     if (!nom) {
@@ -569,8 +570,8 @@ async function saveMatiere() {
         showToast('Veuillez saisir un coefficient valide', 'warning');
         return;
     }
-    if (!niveauId) {
-        showToast('Veuillez sélectionner un niveau', 'warning');
+    if (!classeId) {
+        showToast('Veuillez sélectionner une classe', 'warning');
         return;
     }
 
@@ -583,7 +584,7 @@ async function saveMatiere() {
             ENSEIGNANT_ID: parseInt(enseignantId),
             COEFFICIENT: parseFloat(coefficient),
             HEURES_SEMAINE: parseInt(heuresSemaine) || 3,
-            NIVEAU_ID: niveauId
+            CLASSE_ID: parseInt(classeId)
         };
         
         if (editId) {
@@ -628,13 +629,13 @@ function editMatiere(id) {
     var enseignantSelect = document.getElementById('matiereEnseignant');
     var coeffInput = document.getElementById('matiereCoeff');
     var heuresInput = document.getElementById('matiereHeures');
-    var niveauSelect = document.getElementById('matiereNiveau');
+    var classeSelect = document.getElementById('matiereClasse');
     
     if (nomInput) nomInput.value = m.NOM;
     if (enseignantSelect) enseignantSelect.value = m.ENSEIGNANT_ID;
     if (coeffInput) coeffInput.value = m.COEFFICIENT;
     if (heuresInput) heuresInput.value = m.HEURES_SEMAINE;
-    if (niveauSelect) niveauSelect.value = m.NIVEAU_ID;
+    if (classeSelect) classeSelect.value = m.CLASSE_ID;
 
     var modalTitle = document.getElementById('matiereModalTitle');
     if (modalTitle) modalTitle.innerHTML = '<i class="fas fa-edit"></i> Modifier : ' + escHtml(m.NOM);
@@ -715,10 +716,10 @@ function exportMatieres() {
     showSpinner();
     setTimeout(function () {
         try {
-            var header = ['ID', 'Matière', 'Enseignant', 'Niveau', 'Coefficient', 'Heures/sem.', 'Créé le'];
+            var header = ['ID', 'Matière', 'Enseignant', 'Classe', 'Coefficient', 'Heures/sem.', 'Créé le'];
             var rows = matieresData.map(function (m) {
                 var date = m.CREATED_AT ? new Date(m.CREATED_AT).toLocaleDateString('fr-FR') : '';
-                return [m.ID, m.NOM, m.ENSEIGNANT, m.NIVEAU, m.COEFFICIENT, m.HEURES_SEMAINE, date]
+                return [m.ID, m.NOM, m.ENSEIGNANT, m.CLASSE_NOM, m.COEFFICIENT, m.HEURES_SEMAINE, date]
                     .map(function (v) { return '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"'; })
                     .join(',');
             });
@@ -815,7 +816,7 @@ document.addEventListener('DOMContentLoaded', function () {
     forceHideSpinner();
     hidePreloader();
     initUIControls();
-    chargerNiveaux();
+    chargerClasses();      // Charger les classes (remplace chargerNiveaux)
     chargerUsers();
     chargerMatieres();
 });

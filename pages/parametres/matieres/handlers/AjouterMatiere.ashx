@@ -18,7 +18,6 @@ public class AjouterMatiere : IHttpHandler, IRequiresSessionState
 
         try
         {
-            // Lire le corps de la requête
             string jsonBody = new System.IO.StreamReader(context.Request.InputStream).ReadToEnd();
             var serializer = new JavaScriptSerializer();
             var data = serializer.Deserialize<dynamic>(jsonBody);
@@ -27,14 +26,14 @@ public class AjouterMatiere : IHttpHandler, IRequiresSessionState
             int enseignantId = Convert.ToInt32(data["ENSEIGNANT_ID"]);
             decimal coefficient = Convert.ToDecimal(data["COEFFICIENT"]);
             int heuresSemaine = Convert.ToInt32(data["HEURES_SEMAINE"]);
-            string niveauId = Convert.ToString(data["NIVEAU_ID"]);
+            int classeId = Convert.ToInt32(data["CLASSE_ID"]);
 
             using (SqlConnection conn = new SqlConnection(connStr))
             {
                 conn.Open();
 
-                string sql = @"INSERT INTO MATIERES (ID, NOM, ENSEIGNANT, COEFFICIENT, HEURES_SEMAINE, NIVEAU, CREATED_AT) 
-                               VALUES (NEWID(), @nom, @enseignantId, @coefficient, @heuresSemaine, @niveauId, GETDATE())";
+                string sql = @"INSERT INTO MATIERES (ID, NOM, ENSEIGNANT, COEFFICIENT, HEURES_SEMAINE, CLASSE_ID, CREATED_AT) 
+                               VALUES (NEWID(), @nom, @enseignantId, @coefficient, @heuresSemaine, @classeId, GETDATE())";
 
                 using (SqlCommand cmd = new SqlCommand(sql, conn))
                 {
@@ -42,7 +41,7 @@ public class AjouterMatiere : IHttpHandler, IRequiresSessionState
                     cmd.Parameters.AddWithValue("@enseignantId", enseignantId);
                     cmd.Parameters.AddWithValue("@coefficient", coefficient);
                     cmd.Parameters.AddWithValue("@heuresSemaine", heuresSemaine);
-                    cmd.Parameters.AddWithValue("@niveauId", niveauId);
+                    cmd.Parameters.AddWithValue("@classeId", classeId);
 
                     int rowsAffected = cmd.ExecuteNonQuery();
                     

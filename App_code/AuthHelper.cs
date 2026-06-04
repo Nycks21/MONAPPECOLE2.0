@@ -30,7 +30,7 @@ public static class AuthHelper
         }
     }
 
-    // Récupère le RoleId depuis la session (défini dans Login.aspx.cs)
+    // Récupère le RoleId depuis la session
     private static int? GetUserRoleId()
     {
         var session = HttpContext.Current.Session;
@@ -45,7 +45,94 @@ public static class AuthHelper
         }
     }
 
-    // Récupère le nom du rôle à partir du RoleId
+    // ============================================================
+    // MÉTHODES POUR LES PAGES ASPX
+    // ============================================================
+
+    public static string GetUserRole()
+    {
+        var session = HttpContext.Current.Session;
+        if (session["USERROLE"] != null)
+        {
+            return session["USERROLE"].ToString();
+        }
+        return "";
+    }
+
+    public static string GetUserName()
+    {
+        var session = HttpContext.Current.Session;
+        if (session["username"] != null)
+        {
+            return session["username"].ToString();
+        }
+        return "";
+    }
+
+    public static string GetProfesseurId()
+    {
+        var session = HttpContext.Current.Session;
+        if (session["IDUSER"] != null)
+        {
+            return session["IDUSER"].ToString();
+        }
+        return "0";
+    }
+
+    public static string GetClassesAutorisees()
+    {
+        var session = HttpContext.Current.Session;
+        if (session["ClassesAutorisees"] != null)
+        {
+            return session["ClassesAutorisees"].ToString();
+        }
+        return "[]";
+    }
+
+    public static string GetMatieresAutorisees()
+    {
+        var session = HttpContext.Current.Session;
+        if (session["MatieresAutorisees"] != null)
+        {
+            return session["MatieresAutorisees"].ToString();
+        }
+        return "[]";
+    }
+
+    // ============================================================
+    // VÉRIFICATIONS DES RÔLES
+    // ============================================================
+
+    public static bool IsSuperAdmin()
+    {
+        var roleId = GetUserRoleId();
+        return roleId.HasValue && roleId.Value == 0;
+    }
+
+    public static bool IsAdmin()
+    {
+        var roleId = GetUserRoleId();
+        return roleId.HasValue && roleId.Value == 1;
+    }
+
+    public static bool IsProfessor()
+    {
+        var roleId = GetUserRoleId();
+        return roleId.HasValue && roleId.Value == 3;
+    }
+
+    public static bool IsSecretaire()
+    {
+        var roleId = GetUserRoleId();
+        return roleId.HasValue && roleId.Value == 4;
+    }
+
+    public static bool IsComptable()
+    {
+        var roleId = GetUserRoleId();
+        return roleId.HasValue && roleId.Value == 5;
+    }
+
     public static string GetRoleName()
     {
         var roleId = GetUserRoleId();
@@ -62,40 +149,9 @@ public static class AuthHelper
         }
     }
 
-    // Vérifie si l'utilisateur est SuperAdmin (USERROLE = 0)
-    public static bool IsSuperAdmin()
-    {
-        var roleId = GetUserRoleId();
-        return roleId.HasValue && roleId.Value == 0;
-    }
-
-    // Vérifie si l'utilisateur est Admin (USERROLE = 1)
-    public static bool IsAdmin()
-    {
-        var roleId = GetUserRoleId();
-        return roleId.HasValue && roleId.Value == 1;
-    }
-
-    // Vérifie si l'utilisateur est Professeur (USERROLE = 3)
-    public static bool IsProfessor()
-    {
-        var roleId = GetUserRoleId();
-        return roleId.HasValue && roleId.Value == 3;
-    }
-
-    // Vérifie si l'utilisateur est Secrétaire (USERROLE = 4)
-    public static bool IsSecretaire()
-    {
-        var roleId = GetUserRoleId();
-        return roleId.HasValue && roleId.Value == 4;
-    }
-
-    // Vérifie si l'utilisateur est Comptable (USERROLE = 5)
-    public static bool IsComptable()
-    {
-        var roleId = GetUserRoleId();
-        return roleId.HasValue && roleId.Value == 5;
-    }
+    // ============================================================
+    // MÉTHODES PRIVÉES
+    // ============================================================
 
     private static bool IsTokenValid()
     {

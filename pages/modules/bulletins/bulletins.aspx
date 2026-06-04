@@ -262,13 +262,12 @@
                                             style="display:flex; flex-direction:column; gap:5px; min-width:180px; flex:1;">
                                             <label
                                                 style="font-size:11px; font-weight:600; color:#6c757d; text-transform:uppercase; letter-spacing:.5px;">
-                                                Classe
+                                                Matière
                                             </label>
                                             <%-- Peuplé dynamiquement par JS via l'API --%>
-                                                <select id="ddlClasse"
-                                                    class="form-control form-control-sm" onchange="onClasseChange()"
+                                                <select id="ddlMatiere" class="form-control form-control-sm"
                                                     style="height:36px;">
-                                                    <option value="">-- Sélectionner une classe --</option>
+                                                    <option value="">-- Sélectionner une matière --</option>
                                                 </select>
                                         </div>
 
@@ -276,12 +275,12 @@
                                             style="display:flex; flex-direction:column; gap:5px; min-width:180px; flex:1;">
                                             <label
                                                 style="font-size:11px; font-weight:600; color:#6c757d; text-transform:uppercase; letter-spacing:.5px;">
-                                                Matière
+                                                Classe
                                             </label>
                                             <%-- Peuplé dynamiquement par JS via l'API --%>
-                                                <select id="ddlMatiere"
-                                                    class="form-control form-control-sm" style="height:36px;">
-                                                    <option value="">-- Sélectionner une matière --</option>
+                                                <select id="ddlClasse" class="form-control form-control-sm"
+                                                    onchange="onClasseChange()" style="height:36px;">
+                                                    <option value="">-- Sélectionner une classe --</option>
                                                 </select>
                                         </div>
 
@@ -339,17 +338,17 @@
                                                     <th style="width:180px; text-align:left; padding:10px 14px;">ID /
                                                         Nom</th>
                                                     <th style="width:120px;">
-                                                        Note 1 (Coef 1)<br>
+                                                        Note 1<br>
                                                         <span id="dateEval1"
                                                             style="font-size:10px; font-weight:400; color:#aaa;"></span>
                                                     </th>
                                                     <th style="width:120px;">
-                                                        Note 2 (Coef 2)<br>
+                                                        Note 2<br>
                                                         <span id="dateEval2"
                                                             style="font-size:10px; font-weight:400; color:#aaa;"></span>
                                                     </th>
                                                     <th style="width:120px;">
-                                                        Projet (Coef 1)<br>
+                                                        Examen<br>
                                                         <span id="dateEvalP"
                                                             style="font-size:10px; font-weight:400; color:#aaa;"></span>
                                                     </th>
@@ -414,7 +413,7 @@
                 </div>
 
                 <!-- ═══ SCRIPTS ═══ -->
-                <script src="js/bulletins-simple.js?v=<%=AuthHelper.Version %>"></script>
+                <script src="js/bulletins.js?v=<%=AuthHelper.Version %>"></script>
                 <script src="../../_assets/js/global.js?v=<%=AuthHelper.Version %>"></script>
 
         </form>

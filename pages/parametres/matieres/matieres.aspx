@@ -181,40 +181,44 @@
                                             <span>Utilitaires</span>
                                         </a>
                                     </li>
-                                <% } %>
-                                <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin()) { %>
-                                    <li class="nav-item">
-                                        <a href="../../administrations/annee/annee.aspx" class="nav-link">
-                                            <div style="width:30px; text-align:center; margin-right:10px;">
-                                                <i class="fas fa-calendar-alt"></i>
-                                            </div>
-                                            <span>Années</span>
-                                        </a>
-                                    </li>
-                                <% } %>
-                                
-                                <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin()) { %>
-                                <li class="nav-item">
-                                    <a href="../../administrations/utilisateur/utilisateur.aspx" class="nav-link">
-                                        <div style="width:30px;text-align:center;margin-right:10px;">
-                                            <i class="fas fa-user"></i>
-                                        </div>
-                                        <span>Utilisateur</span>
-                                    </a>
-                                </li>
-                                <% } %>
+                                    <% } %>
+                                        <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin()) { %>
+                                            <li class="nav-item">
+                                                <a href="../../administrations/annee/annee.aspx" class="nav-link">
+                                                    <div style="width:30px; text-align:center; margin-right:10px;">
+                                                        <i class="fas fa-calendar-alt"></i>
+                                                    </div>
+                                                    <span>Années</span>
+                                                </a>
+                                            </li>
+                                            <% } %>
 
-                                <% if (AuthHelper.IsSuperAdmin()) { %>
-                                    <li class="nav-item">
-                                        <a href="../../administrations/requete/requetes.aspx" class="nav-link"
-                                            style="display: flex; align-items: center;">
-                                            <div style="width:30px; text-align:center; margin-right:10px;">
-                                                <i class="fas fa-database"></i>
-                                            </div>
-                                            <span>Requetes SQL</span>
-                                        </a>
-                                    </li>
-                                <% } %>
+                                                <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin()) { %>
+                                                    <li class="nav-item">
+                                                        <a href="../../administrations/utilisateur/utilisateur.aspx"
+                                                            class="nav-link">
+                                                            <div
+                                                                style="width:30px;text-align:center;margin-right:10px;">
+                                                                <i class="fas fa-user"></i>
+                                                            </div>
+                                                            <span>Utilisateur</span>
+                                                        </a>
+                                                    </li>
+                                                    <% } %>
+
+                                                        <% if (AuthHelper.IsSuperAdmin()) { %>
+                                                            <li class="nav-item">
+                                                                <a href="../../administrations/requete/requetes.aspx"
+                                                                    class="nav-link"
+                                                                    style="display: flex; align-items: center;">
+                                                                    <div
+                                                                        style="width:30px; text-align:center; margin-right:10px;">
+                                                                        <i class="fas fa-database"></i>
+                                                                    </div>
+                                                                    <span>Requetes SQL</span>
+                                                                </a>
+                                                            </li>
+                                                            <% } %>
                             </ul>
                         </nav>
                     </div>
@@ -273,7 +277,7 @@
                                             <tr style="background-color: #f8f9fa; text-align: center;">
                                                 <th style="width: 120px;">Matière</th>
                                                 <th style="width: 120px;">Enseignant</th>
-                                                <th style="width: 120px;">Niveau</th>
+                                                <th style="width: 120px;">Classe</th>
                                                 <th style="width: 120px;">Coefficient</th>
                                                 <th style="width: 120px;">Heures/sem.</th>
                                                 <th style="width: 120px;">Créé le</th>
@@ -334,9 +338,9 @@
                         </div>
 
                         <div class="form-group">
-                            <label>Niveau</label>
-                            <select id="matiereNiveau" class="form-control">
-                                <option value="">-- Sélectionner un niveau --</option>
+                            <label>Classe</label>
+                            <select id="matiereClasse" class="form-control">
+                                <option value="">-- Sélectionner une classe --</option>
                             </select>
                         </div>
                     </div>

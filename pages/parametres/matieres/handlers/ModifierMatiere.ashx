@@ -43,7 +43,6 @@ public class ModifierMatiere : IHttpHandler, IRequiresSessionState
             if (payload == null)
                 throw new ArgumentException("Données invalides.");
 
-            // Validation ID matière (GUID)
             Guid matiereGuid;
             if (!Guid.TryParse(payload.ID, out matiereGuid))
                 throw new ArgumentException("ID de matière invalide.");
@@ -51,14 +50,11 @@ public class ModifierMatiere : IHttpHandler, IRequiresSessionState
             if (string.IsNullOrWhiteSpace(payload.NOM))
                 throw new ArgumentException("Le nom de la matière est obligatoire.");
 
-            // Validation ENSEIGNANT_ID (int > 0)
             if (payload.ENSEIGNANT_ID <= 0)
                 throw new ArgumentException("Veuillez sélectionner un enseignant valide.");
 
-            // Validation NIVEAU (GUID)
-            Guid niveauGuid;
-            if (!Guid.TryParse(payload.NIVEAU_ID, out niveauGuid))
-                throw new ArgumentException("Le niveau sélectionné est invalide.");
+            if (payload.CLASSE_ID <= 0)
+                throw new ArgumentException("Veuillez sélectionner une classe valide.");
 
             string connStr = ConfigurationManager.ConnectionStrings["MaConnexion"].ConnectionString;
 
@@ -69,15 +65,15 @@ public class ModifierMatiere : IHttpHandler, IRequiresSessionState
                          ENSEIGNANT     = @ens,
                          COEFFICIENT    = @coeff,
                          HEURES_SEMAINE = @heures,
-                         NIVEAU         = @niveau
+                         CLASSE_ID      = @classeId
                   WHERE  ID = @id", conn))
             {
-                cmd.Parameters.Add("@id",     System.Data.SqlDbType.UniqueIdentifier).Value = matiereGuid;
-                cmd.Parameters.Add("@nom",    System.Data.SqlDbType.NVarChar).Value         = payload.NOM.Trim();
-                cmd.Parameters.Add("@ens",    System.Data.SqlDbType.Int).Value              = payload.ENSEIGNANT_ID;
-                cmd.Parameters.Add("@coeff",  System.Data.SqlDbType.Decimal).Value          = payload.COEFFICIENT;
-                cmd.Parameters.Add("@heures", System.Data.SqlDbType.Int).Value              = payload.HEURES_SEMAINE;
-                cmd.Parameters.Add("@niveau", System.Data.SqlDbType.UniqueIdentifier).Value  = niveauGuid;
+                cmd.Parameters.Add("@id",       System.Data.SqlDbType.UniqueIdentifier).Value = matiereGuid;
+                cmd.Parameters.Add("@nom",      System.Data.SqlDbType.NVarChar).Value         = payload.NOM.Trim();
+                cmd.Parameters.Add("@ens",      System.Data.SqlDbType.Int).Value              = payload.ENSEIGNANT_ID;
+                cmd.Parameters.Add("@coeff",    System.Data.SqlDbType.Decimal).Value          = payload.COEFFICIENT;
+                cmd.Parameters.Add("@heures",   System.Data.SqlDbType.Int).Value              = payload.HEURES_SEMAINE;
+                cmd.Parameters.Add("@classeId", System.Data.SqlDbType.Int).Value              = payload.CLASSE_ID;
 
                 conn.Open();
                 int rows = cmd.ExecuteNonQuery();
@@ -108,6 +104,6 @@ public class ModifierMatiere : IHttpHandler, IRequiresSessionState
         public int     ENSEIGNANT_ID  { get; set; }
         public decimal COEFFICIENT    { get; set; }
         public int     HEURES_SEMAINE { get; set; }
-        public string  NIVEAU_ID      { get; set; }
+        public int     CLASSE_ID      { get; set; }
     }
 }
