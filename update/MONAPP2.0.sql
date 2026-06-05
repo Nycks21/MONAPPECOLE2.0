@@ -401,6 +401,58 @@ END
 GO
 
 -- =====================================================
+-- TABLE HISTORIQUE_PAIEMENTS
+-- Stocke chaque transaction de paiement individuellement
+-- =====================================================
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'HISTORIQUE_PAIEMENTS')
+BEGIN
+    CREATE TABLE HISTORIQUE_PAIEMENTS (
+        ID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+        FRAIS_ID UNIQUEIDENTIFIER NOT NULL,
+        MATRICULE NVARCHAR(20) NOT NULL,
+        NOM NVARCHAR(100) NOT NULL,
+        CLASSE INT NOT NULL,
+        ANNEE_ID INT NOT NULL,
+        
+        -- Détails du paiement
+        MONTANT DECIMAL(18, 2) NOT NULL,
+        DATE_PAIEMENT DATETIME NOT NULL,
+        MODE_PAIEMENT NVARCHAR(20) NOT NULL,
+        REFERENCE NVARCHAR(100) NULL,
+        COMMENTAIRE NVARCHAR(MAX) NULL,
+        
+        -- Informations sur l'utilisateur qui a enregistré le paiement
+        USER_ID INT NULL,
+        USERNAME NVARCHAR(100) NULL,
+        
+        -- État avant paiement
+        ANCIEN_TOTAL DECIMAL(18, 2) NULL,
+        ANCIEN_PAYE DECIMAL(18, 2) NULL,
+        ANCIEN_RESTE DECIMAL(18, 2) NULL,
+        
+        -- État après paiement
+        NOUVEAU_TOTAL DECIMAL(18, 2) NULL,
+        NOUVEAU_PAYE DECIMAL(18, 2) NULL,
+        NOUVEAU_RESTE DECIMAL(18, 2) NULL,
+        
+        CREATED_AT DATETIME DEFAULT GETDATE(),
+        
+        -- Clés étrangères
+        CONSTRAINT FK_HISTORIQUE_FRAIS FOREIGN KEY (FRAIS_ID) 
+            REFERENCES FRAIS(ID),
+        CONSTRAINT FK_HISTORIQUE_ELEVES_MATRICULE FOREIGN KEY (MATRICULE) 
+            REFERENCES ELEVES(MATRICULE),
+        CONSTRAINT FK_HISTORIQUE_CLASSES FOREIGN KEY (CLASSE) 
+            REFERENCES CLASSES(ID),
+        CONSTRAINT FK_HISTORIQUE_RANNEE FOREIGN KEY (ANNEE_ID) 
+            REFERENCES RANNEE(ID),
+        CONSTRAINT CHK_HISTORIQUE_MODE_PAIEMENT 
+            CHECK (MODE_PAIEMENT IN ('Especes', 'Cheque', 'Virement', 'MobileMoney'))
+    );
+END
+GO
+
+-- =====================================================
 -- TABLE BULLETINS
 -- =====================================================
 

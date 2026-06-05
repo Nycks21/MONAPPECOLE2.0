@@ -1,4 +1,4 @@
-﻿'use strict';
+﻿﻿﻿'use strict';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // URLS DES HANDLERS FRAIS
@@ -8,7 +8,9 @@ var API_FRAIS = {
     getEleves: '../eleves/handlers/GetEleve.ashx',
     getClasses: '../../parametres/classes/handlers/GetClasse.ashx',
     ajouterPaiement: 'handlers/AjouterPaiementFrais.ashx',
-    getPaiements: 'handlers/GetPaiementsFrais.ashx'
+    getHistorique: 'handlers/GetHistoriquePaiements.ashx',
+    modifierHistorique: 'handlers/ModifierHistoriquePaiement.ashx',
+    supprimerHistorique: 'handlers/SupprimerHistoriquePaiement.ashx'
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -36,6 +38,17 @@ function formatMoney(amount) {
     return new Intl.NumberFormat('fr-MG').format(amount) + ' Ar';
 }
 
+function formatDateTime(dateStr) {
+    if (!dateStr) return '-';
+    try {
+        var date = new Date(dateStr);
+        if (!isNaN(date.getTime())) {
+            return date.toLocaleDateString('fr-FR') + ' ' + date.toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'});
+        }
+    } catch(e) {}
+    return dateStr;
+}
+
 function formatDate(dateStr) {
     if (!dateStr) return '-';
     try {
@@ -45,6 +58,17 @@ function formatDate(dateStr) {
         }
     } catch(e) {}
     return dateStr;
+}
+
+function getModePaiementBadge(mode) {
+    var colors = {
+        'Especes': '#28a745',
+        'Cheque': '#17a2b8',
+        'Virement': '#007bff',
+        'MobileMoney': '#ffc107'
+    };
+    var color = colors[mode] || '#6c757d';
+    return '<span style="background:' + color + ';color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;">' + escapeHtml(mode) + '</span>';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -61,15 +85,13 @@ function hideSpinner() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// MODALES - CORRIGÉES
+// MODALES
 // ─────────────────────────────────────────────────────────────────────────────
 function openModal(id) {
     var modal = document.getElementById(id);
     if (modal) {
         modal.style.display = 'flex';
         document.body.style.overflow = 'hidden';
-    } else {
-        console.error('Modal not found:', id);
     }
 }
 
@@ -124,6 +146,7 @@ async function loadFrais() {
         applySort();
         updateStats();
         renderTable();
+        attachPaginationButtons();
 
     } catch (err) {
         console.error('loadFrais:', err);
@@ -140,12 +163,9 @@ async function loadFrais() {
 // ─────────────────────────────────────────────────────────────────────────────
 function populateStudentSelect() {
     var sel = document.getElementById('paymentStudent');
-    if (!sel) {
-        console.warn('paymentStudent select not found');
-        return;
-    }
+    if (!sel) return;
     
-    sel.innerHTML = '<option value="">Sélectionner un élève...</option>';
+    sel.innerHTML = '<option value="">-- Sélectionner un élève --</option>';
     for (var i = 0; i < elevesList.length; i++) {
         var e = elevesList[i];
         var opt = document.createElement('option');
@@ -159,15 +179,12 @@ function populateStudentSelect() {
 
 function populateClassFilter() {
     var sel = document.getElementById('fraisFilterClasse');
-    if (!sel) {
-        console.warn('fraisFilterClasse select not found');
-        return;
-    }
+    if (!sel) return;
     
     sel.innerHTML = '<option value="">Toutes les classes</option>';
     for (var i = 0; i < classesList.length; i++) {
         var opt = document.createElement('option');
-        opt.value = classesList[i].ID || classesList[i].NOM;
+        opt.value = classesList[i].NOM;
         opt.textContent = classesList[i].NOM;
         sel.appendChild(opt);
     }
@@ -246,8 +263,7 @@ function filterFraisTable() {
         var matchStatus = !statusFilter || (item.STATUT || '') === statusFilter;
         
         var matchClass = !classFilter || 
-            String(item.CLASSE_NOM || '').toLowerCase() === String(classFilter).toLowerCase() ||
-            String(item.CLASSE_ID || '') === String(classFilter);
+            (item.CLASSE_NOM || '').toLowerCase() === classFilter.toLowerCase();
         
         return matchSearch && matchStatus && matchClass;
     });
@@ -277,15 +293,10 @@ function resetFilters() {
 // ─────────────────────────────────────────────────────────────────────────────
 function renderTable() {
     var tbody = document.getElementById('fraisTableBody');
-    if (!tbody) {
-        console.warn('fraisTableBody not found');
-        return;
-    }
+    if (!tbody) return;
     
     if (!filteredFrais || filteredFrais.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:50px;">' +
-            '<i class="fas fa-search" style="font-size:40px;color:#ccc;display:block;margin-bottom:12px;"></i>' +
-            'Aucune donnée de frais trouvée</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:50px;"><i class="fas fa-search" style="font-size:40px;color:#ccc;display:block;margin-bottom:12px;"></i>Aucune donnée de frais trouvée</td></tr>';
         updatePaginationInfo();
         return;
     }
@@ -296,17 +307,14 @@ function renderTable() {
     tbody.innerHTML = '';
     for (var i = 0; i < pageData.length; i++) {
         var f = pageData[i];
-        var row = tbody.insertRow();
-        
         var progression = f.PROGRESSION || 0;
         var progressWidth = Math.min(100, progression);
-        var statusText = f.STATUT || 'Non payé';
         
+        var row = tbody.insertRow();
         row.innerHTML = `
-            <td class="text-center">${getAnneeBadge(f.ANNEE_TEXTE)}</td>
-            <td class="text-center">${getMatriculeBadge(f.MATRICULE)}</td>
-            <td class="text-center">${getNomBadge(f.NOM)}</td>
-            <td class="text-center">${getClasseBadge(f.CLASSE_NOM || '-')}</td>
+            <td class="text-center"><span style="background:#f1f3f5;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:700;">${escapeHtml(f.MATRICULE || '-')}</span></td>
+            <td class="text-center"><strong>${escapeHtml(f.NOM || '-')}</strong></td>
+            <td class="text-center"><span style="background:#fff;color:#007bff;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;border:1px solid #007bff;"><i class="fas fa-folder"></i> ${escapeHtml(f.CLASSE_NOM || '-')}</span></td>
             <td class="text-center"><strong>${formatMoney(f.TOTAL)}</strong></td>
             <td class="text-center" style="color:#28a745">${formatMoney(f.PAYE)}</td>
             <td class="text-center" style="color:#dc3545">${formatMoney(f.RESTE)}</td>
@@ -318,47 +326,19 @@ function renderTable() {
                     <span style="font-size:12px;min-width:40px;">${progression.toFixed(0)}%</span>
                 </div>
             </td>
-            <td class="text-center">${getStatusBadge(statusText)}</td>
-            <td class="text-center">${formatDate(f.DERNIER_PAIEMENT)}</td>
+            <td class="text-center">${getStatusBadge(f.STATUT || 'Non payé')}</td>
             <td class="text-center">
-                <div style="display:flex;gap:4px;justify-content:center;">
-                    <button class="btn btn-sm btn-success" onclick="openPaymentModalForStudent('${escapeHtml(f.MATRICULE)}', '${escapeHtml(f.NOM)}')" title="Enregistrer paiement">
-                        <i class="fas fa-money-bill-wave"></i>
-                    </button>
-                    <button class="btn btn-sm btn-info" onclick="viewPaymentHistory('${escapeHtml(f.MATRICULE)}')" title="Historique">
-                        <i class="fas fa-history"></i>
-                    </button>
-                </div>
+                <button type="button" class="btn btn-sm btn-success" onclick="openPaymentModalForStudent('${escapeHtml(f.MATRICULE)}', '${escapeHtml(f.NOM)}')" title="Enregistrer paiement" style="margin:0 2px;">
+                    <i class="fas fa-money-bill-wave"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-info" onclick="viewPaymentHistory('${escapeHtml(f.MATRICULE)}', '${escapeHtml(f.NOM)}')" title="Historique" style="margin:0 2px;">
+                    <i class="fas fa-history"></i>
+                </button>
             </td>
         `;
     }
     
     updatePaginationInfo();
-    createPaginationControls();
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// BADGES
-// ─────────────────────────────────────────────────────────────────────────────
-function getNomBadge(nom) {
-    return '<span style="font-weight:700;">' + escapeHtml(nom || '-') + '</span>';
-}
-
-function getMatriculeBadge(mat) {
-    return '<span style="background:#f1f3f5;color:#212529;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:700;border:1px solid #dee2e6;">' + escapeHtml(mat || '-') + '</span>';
-}
-
-function getClasseBadge(cls) {
-    return '<span style="background:#fff;color:#007bff;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;border:1px solid #007bff;">' +
-        '<i class="fas fa-folder" style="margin-right:4px;"></i>' + escapeHtml(cls) + '</span>';
-}
-
-function getAnneeBadge(anneeId) {
-    // Si vous avez l'année texte, utilisez-la directement
-    if (!anneeId) return '<span style="background:#f1f3f5;color:#212529;padding:3px 10px;border-radius:6px;font-size:12px;">-</span>';
-    
-    // Sinon, si c'est un ID, vous pouvez le formater
-    return '<span style="background:#f1f3f5;color:#212529;padding:3px 10px;border-radius:6px;font-size:12px;">' + escapeHtml(anneeId) + '</span>';
 }
 
 function getStatusBadge(status) {
@@ -376,8 +356,7 @@ function getStatusBadge(status) {
         icon = 'fa-times-circle';
     }
     
-    return '<span style="background:' + bg + ';color:#fff;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">' +
-        '<i class="fas ' + icon + '" style="margin-right:4px;"></i>' + escapeHtml(status) + '</span>';
+    return '<span style="background:' + bg + ';color:#fff;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;"><i class="fas ' + icon + '"></i> ' + escapeHtml(status) + '</span>';
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -405,95 +384,19 @@ function updatePaginationInfo() {
     if (nextBtn) nextBtn.disabled = currentPage === totalPages || totalPages === 0;
 }
 
-function createPaginationControls() {
-    var totalPages = Math.ceil(filteredFrais.length / rowsPerPage);
-    var oldContainer = document.getElementById('frais-pagination-container');
-    if (oldContainer) oldContainer.remove();
+function attachPaginationButtons() {
+    var prevBtn = document.getElementById('prevPageBtn');
+    var nextBtn = document.getElementById('nextPageBtn');
     
-    if (totalPages <= 1) return;
-    
-    var container = document.createElement('div');
-    container.id = 'frais-pagination-container';
-    container.style.cssText = 'display:flex;justify-content:center;align-items:center;gap:5px;margin-top:15px;flex-wrap:wrap;';
-    
-    container.appendChild(createPageButton('«', function() { goToPage(1); }, currentPage === 1));
-    container.appendChild(createPageButton('‹', function() { if (currentPage > 1) goToPage(currentPage - 1); }, currentPage === 1));
-    
-    var maxVisible = 5;
-    var startPage = Math.max(1, currentPage - 2);
-    var endPage = Math.min(totalPages, startPage + maxVisible - 1);
-    
-    if (endPage - startPage + 1 < maxVisible) {
-        startPage = Math.max(1, endPage - maxVisible + 1);
+    if (prevBtn) {
+        prevBtn.onclick = function() { if (currentPage > 1) { currentPage--; renderTable(); } };
     }
-    
-    if (startPage > 1) {
-        container.appendChild(createPageButton('1', function() { goToPage(1); }));
-        if (startPage > 2) container.appendChild(createDots());
+    if (nextBtn) {
+        nextBtn.onclick = function() { 
+            var totalPages = Math.ceil(filteredFrais.length / rowsPerPage);
+            if (currentPage < totalPages) { currentPage++; renderTable(); }
+        };
     }
-    
-    for (var i = startPage; i <= endPage; i++) {
-        container.appendChild(createPageButton(i.toString(), function(page) { 
-            return function() { goToPage(page); };
-        }(i), i === currentPage));
-    }
-    
-    if (endPage < totalPages) {
-        if (endPage < totalPages - 1) container.appendChild(createDots());
-        container.appendChild(createPageButton(totalPages.toString(), function() { goToPage(totalPages); }));
-    }
-    
-    container.appendChild(createPageButton('›', function() { if (currentPage < totalPages) goToPage(currentPage + 1); }, currentPage === totalPages));
-    container.appendChild(createPageButton('»', function() { goToPage(totalPages); }, currentPage === totalPages));
-    
-    var tableContainer = document.querySelector('.dash-card-body');
-    if (tableContainer) {
-        tableContainer.appendChild(container);
-    }
-}
-
-function createPageButton(text, onClick, isDisabled) {
-    var btn = document.createElement('button');
-    btn.type = 'button';
-    btn.textContent = text;
-    var isActive = (!isNaN(text) && parseInt(text) === currentPage);
-    
-    btn.style.cssText = 'padding:7px 13px;border:1px solid ' + (isActive ? '#007bff' : '#dee2e6') + ';' +
-        'background:' + (isActive ? '#007bff' : isDisabled ? '#e9ecef' : 'white') + ';' +
-        'color:' + (isActive ? 'white' : isDisabled ? '#6c757d' : '#007bff') + ';' +
-        'cursor:' + (isDisabled || isActive ? 'default' : 'pointer') + ';border-radius:6px;font-weight:' + (isActive ? '700' : '500') + ';' +
-        'min-width:38px;transition:all .15s;';
-    
-    if (onClick && !isDisabled && !isActive) {
-        btn.addEventListener('click', onClick);
-        btn.addEventListener('mouseenter', function() {
-            if (!isDisabled && !isActive) {
-                btn.style.background = '#007bff';
-                btn.style.color = 'white';
-            }
-        });
-        btn.addEventListener('mouseleave', function() {
-            if (!isDisabled && !isActive) {
-                btn.style.background = 'white';
-                btn.style.color = '#007bff';
-            }
-        });
-    }
-    
-    if (isDisabled) btn.disabled = true;
-    return btn;
-}
-
-function createDots() {
-    var span = document.createElement('span');
-    span.textContent = '…';
-    span.style.cssText = 'padding:7px 4px;color:#6c757d;';
-    return span;
-}
-
-function goToPage(page) {
-    currentPage = page;
-    renderTable();
 }
 
 function previousFraisPage() {
@@ -526,7 +429,7 @@ function openAddPaymentModal() {
     
     if (amountInput) amountInput.value = '';
     if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
-    if (methodSelect) methodSelect.value = 'Espèces';
+    if (methodSelect) methodSelect.value = 'Especes';
     if (refInput) refInput.value = '';
     if (commentInput) commentInput.value = '';
     
@@ -551,7 +454,7 @@ function openPaymentModalForStudent(matricule, nom) {
     
     if (amountInput) amountInput.value = '';
     if (dateInput) dateInput.value = new Date().toISOString().split('T')[0];
-    if (methodSelect) methodSelect.value = 'Espèces';
+    if (methodSelect) methodSelect.value = 'Especes';
     if (refInput) refInput.value = '';
     if (commentInput) commentInput.value = '';
     
@@ -596,23 +499,17 @@ async function savePayment() {
     var commentaire = document.getElementById('paymentComment')?.value;
     
     if (!matricule) {
-        if (typeof Swal !== 'undefined') {
-            Swal.fire('Erreur', 'Veuillez sélectionner un élève.', 'warning');
-        }
+        Swal.fire('Erreur', 'Veuillez sélectionner un élève.', 'warning');
         return;
     }
     
     if (!montant || montant <= 0) {
-        if (typeof Swal !== 'undefined') {
-            Swal.fire('Erreur', 'Le montant doit être supérieur à 0.', 'warning');
-        }
+        Swal.fire('Erreur', 'Le montant doit être supérieur à 0.', 'warning');
         return;
     }
     
     if (!date) {
-        if (typeof Swal !== 'undefined') {
-            Swal.fire('Erreur', 'La date est obligatoire.', 'warning');
-        }
+        Swal.fire('Erreur', 'La date est obligatoire.', 'warning');
         return;
     }
     
@@ -636,30 +533,265 @@ async function savePayment() {
         
         if (result.success) {
             closePaymentModal();
-            if (typeof Swal !== 'undefined') {
-                Swal.fire({ icon: 'success', title: 'Paiement enregistré', timer: 1500, showConfirmButton: false });
-            }
-            setTimeout(function() {
-                loadFrais();
-            }, 1500);
+            Swal.fire({ icon: 'success', title: 'Paiement enregistré', timer: 1500, showConfirmButton: false });
+            setTimeout(function() { loadFrais(); }, 1500);
         } else {
-            if (typeof Swal !== 'undefined') {
-                Swal.fire('Erreur', result.message || 'Erreur lors de l\'enregistrement.', 'error');
-            }
+            Swal.fire('Erreur', result.message || 'Erreur lors de l\'enregistrement.', 'error');
         }
     } catch (err) {
         console.error('savePayment:', err);
-        if (typeof Swal !== 'undefined') {
-            Swal.fire('Erreur réseau', err.message, 'error');
-        }
+        Swal.fire('Erreur réseau', err.message, 'error');
     } finally {
         hideSpinner();
     }
 }
 
-function viewPaymentHistory(matricule) {
-    if (typeof Swal !== 'undefined') {
-        Swal.fire('Info', 'Fonctionnalité à venir: Historique des paiements', 'info');
+// ─────────────────────────────────────────────────────────────────────────────
+// HISTORIQUE DES PAIEMENTS AVEC ACTIONS
+// ─────────────────────────────────────────────────────────────────────────────
+async function viewPaymentHistory(matricule, nom) {
+    showSpinner();
+    try {
+        var res = await fetch(API_FRAIS.getHistorique + '?matricule=' + encodeURIComponent(matricule));
+        var result = await res.json();
+        
+        if (result.success && result.data && result.data.length > 0) {
+            var history = result.data;
+            var totalPaiements = 0;
+            
+            for (var i = 0; i < history.length; i++) {
+                totalPaiements += history[i].MONTANT;
+            }
+            
+            var historyHtml = `
+                <div style="max-height: 500px; overflow-y: auto;">
+                    <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; margin-bottom: 15px;">
+                        <p><strong>Élève:</strong> ${escapeHtml(nom)}</p>
+                        <p><strong>Matricule:</strong> ${escapeHtml(matricule)}</p>
+                        <p><strong>Total des paiements:</strong> ${formatMoney(totalPaiements)}</p>
+                    </div>
+                    <table style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr style="background-color: #f8f9fa; border-bottom: 2px solid #dee2e6;">
+                                <th style="padding: 10px; text-align: left;">Date</th>
+                                <th style="padding: 10px; text-align: left;">Montant</th>
+                                <th style="padding: 10px; text-align: left;">Mode</th>
+                                <th style="padding: 10px; text-align: left;">Référence</th>
+                                <th style="padding: 10px; text-align: left;">Enregistré par</th>
+                                <th style="padding: 10px; text-align: left;">Commentaire</th>
+                                <th style="padding: 10px; text-align: center;">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+            
+            for (var i = 0; i < history.length; i++) {
+                var h = history[i];
+                historyHtml += `
+                    <tr style="border-bottom: 1px solid #dee2e6;" id="history-row-${h.ID}">
+                        <td style="padding: 8px;">${formatDateTime(h.DATE_PAIEMENT)}</td>
+                        <td style="padding: 8px; color: #28a745; font-weight: bold;">${formatMoney(h.MONTANT)}</td>
+                        <td style="padding: 8px;">${getModePaiementBadge(h.MODE_PAIEMENT)}</td>
+                        <td style="padding: 8px;">${escapeHtml(h.REFERENCE || '-')}</td>
+                        <td style="padding: 8px;">${escapeHtml(h.USERNAME || '-')}</td>
+                        <td style="padding: 8px;">${escapeHtml(h.COMMENTAIRE || '-')}</td>
+                        <td style="padding: 8px; text-align: center;">
+                            <div style="display: flex; gap: 5px; justify-content: center;">
+                                <button type="button" class="btn-history-edit" onclick="editHistoriquePaiement('${h.ID}', '${matricule}', '${escapeHtml(nom)}', ${h.MONTANT}, '${h.DATE_PAIEMENT}', '${h.MODE_PAIEMENT}', '${escapeHtml(h.REFERENCE || '')}', '${escapeHtml(h.COMMENTAIRE || '')}')" title="Modifier">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button type="button" class="btn-history-delete" onclick="deleteHistoriquePaiement('${h.ID}', '${matricule}', ${h.MONTANT})" title="Supprimer">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr style="background-color: #f8f9fa;">
+                        <td colspan="7" style="padding: 5px 8px; font-size: 11px; color: #6c757d;">
+                            <i class="fas fa-info-circle"></i> 
+                            Avant: ${formatMoney(h.ANCIEN_PAYE)} payé / ${formatMoney(h.ANCIEN_RESTE)} restant → 
+                            Après: ${formatMoney(h.NOUVEAU_PAYE)} payé / ${formatMoney(h.NOUVEAU_RESTE)} restant
+                        </td>
+                    </tr>
+                `;
+            }
+            
+            historyHtml += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+            
+            Swal.fire({
+                title: `Historique des paiements - ${escapeHtml(nom)}`,
+                html: historyHtml,
+                icon: 'info',
+                width: '1200px',
+                confirmButtonText: 'Fermer',
+                confirmButtonColor: '#007bff',
+                showCloseButton: true
+            });
+        } else {
+            Swal.fire({
+                title: 'Aucun historique',
+                text: `Aucun paiement enregistré pour ${escapeHtml(nom)}`,
+                icon: 'info',
+                confirmButtonText: 'OK'
+            });
+        }
+    } catch (err) {
+        console.error('viewPaymentHistory:', err);
+        Swal.fire('Erreur', 'Impossible de charger l\'historique des paiements', 'error');
+    } finally {
+        hideSpinner();
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MODIFIER UN PAIEMENT HISTORIQUE
+// ─────────────────────────────────────────────────────────────────────────────
+async function editHistoriquePaiement(historyId, matricule, nom, ancienMontant, datePaiement, modePaiement, reference, commentaire) {
+    var result = await Swal.fire({
+        title: 'Modifier le paiement',
+        html: `
+            <div style="text-align: left;">
+                <div class="form-group">
+                    <label>Élève</label>
+                    <input type="text" id="editStudentName" class="swal2-input" value="${escapeHtml(nom)}" readonly style="background:#e9ecef;">
+                </div>
+                <div class="form-group">
+                    <label>Montant (Ar)</label>
+                    <input type="number" id="editMontant" class="swal2-input" value="${ancienMontant}" step="1000" min="0">
+                </div>
+                <div class="form-group">
+                    <label>Date du paiement</label>
+                    <input type="datetime-local" id="editDatePaiement" class="swal2-input" value="${datePaiement.replace(' ', 'T').substring(0, 16)}">
+                </div>
+                <div class="form-group">
+                    <label>Mode de paiement</label>
+                    <select id="editModePaiement" class="swal2-select">
+                        <option value="Especes" ${modePaiement === 'Especes' ? 'selected' : ''}>Espèces</option>
+                        <option value="Cheque" ${modePaiement === 'Cheque' ? 'selected' : ''}>Chèque</option>
+                        <option value="Virement" ${modePaiement === 'Virement' ? 'selected' : ''}>Virement</option>
+                        <option value="MobileMoney" ${modePaiement === 'MobileMoney' ? 'selected' : ''}>Mobile Money</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Référence</label>
+                    <input type="text" id="editReference" class="swal2-input" value="${escapeHtml(reference)}">
+                </div>
+                <div class="form-group">
+                    <label>Commentaire</label>
+                    <textarea id="editCommentaire" class="swal2-textarea" rows="2">${escapeHtml(commentaire)}</textarea>
+                </div>
+            </div>
+        `,
+        showCancelButton: true,
+        confirmButtonText: 'Enregistrer',
+        cancelButtonText: 'Annuler',
+        confirmButtonColor: '#007bff',
+        cancelButtonColor: '#6c757d',
+        preConfirm: function() {
+            var montant = parseFloat(document.getElementById('editMontant').value);
+            var datePaiement = document.getElementById('editDatePaiement').value;
+            var modePaiement = document.getElementById('editModePaiement').value;
+            var reference = document.getElementById('editReference').value;
+            var commentaire = document.getElementById('editCommentaire').value;
+            
+            if (!montant || montant <= 0) {
+                Swal.showValidationMessage('Le montant doit être supérieur à 0');
+                return false;
+            }
+            if (!datePaiement) {
+                Swal.showValidationMessage('La date est obligatoire');
+                return false;
+            }
+            
+            return {
+                montant: montant,
+                datePaiement: datePaiement,
+                modePaiement: modePaiement,
+                reference: reference,
+                commentaire: commentaire
+            };
+        }
+    });
+    
+    if (result.isConfirmed) {
+        showSpinner();
+        try {
+            var res = await fetch(API_FRAIS.modifierHistorique, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    id: historyId,
+                    matricule: matricule,
+                    montant: result.value.montant,
+                    datePaiement: result.value.datePaiement,
+                    modePaiement: result.value.modePaiement,
+                    reference: result.value.reference,
+                    commentaire: result.value.commentaire
+                })
+            });
+            var data = await res.json();
+            
+            if (data.success) {
+                Swal.fire({ icon: 'success', title: 'Modifié', text: 'Paiement modifié avec succès', timer: 1500, showConfirmButton: false });
+                setTimeout(function() { 
+                    loadFrais();
+                    viewPaymentHistory(matricule, nom);
+                }, 1500);
+            } else {
+                Swal.fire('Erreur', data.message || 'Erreur lors de la modification', 'error');
+            }
+        } catch (err) {
+            console.error('editHistoriquePaiement:', err);
+            Swal.fire('Erreur', err.message, 'error');
+        } finally {
+            hideSpinner();
+        }
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SUPPRIMER UN PAIEMENT HISTORIQUE
+// ─────────────────────────────────────────────────────────────────────────────
+async function deleteHistoriquePaiement(historyId, matricule, montant) {
+    var result = await Swal.fire({
+        title: 'Confirmation',
+        text: `Voulez-vous vraiment supprimer ce paiement de ${formatMoney(montant)} ?`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Oui, supprimer',
+        cancelButtonText: 'Annuler',
+        confirmButtonColor: '#d33',
+        cancelButtonColor: '#6c757d'
+    });
+    
+    if (result.isConfirmed) {
+        showSpinner();
+        try {
+            var res = await fetch(API_FRAIS.supprimerHistorique, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id: historyId, matricule: matricule })
+            });
+            var data = await res.json();
+            
+            if (data.success) {
+                Swal.fire({ icon: 'success', title: 'Supprimé', text: 'Paiement supprimé avec succès', timer: 1500, showConfirmButton: false });
+                setTimeout(function() { 
+                    loadFrais();
+                }, 1500);
+            } else {
+                Swal.fire('Erreur', data.message || 'Erreur lors de la suppression', 'error');
+            }
+        } catch (err) {
+            console.error('deleteHistoriquePaiement:', err);
+            Swal.fire('Erreur', err.message, 'error');
+        } finally {
+            hideSpinner();
+        }
     }
 }
 
@@ -667,21 +799,12 @@ function viewPaymentHistory(matricule) {
 // EXPORT ET IMPRESSION
 // ─────────────────────────────────────────────────────────────────────────────
 function exportFraisToExcel() {
-    if (typeof XLSX === 'undefined') {
-        if (typeof Swal !== 'undefined') {
-            Swal.fire('Erreur', 'La bibliothèque Excel n\'est pas chargée.', 'error');
-        }
-        return;
-    }
-    
     if (!filteredFrais.length) {
-        if (typeof Swal !== 'undefined') {
-            Swal.fire('Info', 'Aucune donnée à exporter', 'info');
-        }
+        Swal.fire('Info', 'Aucune donnée à exporter', 'info');
         return;
     }
     
-    var data = [['Matricule', 'Nom', 'Classe', 'Total (Ar)', 'Payé (Ar)', 'Reste (Ar)', 'Statut', 'Dernier paiement']];
+    var data = [['Matricule', 'Nom', 'Classe', 'Total (Ar)', 'Payé (Ar)', 'Reste (Ar)', 'Statut']];
     
     for (var i = 0; i < filteredFrais.length; i++) {
         var f = filteredFrais[i];
@@ -692,15 +815,18 @@ function exportFraisToExcel() {
             f.TOTAL || 0,
             f.PAYE || 0,
             f.RESTE || 0,
-            f.STATUT || 'Non payé',
-            formatDate(f.DERNIER_PAIEMENT)
+            f.STATUT || 'Non payé'
         ]);
     }
     
-    var ws = XLSX.utils.aoa_to_sheet(data);
-    var wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, 'Frais_Scolaires');
-    XLSX.writeFile(wb, 'Frais_' + new Date().toISOString().slice(0, 10) + '.xlsx');
+    var csv = data.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+    var blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    var link = document.createElement('a');
+    var url = URL.createObjectURL(blob);
+    link.href = url;
+    link.download = 'Frais_' + new Date().toISOString().slice(0, 10) + '.csv';
+    link.click();
+    URL.revokeObjectURL(url);
 }
 
 function printFraisReport() {
@@ -711,13 +837,10 @@ function printFraisReport() {
     html += 'table { width: 100%; border-collapse: collapse; }';
     html += 'th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }';
     html += 'th { background-color: #f2f2f2; }';
-    html += '.header { text-align: center; margin-bottom: 20px; }';
     html += '</style></head><body>';
-    html += '<div class="header"><h2>Rapport des Frais Scolaires</h2>';
-    html += '<p>Date: ' + new Date().toLocaleDateString('fr-FR') + '</p></div>';
-    html += '<table><thead><tr>';
-    html += '<th>Matricule</th><th>Nom</th><th>Classe</th><th>Total (Ar)</th><th>Payé (Ar)</th><th>Reste (Ar)</th><th>Statut</th>';
-    html += '</tr></thead><tbody>';
+    html += '<h2>Rapport des Frais Scolaires</h2>';
+    html += '<p>Date: ' + new Date().toLocaleDateString('fr-FR') + '</p>';
+    html += '<table><thead><tr><th>Matricule</th><th>Nom</th><th>Classe</th><th>Total (Ar)</th><th>Payé (Ar)</th><th>Reste (Ar)</th><th>Statut</th></tr></thead><tbody>';
     
     for (var i = 0; i < filteredFrais.length; i++) {
         var f = filteredFrais[i];
@@ -743,19 +866,18 @@ function printFraisReport() {
 // ─────────────────────────────────────────────────────────────────────────────
 function init() {
     console.log('[Frais] Initialisation...');
-    
-    // Vérifier que les éléments existent avant d'initialiser
-    var modal = document.getElementById('paymentModal');
-    if (!modal) {
-        console.warn('[Frais] paymentModal not found in DOM');
-    }
-    
     loadFrais();
     
+    var searchInput = document.getElementById('fraisSearch');
+    var statusFilter = document.getElementById('fraisFilterStatut');
+    var classFilter = document.getElementById('fraisFilterClasse');
+    
+    if (searchInput) searchInput.addEventListener('input', filterFraisTable);
+    if (statusFilter) statusFilter.addEventListener('change', filterFraisTable);
+    if (classFilter) classFilter.addEventListener('change', filterFraisTable);
+    
     document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            closeModal('paymentModal');
-        }
+        if (e.key === 'Escape') closeModal('paymentModal');
     });
 }
 
@@ -769,11 +891,14 @@ window.printFraisReport = printFraisReport;
 window.previousFraisPage = previousFraisPage;
 window.nextFraisPage = nextFraisPage;
 window.filterFraisTable = filterFraisTable;
+window.resetFilters = resetFilters;
 window.savePayment = savePayment;
 window.closePaymentModal = closePaymentModal;
 window.updatePaymentInfo = updatePaymentInfo;
-window.viewPaymentHistory = viewPaymentHistory;
 window.sortBy = sortBy;
+window.viewPaymentHistory = viewPaymentHistory;
+window.editHistoriquePaiement = editHistoriquePaiement;
+window.deleteHistoriquePaiement = deleteHistoriquePaiement;
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);

@@ -40,6 +40,14 @@ public class AjouterPaiementFrais : IHttpHandler, IRequiresSessionState
             if (payload.montant <= 0)
                 throw new ArgumentException("Montant invalide.");
 
+            // Récupérer l'utilisateur connecté
+            int userId = 0;
+            string username = "Système";
+            if (ctx.Session["IDUSER"] != null)
+                userId = Convert.ToInt32(ctx.Session["IDUSER"]);
+            if (ctx.Session["username"] != null)
+                username = ctx.Session["username"].ToString();
+
             string connStr = ConfigurationManager.ConnectionStrings["MaConnexion"].ConnectionString;
             
             using (var conn = new SqlConnection(connStr))
@@ -49,37 +57,96 @@ public class AjouterPaiementFrais : IHttpHandler, IRequiresSessionState
                 {
                     try
                     {
+                        // Récupérer les infos actuelles du frais
+                        string selectSql = @"
+                            SELECT ID, TOTAL, PAYE, RESTE, CLASSE, NOM, ANNEE_ID 
+                            FROM FRAIS 
+                            WHERE MATRICULE = @matricule";
+                        
+                        Guid fraisId = Guid.Empty;
+                        decimal ancienPaye = 0;
+                        decimal ancienReste = 0;
+                        int classeId = 0;
+                        string nom = "";
+                        int anneeId = 0;
+
+                        using (var cmd = new SqlCommand(selectSql, conn, transaction))
+                        {
+                            cmd.Parameters.AddWithValue("@matricule", payload.matricule);
+                            using (var reader = cmd.ExecuteReader())
+                            {
+                                if (reader.Read())
+                                {
+                                    fraisId = reader.GetGuid(0);
+                                    ancienPaye = reader.GetDecimal(2);
+                                    ancienReste = reader.GetDecimal(3);
+                                    classeId = reader.GetInt32(4);
+                                    nom = reader.GetString(5);
+                                    anneeId = reader.GetInt32(6);
+                                }
+                                else
+                                {
+                                    throw new Exception("Élève non trouvé dans la table des frais.");
+                                }
+                            }
+                        }
+
+                        decimal nouveauPaye = ancienPaye + payload.montant;
+                        decimal nouveauReste = ancienReste - payload.montant;
+
                         // Mettre à jour le montant payé
                         string updateSql = @"UPDATE FRAIS 
-                                            SET PAYE = PAYE + @montant,
+                                            SET PAYE = @nouveauPaye,
+                                                MODEPAIE = @modePaiement,
+                                                REFERENCE = @reference,
+                                                COMMENTAIRE = @commentaire,
                                                 DERNIER_PAIEMENT = @datePaiement,
                                                 UPDATED_AT = GETDATE()
                                             WHERE MATRICULE = @matricule";
                         
                         using (var cmd = new SqlCommand(updateSql, conn, transaction))
                         {
-                            cmd.Parameters.Add("@montant", System.Data.SqlDbType.Decimal).Value = payload.montant;
-                            cmd.Parameters.Add("@datePaiement", System.Data.SqlDbType.DateTime).Value = payload.datePaiement;
-                            cmd.Parameters.Add("@matricule", System.Data.SqlDbType.NVarChar, 50).Value = payload.matricule;
+                            cmd.Parameters.AddWithValue("@nouveauPaye", nouveauPaye);
+                            cmd.Parameters.AddWithValue("@modePaiement", payload.modePaiement ?? "Especes");
+                            cmd.Parameters.AddWithValue("@reference", string.IsNullOrEmpty(payload.reference) ? (object)DBNull.Value : payload.reference);
+                            cmd.Parameters.AddWithValue("@commentaire", string.IsNullOrEmpty(payload.commentaire) ? (object)DBNull.Value : payload.commentaire);
+                            cmd.Parameters.AddWithValue("@datePaiement", payload.datePaiement);
+                            cmd.Parameters.AddWithValue("@matricule", payload.matricule);
                             
                             int rowsAffected = cmd.ExecuteNonQuery();
                             if (rowsAffected == 0)
                                 throw new Exception("Élève non trouvé.");
                         }
                         
-                        // Insérer l'historique du paiement (optionnel)
-                        string insertSql = @"INSERT INTO PAIEMENTS_HISTORIQUE 
-                                            (MATRICULE, MONTANT, DATE_PAIEMENT, MODE_PAIEMENT, REFERENCE, COMMENTAIRE, CREATED_AT)
-                                            VALUES (@matricule, @montant, @datePaiement, @mode, @reference, @commentaire, GETDATE())";
+                        // Insérer l'historique du paiement
+                        string insertSql = @"INSERT INTO HISTORIQUE_PAIEMENTS 
+                                            (ID, FRAIS_ID, MATRICULE, NOM, CLASSE, ANNEE_ID,
+                                             MONTANT, DATE_PAIEMENT, MODE_PAIEMENT, REFERENCE, COMMENTAIRE,
+                                             USER_ID, USERNAME,
+                                             ANCIEN_PAYE, ANCIEN_RESTE, NOUVEAU_PAYE, NOUVEAU_RESTE, CREATED_AT)
+                                            VALUES (NEWID(), @fraisId, @matricule, @nom, @classeId, @anneeId,
+                                                    @montant, @datePaiement, @mode, @reference, @commentaire,
+                                                    @userId, @username,
+                                                    @ancienPaye, @ancienReste, @nouveauPaye, @nouveauReste, GETDATE())";
                         
                         using (var cmd = new SqlCommand(insertSql, conn, transaction))
                         {
-                            cmd.Parameters.Add("@matricule", System.Data.SqlDbType.NVarChar, 50).Value = payload.matricule;
-                            cmd.Parameters.Add("@montant", System.Data.SqlDbType.Decimal).Value = payload.montant;
-                            cmd.Parameters.Add("@datePaiement", System.Data.SqlDbType.DateTime).Value = payload.datePaiement;
-                            cmd.Parameters.Add("@mode", System.Data.SqlDbType.NVarChar, 50).Value = payload.modePaiement ?? "Espèces";
-                            cmd.Parameters.Add("@reference", System.Data.SqlDbType.NVarChar, 100).Value = string.IsNullOrEmpty(payload.reference) ? (object)DBNull.Value : payload.reference;
-                            cmd.Parameters.Add("@commentaire", System.Data.SqlDbType.NVarChar, 500).Value = string.IsNullOrEmpty(payload.commentaire) ? (object)DBNull.Value : payload.commentaire;
+                            cmd.Parameters.AddWithValue("@fraisId", fraisId);
+                            cmd.Parameters.AddWithValue("@matricule", payload.matricule);
+                            cmd.Parameters.AddWithValue("@nom", nom);
+                            cmd.Parameters.AddWithValue("@classeId", classeId);
+                            cmd.Parameters.AddWithValue("@anneeId", anneeId);
+                            cmd.Parameters.AddWithValue("@montant", payload.montant);
+                            cmd.Parameters.AddWithValue("@datePaiement", payload.datePaiement);
+                            cmd.Parameters.AddWithValue("@mode", payload.modePaiement ?? "Especes");
+                            cmd.Parameters.AddWithValue("@reference", string.IsNullOrEmpty(payload.reference) ? (object)DBNull.Value : payload.reference);
+                            cmd.Parameters.AddWithValue("@commentaire", string.IsNullOrEmpty(payload.commentaire) ? (object)DBNull.Value : payload.commentaire);
+                            cmd.Parameters.AddWithValue("@userId", userId);
+                            cmd.Parameters.AddWithValue("@username", username);
+                            cmd.Parameters.AddWithValue("@ancienPaye", ancienPaye);
+                            cmd.Parameters.AddWithValue("@ancienReste", ancienReste);
+                            cmd.Parameters.AddWithValue("@nouveauPaye", nouveauPaye);
+                            cmd.Parameters.AddWithValue("@nouveauReste", nouveauReste);
                             cmd.ExecuteNonQuery();
                         }
                         

@@ -167,3 +167,33 @@
          width: 100%;
      }
  }
+
+ /* Boutons d'action dans l'historique */
+.btn-history-edit, .btn-history-delete {
+    padding: 5px 10px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.2s;
+}
+
+.btn-history-edit {
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    color: white;
+}
+
+.btn-history-edit:hover {
+    background: linear-gradient(135deg, #0056b3 0%, #004099 100%);
+    transform: scale(1.05);
+}
+
+.btn-history-delete {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: white;
+}
+
+.btn-history-delete:hover {
+    background: linear-gradient(135deg, #c82333 0%, #a71d2a 100%);
+    transform: scale(1.05);
+}
