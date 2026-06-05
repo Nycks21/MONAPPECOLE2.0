@@ -13,7 +13,7 @@ public class GetUsers : IHttpHandler, IRequiresSessionState
     public void ProcessRequest(HttpContext ctx)
     {
         ctx.Response.ContentType = "application/json";
-        ctx.Response.Charset     = "utf-8";
+        ctx.Response.Charset = "utf-8";
         ctx.Response.Cache.SetNoStore();
 
         if (ctx.Session["authenticated"] == null || !(bool)ctx.Session["authenticated"])
@@ -29,11 +29,11 @@ public class GetUsers : IHttpHandler, IRequiresSessionState
             var list = new List<object>();
 
             using (var conn = new SqlConnection(connStr))
-            using (var cmd  = new SqlCommand(
+            using (var cmd = new SqlCommand(
                 @"SELECT IDUSER, NOM
-                  FROM   [dbo].[USERS]
-                  WHERE ROLEID = '3'
-                  ORDER  BY NOM ASC", conn))
+                  FROM USERS
+                  WHERE ROLEID = 3
+                  ORDER BY NOM ASC", conn))
             {
                 conn.Open();
                 using (var reader = cmd.ExecuteReader())
@@ -42,21 +42,21 @@ public class GetUsers : IHttpHandler, IRequiresSessionState
                     {
                         list.Add(new
                         {
-                            ID  = reader.IsDBNull(0) ? 0 : reader.GetInt32(0), // IDUSER → exposé comme ID au JS
-                            NOM = reader.IsDBNull(1) ? "" : reader.GetString(1)
+                            ID = reader.GetInt32(0),
+                            NOM = reader.GetString(1)
                         });
                     }
                 }
             }
 
-            ctx.Response.Write(new JavaScriptSerializer().Serialize(
-                new { success = true, users = list }));
+            var serializer = new JavaScriptSerializer();
+            ctx.Response.Write(serializer.Serialize(new { success = true, users = list }));
         }
         catch (Exception ex)
         {
             ctx.Response.StatusCode = 500;
-            ctx.Response.Write("{\"success\":false,\"message\":"
-                + new JavaScriptSerializer().Serialize(ex.Message) + "}");
+            var serializer = new JavaScriptSerializer();
+            ctx.Response.Write(serializer.Serialize(new { success = false, message = ex.Message }));
         }
     }
 

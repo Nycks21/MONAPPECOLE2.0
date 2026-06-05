@@ -1,17 +1,22 @@
 ﻿using System;
-using System.Configuration;
-using System.Data.SqlClient;
-using System.Web;
 using System.Web.UI;
 
-public partial class utilisateurs : Page
+public partial class utilisateurs : System.Web.UI.Page
 {
-    // ============================
-    // PAGE_LOAD
-    // ============================
     protected void Page_Load(object sender, EventArgs e)
     {
-        // Cet appel unique exécute TOUTE la logique contenue dans le helper
-        AuthHelper.VerifySession(this);
+        // Vérifier les droits d'accès
+        if (!AuthHelper.IsAdmin() && !AuthHelper.IsSuperAdmin())
+        {
+            Response.Redirect("../../accueil/dashboards/index.aspx");
+        }
+
+        // Ajouter une classe CSS au body via JavaScript
+        if (AuthHelper.IsSuperAdmin())
+        {
+            // Enregistrer un script pour ajouter la classe au body
+            string script = "document.body.classList.add('superadmin-mode');";
+            ClientScript.RegisterStartupScript(this.GetType(), "superadmin", script, true);
+        }
     }
 }

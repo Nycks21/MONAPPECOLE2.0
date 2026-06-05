@@ -336,3 +336,35 @@ function handleTreeviewClick(e) {
 document.addEventListener('DOMContentLoaded', function() {
     initTreeview();
 });
+
+// Dans shell.js, vous pouvez maintenant filtrer les menus
+function filterMenusByPermissions() {
+    if (!window.userPermissions) return;
+    
+    // Cacher les menus non autorisés
+    document.querySelectorAll('.nav-link').forEach(link => {
+        const href = link.getAttribute('href');
+        if (href && href !== '#') {
+            // Extraire le code du menu à partir du href
+            let menuCode = '';
+            if (href.includes('eleves')) menuCode = 'eleves';
+            else if (href.includes('absences')) menuCode = 'absences';
+            else if (href.includes('frais')) menuCode = 'frais';
+            else if (href.includes('bulletins')) menuCode = 'bulletins';
+            else if (href.includes('niveaux')) menuCode = 'niveaux';
+            else if (href.includes('salles')) menuCode = 'salles';
+            else if (href.includes('classes')) menuCode = 'classes';
+            else if (href.includes('matieres')) menuCode = 'matieres';
+            else if (href.includes('utilitaires')) menuCode = 'utilitaires';
+            else if (href.includes('annee')) menuCode = 'annee';
+            else if (href.includes('utilisateur')) menuCode = 'utilisateur';
+            else if (href.includes('requete')) menuCode = 'requetes';
+            
+            if (menuCode && !window.userPermissions.includes(menuCode)) {
+                // Cacher le menu parent si tous les enfants sont cachés
+                const parentLi = link.closest('.nav-item');
+                if (parentLi) parentLi.style.display = 'none';
+            }
+        }
+    });
+}

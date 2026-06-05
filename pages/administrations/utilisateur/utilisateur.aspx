@@ -7,11 +7,12 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Utilisateur — Gestion Scolaire</title>
 
-        <!-- Font Awesome --> 
+        <!-- Font Awesome -->
         <link rel="stylesheet" href="../../_assets/css/all.min.css?v=<%=AuthHelper.Version %>">
         <link rel="stylesheet" href="../../_assets/css/fontawesome.css?v=<%=AuthHelper.Version %>">
         <link rel="stylesheet" href="../../_assets/css/fontawesome.min.css?v=<%=AuthHelper.Version %>">
         <link rel="stylesheet" href="../../_assets/css/global.css?v=<%=AuthHelper.Version %>">
+        <link rel="stylesheet" href="css/style.css?v=<%=AuthHelper.Version %>">
     </head>
 
     <body class="hold-transition" data-version="<%=AuthHelper.Version %>">
@@ -81,168 +82,12 @@
                             </div>
                             <div class="user-info">
                                 <span id="profilUsername" class="user-role">Profile :</span>
-                                <span id="navbarUsername" class="user-name">Admin Système</span>
+                                <span id="navbarUsername" class="user-name">-</span>
                             </div>
                         </div>
 
-                        <!-- Navigation -->
-                        <nav>
-                            <ul class="nav-pills">
-                                <!-- Accueil -->
-                                <li class="nav-item">
-                                    <div class="nav-section">Accueil</div>
-                                    <a href="../../accueil/dashboards/index.aspx" class="nav-link">
-                                        <div style="width:30px; text-align:center; margin-right:10px;">
-                                            <i class="fas fa-chalkboard"></i>
-                                        </div>
-                                        <span>Dashboard</span>
-                                    </a>
-                                </li>
-
-                                <!-- Modules -->
-                                 <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin() || AuthHelper.IsSecretaire() || AuthHelper.IsProfessor()) { %>
-                                <div class="nav-section">Modules</div>
-                                <% } %>
-
-                                <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin() || AuthHelper.IsSecretaire()) { %>
-                                <li class="nav-item">
-                                    <a href="../../modules/eleves/eleves.aspx" class="nav-link">
-                                        <div style="width:30px; text-align:center; margin-right:10px;">
-                                            <i class="fas fa-users"></i>
-                                        </div>
-                                        <span>Liste des élèves</span>
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="../../modules/absences/absences.aspx" class="nav-link">
-                                        <div style="width:30px; text-align:center; margin-right:10px;">
-                                            <i class="fas fa-calendar-times"></i>
-                                        </div>
-                                        <span>Retards & Absences</span>
-                                    </a>
-                                </li>
-                                <% } %>
-
-                                <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin() || AuthHelper.IsProfessor()) { %>
-                                <li class="nav-item">
-                                    <a href="../../modules/bulletins/bulletins.aspx" class="nav-link">
-                                        <div style="width:30px; text-align:center; margin-right:10px;">
-                                            <i class="fas fa-file-alt"></i>
-                                        </div>
-                                        <span>Bulletins</span>
-                                    </a>
-                                </li>
-                                <% } %>
-
-                                <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin() || AuthHelper.IsComptable()) { %>
-                                <div class="nav-section">Ecolage</div>
-                                <li class="nav-item">
-                                    <a href="../../modules/frais/frais.aspx" class="nav-link">
-                                        <div style="width:30px; text-align:center; margin-right:10px;">
-                                            <i class="fas fa-money-bill-wave"></i>
-                                        </div>
-                                        <span>Frais scolaires</span>
-                                    </a>
-                                </li>
-                                <% } %>
-
-                                <!-- Paramètres -->
-                                <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin() || AuthHelper.IsProfessor()) { %>
-                                <div class="nav-section">Paramètres</div>
-                                <% } %>
-
-                                <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin() || AuthHelper.IsProfessor()) { %>
-                                <li class="nav-item">
-                                <li class="nav-item">
-                                    <a href="../../parametres/niveaux/niveaux.aspx" class="nav-link">
-                                        <div style="width:30px; text-align:center; margin-right:10px;">
-                                            <i class="fas fa-layer-group"></i>
-                                        </div>
-                                        <span>Niveau</span>
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="../../parametres/salles/salles.aspx" class="nav-link">
-                                        <div style="width:30px; text-align:center; margin-right:10px;">
-                                            <i class="fas fa-door-open"></i>
-                                        </div>
-                                        <span>Salle</span>
-                                    </a>
-                                </li>
-                                <li class="nav-item">
-                                    <a href="../../parametres/classes/classes.aspx" class="nav-link">
-                                        <div style="width:30px; text-align:center; margin-right:10px;">
-                                            <i class="fas fa-folder"></i>
-                                        </div>
-                                        <span>Classes</span>
-                                    </a>
-                                </li>
-
-                                <li class="nav-item">
-                                    <a href="../../parametres/matieres/matieres.aspx" class="nav-link">
-                                        <div style="width:30px; text-align:center; margin-right:10px;">
-                                            <i class="fas fa-book"></i>
-                                        </div>
-                                        <span>Matières</span>
-                                    </a>
-                                </li>
-                                <% } %>
-
-                                <!-- Administration -->
-                                <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin()) { %>
-                                <div class="nav-section">Utilitaires</div>
-                                <% } %>
-
-                                <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin()) { %>
-                                    <li class="nav-item">
-                                        
-                                        <a href="../utilitaires/utilitaires.aspx" class="nav-link">
-                                            <div style="width:30px; text-align:center; margin-right:10px;">
-                                                <i class="fas fa-cogs"></i>
-                                            </div>
-                                            <span>Importation élèves</span>
-                                        </a>
-                                    </li>
-                                <% } %>
-
-                                <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin()) { %>
-                                <div class="nav-section">Administrations</div>
-                                <% } %>
-
-                                <% if (AuthHelper.IsAdmin() || AuthHelper.IsSuperAdmin()) { %>
-                                    <li class="nav-item">
-                                        <a href="../annee/annee.aspx" class="nav-link">
-                                            <div style="width:30px; text-align:center; margin-right:10px;">
-                                                <i class="fas fa-calendar-alt"></i>
-                                            </div>
-                                            <span>Années</span>
-                                        </a>
-                                    </li>
-                                    
-                                            <li class="nav-item">
-                                                <a href="utilisateur.aspx" class="nav-link active">
-                                                    <div style="width:30px; text-align:center; margin-right:10px;">
-                                                        <i class="fas fa-user"></i>
-                                                    </div>
-                                                    <span>Utilisateur</span>
-                                                </a>
-                                            </li>
-                                            <% } %>
-
-                                                <% if (AuthHelper.IsSuperAdmin()) { %>
-                                                    <li class="nav-item">
-                                                        <a href="../requete/requetes.aspx" class="nav-link"
-                                                            style="display: flex; align-items: center;">
-                                                            <div
-                                                                style="width:30px; text-align:center; margin-right:10px;">
-                                                                <i class="fas fa-database"></i>
-                                                            </div>
-                                                            <span>Requetes SQL</span>
-                                                        </a>
-                                                    </li>
-                                                    <% } %>
-                            </ul>
-                        </nav>
+                        <!-- GÉNÉRATION AUTOMATIQUE DES MENUS -->
+                        <%= AuthHelper.RenderMenuHTML() %>
                     </div>
                 </aside>
 
@@ -388,6 +233,86 @@
                                         <option value="Actif">Actif</option>
                                         <option value="Inactif">Inactif</option>
                                     </select>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Dans la modal addUserModal, après le champ Statut, ajoutez : -->
+
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label style="display: block; margin-bottom: 10px; font-weight: 600;">
+                                        <i class="fas fa-lock"></i> Permissions et accès :
+                                    </label>
+                                    <div
+                                        style="display: flex; flex-wrap: wrap; gap: 15px; padding: 10px; background: #f8f9fa; border-radius: 8px;">
+                                        <div style="display: flex; align-items: center;">
+                                            <input type="checkbox" id="permDashboard" value="dashboard"
+                                                style="margin-right: 8px;">
+                                            <label for="permDashboard" style="margin: 0;">📊 Dashboard</label>
+                                        </div>
+                                        <div style="display: flex; align-items: center;">
+                                            <input type="checkbox" id="permEleves" value="eleves"
+                                                style="margin-right: 8px;">
+                                            <label for="permEleves" style="margin: 0;">👥 Élèves</label>
+                                        </div>
+                                        <div style="display: flex; align-items: center;">
+                                            <input type="checkbox" id="permAbsences" value="absences"
+                                                style="margin-right: 8px;">
+                                            <label for="permAbsences" style="margin: 0;">📅 Absences</label>
+                                        </div>
+                                        <div style="display: flex; align-items: center;">
+                                            <input type="checkbox" id="permBulletins" value="bulletins"
+                                                style="margin-right: 8px;">
+                                            <label for="permBulletins" style="margin: 0;">📄 Bulletins</label>
+                                        </div>
+                                        <div style="display: flex; align-items: center;">
+                                            <input type="checkbox" id="permFrais" value="frais"
+                                                style="margin-right: 8px;">
+                                            <label for="permFrais" style="margin: 0;">💰 Frais scolaires</label>
+                                        </div>
+                                        <div style="display: flex; align-items: center;">
+                                            <input type="checkbox" id="permNiveaux" value="niveaux"
+                                                style="margin-right: 8px;">
+                                            <label for="permNiveaux" style="margin: 0;">📚 Niveaux</label>
+                                        </div>
+                                        <div style="display: flex; align-items: center;">
+                                            <input type="checkbox" id="permSalles" value="salles"
+                                                style="margin-right: 8px;">
+                                            <label for="permSalles" style="margin: 0;">🚪 Salles</label>
+                                        </div>
+                                        <div style="display: flex; align-items: center;">
+                                            <input type="checkbox" id="permClasses" value="classes"
+                                                style="margin-right: 8px;">
+                                            <label for="permClasses" style="margin: 0;">📁 Classes</label>
+                                        </div>
+                                        <div style="display: flex; align-items: center;">
+                                            <input type="checkbox" id="permMatieres" value="matieres"
+                                                style="margin-right: 8px;">
+                                            <label for="permMatieres" style="margin: 0;">📖 Matières</label>
+                                        </div>
+                                        <div style="display: flex; align-items: center;">
+                                            <input type="checkbox" id="permImportation" value="importation"
+                                                style="margin-right: 8px;">
+                                            <label for="permImportation" style="margin: 0;">📤 Importation</label>
+                                        </div>
+                                        <div style="display: flex; align-items: center;">
+                                            <input type="checkbox" id="permAnnees" value="annees"
+                                                style="margin-right: 8px;">
+                                            <label for="permAnnees" style="margin: 0;">📅 Années</label>
+                                        </div>
+                                        <div style="display: flex; align-items: center;">
+                                            <input type="checkbox" id="permUtilisateurs" value="utilisateurs"
+                                                style="margin-right: 8px;">
+                                            <label for="permUtilisateurs" style="margin: 0;">👤 Utilisateurs</label>
+                                        </div>
+                                        <!-- ✅ LIGNE POUR LA CACHER -->
+                                        <div id="permRequetesContainer" style="display: flex; align-items: center;">
+                                            <input type="checkbox" id="permRequetes" value="requetes"
+                                                style="margin-right: 8px;">
+                                            <label for="permRequetes" style="margin: 0;">🗄️ Requêtes SQL</label>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
