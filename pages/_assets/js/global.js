@@ -199,17 +199,17 @@
     });
 
     /* ══════════════════════════════════════════════════
-       GESTION DU MENU ACTIF (TOUTE LA LOGIQUE ICI)
+       GESTION DU MENU ACTIF
     ══════════════════════════════════════════════════ */
     
     function setActiveMenu() {
-        var currentUrl = window.location.pathname.toLowerCase();
-        var menuLinks = document.querySelectorAll('.sidebar .nav-link');
+        var currentPath = window.location.pathname.toLowerCase();
+        var currentPage = currentPath.split('/').pop();
+        var activeMenu = null;
         
-        // Mapping des pages vers les codes de menu
-        var pageToMenu = {
+        // Mapping des pages vers les codes menu
+        var menuMapping = {
             'index.aspx': 'dashboard',
-            'dashboard': 'dashboard',
             'eleves.aspx': 'eleves',
             'absences.aspx': 'absences',
             'bulletins.aspx': 'bulletins',
@@ -224,57 +224,60 @@
             'requetes.aspx': 'requetes'
         };
         
-        // Déterminer la page active
-        var activePage = null;
-        for (var page in pageToMenu) {
-            if (currentUrl.indexOf(page) !== -1) {
-                activePage = pageToMenu[page];
-                break;
-            }
+        activeMenu = menuMapping[currentPage];
+        
+        // Cas particulier pour dashboard
+        if (currentPage === '' || currentPage === 'index.aspx' || currentPage === 'dashboard' || currentPath === '/' || currentPath.indexOf('dashboard') !== -1) {
+            activeMenu = 'dashboard';
         }
         
-        // Cas particulier : page d'accueil
-        if (currentUrl === '/' || currentUrl.indexOf('index.aspx') !== -1 || currentUrl.indexOf('dashboard') !== -1) {
-            activePage = 'dashboard';
-        }
+        // =====================================================
+        // CAS PARTICULIERS POUR TOUS LES CHEMINS
+        // =====================================================
         
-        // Cas particuliers pour les correspondances
-        if (currentUrl.indexOf('utilitaires') !== -1) {
-            activePage = 'importation';
-        }
-        if (currentUrl.indexOf('utilisateur') !== -1) {
-            activePage = 'utilisateurs';
-        }
-        if (currentUrl.indexOf('requete') !== -1) {
-            activePage = 'requetes';
-        }
-        if (currentUrl.indexOf('annee') !== -1 && currentUrl.indexOf('annee') !== -1) {
-            activePage = 'annees';
-        }
+        // Modules
+        if (currentPath.indexOf('/eleves/') !== -1) activeMenu = 'eleves';
+        if (currentPath.indexOf('/absences/') !== -1) activeMenu = 'absences';
+        if (currentPath.indexOf('/bulletins/') !== -1) activeMenu = 'bulletins';
+        if (currentPath.indexOf('/frais/') !== -1) activeMenu = 'frais';
+        
+        // Paramètres
+        if (currentPath.indexOf('/niveaux/') !== -1) activeMenu = 'niveaux';
+        if (currentPath.indexOf('/salles/') !== -1) activeMenu = 'salles';
+        if (currentPath.indexOf('/classes/') !== -1) activeMenu = 'classes';
+        if (currentPath.indexOf('/matieres/') !== -1) activeMenu = 'matieres';
+        
+        // Administrations
+        if (currentPath.indexOf('/utilitaires/') !== -1) activeMenu = 'importation';
+        if (currentPath.indexOf('/annee/') !== -1) activeMenu = 'annees';
+        if (currentPath.indexOf('/utilisateur/') !== -1) activeMenu = 'utilisateurs';
+        if (currentPath.indexOf('/requete/') !== -1) activeMenu = 'requetes';
+        
+        // Accueil
+        if (currentPath.indexOf('/dashboard/') !== -1) activeMenu = 'dashboard';
+        if (currentPath.indexOf('/accueil/') !== -1) activeMenu = 'dashboard';
         
         // Appliquer la classe active
-        menuLinks.forEach(function(link) {
+        var menuLinks = document.querySelectorAll('.sidebar .nav-link');
+        for (var i = 0; i < menuLinks.length; i++) {
+            var link = menuLinks[i];
+            var menuCode = link.getAttribute('data-menu');
             link.classList.remove('active');
-            var href = link.getAttribute('href');
-            if (href && activePage) {
-                if (href.indexOf(activePage) !== -1) {
-                    link.classList.add('active');
-                }
+            if (menuCode === activeMenu) {
+                link.classList.add('active');
             }
-        });
-        
-        // Debug (optionnel - à supprimer en production)
-        // console.log('Page active:', activePage);
+        }
     }
     
     function addMenuHoverEffect() {
         var menuLinks = document.querySelectorAll('.sidebar .nav-link');
-        menuLinks.forEach(function(link) {
+        for (var i = 0; i < menuLinks.length; i++) {
+            var link = menuLinks[i];
             link.removeEventListener('mouseenter', onMenuMouseEnter);
             link.removeEventListener('mouseleave', onMenuMouseLeave);
             link.addEventListener('mouseenter', onMenuMouseEnter);
             link.addEventListener('mouseleave', onMenuMouseLeave);
-        });
+        }
     }
     
     function onMenuMouseEnter() {
@@ -328,9 +331,8 @@
         init();
     }
     
-    // Exposer les fonctions pour les appels ultérieurs (AJAX, etc.)
+    // Exposer les fonctions pour les appels ultérieurs
     window.setActiveMenu = setActiveMenu;
-    window.addMenuHoverEffect = addMenuHoverEffect;
     window.refreshActiveMenu = function() {
         setTimeout(setActiveMenu, 50);
     };
@@ -359,7 +361,9 @@ function applyTranslations() {
         var key  = el.getAttribute('data-i18n');
         var keys = key.split('.');
         var val  = i18n;
-        keys.forEach(function (k) { val = val && val[k]; });
+        for (var i = 0; i < keys.length; i++) {
+            val = val && val[keys[i]];
+        }
         if (val) el.textContent = val;
     });
 }
@@ -404,14 +408,14 @@ function ajax(url, payload) {
 // ════════════════════════════════════════════════════════════════
 // TREE VIEW / ACCORDÉON
 // ════════════════════════════════════════════════════════════════
-
 function initTreeview() {
     var treeviewToggles = document.querySelectorAll('.treeview-toggle');
     
-    treeviewToggles.forEach(function(toggle) {
+    for (var i = 0; i < treeviewToggles.length; i++) {
+        var toggle = treeviewToggles[i];
         toggle.removeEventListener('click', handleTreeviewClick);
         toggle.addEventListener('click', handleTreeviewClick);
-    });
+    }
     
     var activeLink = document.querySelector('.nav-treeview .nav-link.active');
     if (activeLink) {
@@ -431,78 +435,6 @@ function handleTreeviewClick(e) {
         parentItem.classList.toggle('open');
     }
 }
-
-// ============================================================================
-// ACTIVER LE MENU ACTIF - MÉTHODE SIMPLE
-// ============================================================================
-(function() {
-    // Obtenir le nom de la page courante
-    var currentPage = window.location.pathname.split('/').pop();
-    var currentFolder = window.location.pathname.split('/')[1] || '';
-    
-    // Mapping des pages vers les codes menu
-    var menuMapping = {
-        'index.aspx': 'dashboard',
-        'eleves.aspx': 'eleves',
-        'absences.aspx': 'absences',
-        'bulletins.aspx': 'bulletins',
-        'frais.aspx': 'frais',
-        'niveaux.aspx': 'niveaux',
-        'salles.aspx': 'salles',
-        'classes.aspx': 'classes',
-        'matieres.aspx': 'matieres',
-        'utilitaires.aspx': 'importation',
-        'annee.aspx': 'annees',
-        'utilisateur.aspx': 'utilisateurs',
-        'requetes.aspx': 'requetes'
-    };
-    
-    // Déterminer le menu actif
-    var activeMenu = menuMapping[currentPage];
-    
-    // Cas particulier pour dashboard
-    if (currentPage === '' || currentPage === 'index.aspx' || currentPage === 'dashboard') {
-        activeMenu = 'dashboard';
-    }
-    
-    // Cas particulier pour les dossiers
-    if (currentFolder === 'eleves') activeMenu = 'eleves';
-    if (currentFolder === 'absences') activeMenu = 'absences';
-    if (currentFolder === 'bulletins') activeMenu = 'bulletins';
-    if (currentFolder === 'frais') activeMenu = 'frais';
-    if (currentFolder === 'niveaux') activeMenu = 'niveaux';
-    if (currentFolder === 'salles') activeMenu = 'salles';
-    if (currentFolder === 'classes') activeMenu = 'classes';
-    if (currentFolder === 'matieres') activeMenu = 'matieres';
-    
-    // Appliquer la classe active
-    if (activeMenu) {
-        var menuLinks = document.querySelectorAll('.sidebar .nav-link');
-        for (var i = 0; i < menuLinks.length; i++) {
-            var link = menuLinks[i];
-            var menuCode = link.getAttribute('data-menu');
-            if (menuCode === activeMenu) {
-                link.classList.add('active');
-                break;
-            }
-        }
-    }
-    
-    // Ajouter l'effet de survol
-    var links = document.querySelectorAll('.sidebar .nav-link');
-    for (var i = 0; i < links.length; i++) {
-        links[i].addEventListener('mouseenter', function() {
-            if (!this.classList.contains('active')) {
-                this.style.backgroundColor = '#e9ecef';
-            }
-        });
-        links[i].addEventListener('mouseleave', function() {
-            if (!this.classList.contains('active')) {
-                this.style.backgroundColor = '';
-            }
-        });
-    }
-})();
 
 document.addEventListener('DOMContentLoaded', function() {
     initTreeview();
