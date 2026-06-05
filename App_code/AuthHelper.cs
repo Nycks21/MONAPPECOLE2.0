@@ -49,12 +49,12 @@ public static class AuthHelper
     public static List<string> GetUserPermissions()
     {
         var session = HttpContext.Current.Session;
-        
+
         if (session != null && session["USER_PERMISSIONS"] != null)
         {
             return session["USER_PERMISSIONS"] as List<string>;
         }
-        
+
         // SuperAdmin voit tout
         if (IsSuperAdmin())
         {
@@ -66,8 +66,8 @@ public static class AuthHelper
             if (session != null) session["USER_PERMISSIONS"] = allPerms;
             return allPerms;
         }
-        
-        // Admin voit tout sauf requetes (sera géré dans HasPermission)
+
+        // Admin voit tout sauf requetes
         if (IsAdmin())
         {
             var adminPerms = new List<string>();
@@ -81,7 +81,7 @@ public static class AuthHelper
             if (session != null) session["USER_PERMISSIONS"] = adminPerms;
             return adminPerms;
         }
-        
+
         // Pour les autres utilisateurs : charger depuis la base
         int? userId = GetCurrentUserId();
         if (userId.HasValue && userId.Value > 0)
@@ -90,33 +90,33 @@ public static class AuthHelper
             if (session != null) session["USER_PERMISSIONS"] = permissions;
             return permissions;
         }
-        
+
         return new List<string>();
     }
 
     private static List<string> LoadPermissionsFromDatabase(int userId)
     {
         var permissions = new List<string>();
-        
+
         using (SqlConnection conn = new SqlConnection(connStr))
         {
             conn.Open();
-            
+
             string checkColumnQuery = @"
                 SELECT COUNT(*) 
                 FROM INFORMATION_SCHEMA.COLUMNS 
                 WHERE TABLE_NAME = 'USERS' AND COLUMN_NAME = 'MENU_PERMISSIONS'";
-            
+
             SqlCommand checkCmd = new SqlCommand(checkColumnQuery, conn);
             int columnExists = (int)checkCmd.ExecuteScalar();
-            
+
             if (columnExists > 0)
             {
                 string sql = "SELECT MENU_PERMISSIONS FROM USERS WHERE IDUSER = @id";
                 SqlCommand cmd = new SqlCommand(sql, conn);
                 cmd.Parameters.AddWithValue("@id", userId);
                 object result = cmd.ExecuteScalar();
-                
+
                 if (result != null && result != DBNull.Value && !string.IsNullOrEmpty(result.ToString()))
                 {
                     try
@@ -141,21 +141,21 @@ public static class AuthHelper
                 }
             }
         }
-        
+
         return permissions;
     }
 
     // ============================================================
-    // MÉTHODE HASPERMISSION CORRIGÉE
+    // MÉTHODE HASPERMISSION
     // ============================================================
     public static bool HasPermission(string permissionCode)
     {
         // SuperAdmin voit tout (y compris Requêtes SQL)
         if (IsSuperAdmin()) return true;
-        
+
         // Admin voit tout SAUF le menu Requêtes SQL
         if (IsAdmin() && permissionCode != "requetes") return true;
-        
+
         // Pour les autres utilisateurs, vérifier dans les permissions
         var permissions = GetUserPermissions();
         return permissions.Contains(permissionCode);
@@ -165,7 +165,7 @@ public static class AuthHelper
     public static List<MenuItem> GetAuthorizedMenus()
     {
         var authorizedMenus = new List<MenuItem>();
-        
+
         foreach (var menu in AllMenus)
         {
             if (HasPermission(menu.Code))
@@ -173,24 +173,28 @@ public static class AuthHelper
                 authorizedMenus.Add(menu);
             }
         }
-        
+
         return authorizedMenus;
     }
 
-    // Générer le HTML des menus
+    // ============================================================
+    // GÉNÉRATION DU HTML DES MENUS - SANS CLASSE "ACTIVE"
+    // La classe "active" est gérée par JavaScript (global.js)
+    // ============================================================
+    // Générer le HTML des menus - Version avec data-menu
     public static string RenderMenuHTML()
     {
         try
         {
             var menus = GetAuthorizedMenus();
-            
+
             if (menus == null || menus.Count == 0)
             {
                 return "<div class='nav-section' style='padding:15px;text-align:center;'>Aucun menu disponible<br><small>Contactez l'administrateur</small></div>";
             }
-            
+
             var sections = new Dictionary<string, List<MenuItem>>();
-            
+
             foreach (var menu in menus)
             {
                 if (!sections.ContainsKey(menu.Section))
@@ -199,48 +203,31 @@ public static class AuthHelper
                 }
                 sections[menu.Section].Add(menu);
             }
-            
-            string currentPage = "";
-            try
-            {
-                currentPage = HttpContext.Current.Request.Url.AbsolutePath.ToLower();
-            }
-            catch { }
-            
+
             var html = new System.Text.StringBuilder();
             html.Append(@"<ul class=""nav-pills"">");
-            
+
             foreach (var section in sections)
             {
                 html.AppendFormat(@"
                 <li class=""nav-item"">
                     <div class=""nav-section"">{0}</div>", section.Key);
-                
+
                 foreach (var menu in section.Value)
                 {
-                    string activeClass = "";
-                    try
-                    {
-                        string menuUrl = menu.Url.Replace("..", "").Replace("/", "");
-                        if (currentPage.Contains(menuUrl))
-                        {
-                            activeClass = "active";
-                        }
-                    }
-                    catch { }
-                    
+                    // Ajout de l'attribut data-menu avec le code du menu
                     html.AppendFormat(@"
-                    <a href=""{0}"" class=""nav-link {1}"">
+                    <a href=""{0}"" class=""nav-link"" data-menu=""{1}"">
                         <div style=""width:30px; text-align:center; margin-right:10px;"">
                             <i class=""{2}""></i>
                         </div>
                         <span>{3}</span>
-                    </a>", menu.Url, activeClass, menu.Icon, menu.Text);
+                    </a>", menu.Url, menu.Code, menu.Icon, menu.Text);
                 }
-                
+
                 html.Append(@"</li>");
             }
-            
+
             html.Append(@"</ul>");
             return html.ToString();
         }
@@ -258,20 +245,20 @@ public static class AuthHelper
             using (SqlConnection conn = new SqlConnection(connStr))
             {
                 conn.Open();
-                
+
                 string checkColumnQuery = @"
                     SELECT COUNT(*) 
                     FROM INFORMATION_SCHEMA.COLUMNS 
                     WHERE TABLE_NAME = 'USERS' AND COLUMN_NAME = 'MENU_PERMISSIONS'";
-                
+
                 SqlCommand checkCmd = new SqlCommand(checkColumnQuery, conn);
                 int columnExists = (int)checkCmd.ExecuteScalar();
-                
+
                 if (columnExists > 0)
                 {
                     var serializer = new JavaScriptSerializer();
                     string permissionsJson = serializer.Serialize(permissions);
-                    
+
                     string sql = "UPDATE USERS SET MENU_PERMISSIONS = @permissions WHERE IDUSER = @id";
                     SqlCommand cmd = new SqlCommand(sql, conn);
                     cmd.Parameters.AddWithValue("@permissions", permissionsJson);
@@ -284,7 +271,7 @@ public static class AuthHelper
                     SqlCommand deleteCmd = new SqlCommand(deleteSql, conn);
                     deleteCmd.Parameters.AddWithValue("@id", userId);
                     deleteCmd.ExecuteNonQuery();
-                    
+
                     foreach (string perm in permissions)
                     {
                         string insertSql = "INSERT INTO USER_PERMISSIONS (USER_ID, PERMISSION_NAME) VALUES (@id, @perm)";
@@ -294,13 +281,13 @@ public static class AuthHelper
                         insertCmd.ExecuteNonQuery();
                     }
                 }
-                
+
                 var session = HttpContext.Current.Session;
                 if (session != null && session["IDUSER"] != null && Convert.ToInt32(session["IDUSER"]) == userId)
                 {
                     session["USER_PERMISSIONS"] = permissions;
                 }
-                
+
                 return true;
             }
         }
@@ -437,7 +424,7 @@ public static class AuthHelper
     {
         var roleId = GetUserRoleId();
         if (!roleId.HasValue) return "Inconnu";
-        
+
         switch (roleId.Value)
         {
             case 0: return "Super Administrateur";

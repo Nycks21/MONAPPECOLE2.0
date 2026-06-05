@@ -1,4 +1,4 @@
-﻿<%@ WebHandler Language="C#" Class="ModifierAbsence" %>
+<%@ WebHandler Language="C#" Class="ModifierRetard" %>
 using System;
 using System.Configuration;
 using System.Data.SqlClient;
@@ -7,7 +7,7 @@ using System.Web;
 using System.Web.Script.Serialization;
 using System.Web.SessionState;
 
-public class ModifierAbsence : IHttpHandler, IRequiresSessionState
+public class ModifierRetard : IHttpHandler, IRequiresSessionState
 {
     public void ProcessRequest(HttpContext ctx)
     {
@@ -36,30 +36,36 @@ public class ModifierAbsence : IHttpHandler, IRequiresSessionState
                 return;
             }
 
-            // Vérifier que l'ID existe
             if (!data.ContainsKey("id") || data["id"] == null)
             {
                 ctx.Response.Write("{\"success\":false,\"message\":\"ID manquant\"}");
                 return;
             }
 
-            Guid absenceId = Guid.Parse(data["id"].ToString());
+            Guid retardId = Guid.Parse(data["id"].ToString());
             string matricule = data.ContainsKey("matricule") ? data["matricule"].ToString() : "";
             string nom = data.ContainsKey("nom") ? data["nom"].ToString() : "";
             string classeNom = data.ContainsKey("classe") ? data["classe"].ToString() : "";
             
-            DateTime dateDebut = DateTime.Now;
-            if (data.ContainsKey("dateDebut") && data["dateDebut"] != null)
+            DateTime date = DateTime.Now;
+            if (data.ContainsKey("date") && data["date"] != null)
             {
-                dateDebut = DateTime.Parse(data["dateDebut"].ToString());
+                date = DateTime.Parse(data["date"].ToString());
             }
             
-            DateTime dateFin = dateDebut;
-            if (data.ContainsKey("dateFin") && data["dateFin"] != null)
+            TimeSpan heurePrevue = TimeSpan.Parse("08:00");
+            if (data.ContainsKey("heurePrevue") && data["heurePrevue"] != null)
             {
-                dateFin = DateTime.Parse(data["dateFin"].ToString());
+                heurePrevue = TimeSpan.Parse(data["heurePrevue"].ToString());
             }
             
+            TimeSpan heureArrivee = TimeSpan.Parse("08:00");
+            if (data.ContainsKey("heureArrivee") && data["heureArrivee"] != null)
+            {
+                heureArrivee = TimeSpan.Parse(data["heureArrivee"].ToString());
+            }
+            
+            int duree = data.ContainsKey("duree") ? Convert.ToInt32(data["duree"]) : 0;
             string motif = data.ContainsKey("motif") ? data["motif"].ToString() : "";
             bool justifie = data.ContainsKey("justifie") && Convert.ToBoolean(data["justifie"]);
             string justification = data.ContainsKey("justification") ? data["justification"].ToString() : "";
@@ -73,26 +79,30 @@ public class ModifierAbsence : IHttpHandler, IRequiresSessionState
                 conn.Open();
                 
                 using (var cmd = new SqlCommand(@"
-                    UPDATE ABSENCES 
+                    UPDATE RETARDS 
                     SET ANNEE_ID = @anneeId,
                         MATRICULE = @matricule,
                         NOM = @nom,
                         CLASSE = @classeId,
-                        DATE_DEBUT = @dateDebut,
-                        DATE_FIN = @dateFin,
+                        DATE_RETARD = @date,
+                        HEURE_PREVUE = @heurePrevue,
+                        HEURE_ARRIVEE = @heureArrivee,
+                        DUREE = @duree,
                         MOTIF = @motif,
                         JUSTIFIE = @justifie,
                         JUSTIFICATION = @justification,
                         UPDATED_AT = GETDATE()
                     WHERE ID = @id", conn))
                 {
-                    cmd.Parameters.AddWithValue("@id", absenceId);
+                    cmd.Parameters.AddWithValue("@id", retardId);
                     cmd.Parameters.AddWithValue("@anneeId", anneeId);
                     cmd.Parameters.AddWithValue("@matricule", matricule);
                     cmd.Parameters.AddWithValue("@nom", nom);
                     cmd.Parameters.AddWithValue("@classeId", classeId);
-                    cmd.Parameters.AddWithValue("@dateDebut", dateDebut);
-                    cmd.Parameters.AddWithValue("@dateFin", dateFin);
+                    cmd.Parameters.AddWithValue("@date", date);
+                    cmd.Parameters.AddWithValue("@heurePrevue", heurePrevue);
+                    cmd.Parameters.AddWithValue("@heureArrivee", heureArrivee);
+                    cmd.Parameters.AddWithValue("@duree", duree);
                     cmd.Parameters.AddWithValue("@motif", motif);
                     cmd.Parameters.AddWithValue("@justifie", justifie ? 1 : 0);
                     cmd.Parameters.AddWithValue("@justification", justification);
@@ -101,7 +111,7 @@ public class ModifierAbsence : IHttpHandler, IRequiresSessionState
                     
                     if (rowsAffected > 0)
                     {
-                        ctx.Response.Write("{\"success\":true,\"message\":\"Absence modifiée avec succès\"}");
+                        ctx.Response.Write("{\"success\":true,\"message\":\"Retard modifié avec succès\"}");
                     }
                     else
                     {

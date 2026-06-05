@@ -1463,4 +1463,147 @@ textarea:disabled {
     padding-left: 52px;
 }
 
+/* Style pour les liens de menu actifs */
+.sidebar .nav-link {
+    transition: all 0.2s ease;
+    border-radius: 8px;
+    margin: 2px 8px;
+}
+
+.sidebar .nav-link.active {
+    background: linear-gradient(90deg, #007bff 0%, #0056b3 100%) !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 5px rgba(0,123,255,0.3);
+}
+
+.sidebar .nav-link.active i,
+.sidebar .nav-link.active span,
+.sidebar .nav-link.active div {
+    color: #ffffff !important;
+}
+
+.sidebar .nav-link:hover:not(.active) {
+    background-color: #007bff !important;
+    transform: translateX(3px);
+}
+
+/* =====================================================
+   NOTIFICATIONS - Z-INDEX ÉLEVÉ
+   ===================================================== */
+
+/* Forcer SweetAlert à être toujours au-dessus */
+.swal2-container {
+    z-index: 9999999 !important;
+}
+
+.swal2-container.swal2-backdrop-show {
+    z-index: 9999998 !important;
+}
+
+.swal2-popup {
+    z-index: 9999999 !important;
+}
+
+.swal2-backdrop {
+    z-index: 9999998 !important;
+}
+
+/* Pour les toasts SweetAlert */
+.swal2-toast {
+    z-index: 9999999 !important;
+}
+
+/* Modal Bootstrap et autres - inférieur à SweetAlert */
+.modal {
+    z-index: 10000 !important;
+}
+
+.modal-backdrop {
+    z-index: 9999 !important;
+}
+
+/* Spinner - inférieur à SweetAlert */
+#spinnerOverlay {
+    z-index: 99999 !important;
+}
+
+/* Toast personnalisé */
+#toastContainer {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 99999;
+}
+
+.toast-notification {
+    background: white;
+    border-radius: 8px;
+    padding: 12px 20px;
+    margin-bottom: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 250px;
+    max-width: 350px;
+    transform: translateX(120%);
+    transition: transform 0.3s ease;
+    z-index: 99999;
+    position: relative;
+}
+
+.toast-notification.show {
+    transform: translateX(0);
+}
+
+.toast-notification.success {
+    border-left: 4px solid #28a745;
+}
+.toast-notification.success i {
+    color: #28a745;
+}
+
+.toast-notification.error {
+    border-left: 4px solid #dc3545;
+}
+.toast-notification.error i {
+    color: #dc3545;
+}
+
+.toast-notification.warning {
+    border-left: 4px solid #ffc107;
+}
+.toast-notification.warning i {
+    color: #ffc107;
+}
+
+.toast-notification.info {
+    border-left: 4px solid #17a2b8;
+}
+.toast-notification.info i {
+    color: #17a2b8;
+}
+
+.toast-close {
+    background: none;
+    border: none;
+    font-size: 18px;
+    cursor: pointer;
+    margin-left: auto;
+    color: #999;
+}
+
+.toast-close:hover {
+    color: #333;
+}
+
+/* Modal - z-index inférieur aux notifications */
+.modal {
+    z-index: 9999;
+}
+
+.modal-content {
+    z-index: 10000;
+}
+
 

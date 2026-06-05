@@ -11,7 +11,7 @@ public partial class annee : Page
     // ============================
     protected void Page_Load(object sender, EventArgs e)
     {
-        // Cet appel unique exécute TOUTE la logique contenue dans le helper
+        // Vérifier la session
         AuthHelper.VerifySession(this);
     }
 }

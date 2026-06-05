@@ -76,9 +76,9 @@
                                 <span class="status-indicator"></span>
                             </div>
                             <div class="user-info">
-                                <span class="user-role">Profile :</span>
-                                <span id="navbarUsername" class="user-name">-</span>
-                            </div>
+                            <span id="profilUsername" class="user-role">Profile :</span>
+                            <span id="navbarUsername" class="user-name">-</span>
+                        </div>
                         </div>
                         
                         <!-- GÉNÉRATION AUTOMATIQUE DES MENUS -->

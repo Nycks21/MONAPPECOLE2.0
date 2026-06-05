@@ -49,7 +49,7 @@ const DEFAULT_ROLE_PERMISSIONS = {
         'annees', 'utilisateurs', 'requetes'
     ],
     'Professeur': [
-        'dashboard', 'eleves', 'bulletins'
+        'dashboard', 'eleves', 'bulletins' , 'absences'
     ],
     'Secrétaire': [
         'dashboard', 'eleves', 'absences'

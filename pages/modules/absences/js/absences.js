@@ -1,32 +1,39 @@
-'use strict';
+// ============================================================================
+// GESTION DES ABSENCES ET RETARDS - VERSION CORRIGÉE
+// ============================================================================
 
-// ─────────────────────────────────────────────────────────────────────────────
 // API URLs
-// ─────────────────────────────────────────────────────────────────────────────
 var API_ABS = {
-    getAbsences: 'handlers/GetAbsence.ashx',
     getEleves: '../eleves/handlers/GetEleve.ashx',
-    ajouter: 'handlers/AjouterAbsence.ashx',
-    modifier: 'handlers/ModifierAbsence.ashx',
-    supprimer: 'handlers/SupprimerAbsence.ashx'
+    absences: {
+        list: 'handlers/GetAbsences.ashx',
+        add: 'handlers/AjouterAbsence.ashx',
+        update: 'handlers/ModifierAbsence.ashx',
+        delete: 'handlers/SupprimerAbsence.ashx',
+        justify: 'handlers/JustifierAbsence.ashx'
+    },
+    retards: {
+        list: 'handlers/GetRetards.ashx',
+        add: 'handlers/AjouterRetard.ashx',
+        update: 'handlers/ModifierRetard.ashx',
+        delete: 'handlers/SupprimerRetard.ashx',
+        justify: 'handlers/JustifierRetard.ashx'
+    }
 };
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ÉTAT GLOBAL
-// ─────────────────────────────────────────────────────────────────────────────
+// État global
 var absencesData = [];
-var filteredAbs = [];
+var retardsData = [];
+var currentAbsenceId = null;
+var currentRetardId = null;
+var currentTab = 'absences';
+var absPage = 1, retPage = 1;
+var absRows = 10, retRows = 10;
 var elevesLookup = {};
-var currentAbsId = null;
-var currentAbsMode = 'add';
-var absPage = 1;
-var absRowsPerPage = 10;
-var absSortCol = 'DATE_DEBUT';
-var absSortDir = -1;
 
-// ─────────────────────────────────────────────────────────────────────────────
-// FONCTIONS UTILITAIRES
-// ─────────────────────────────────────────────────────────────────────────────
+// ============================================================================
+// UTILITAIRES
+// ============================================================================
 function escapeHtml(str) {
     if (!str) return '';
     return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -34,250 +41,65 @@ function escapeHtml(str) {
 
 function formatDate(dateStr) {
     if (!dateStr) return '-';
-    if (dateStr.includes('/')) {
-        var parts = dateStr.split(' ')[0].split('/');
-        if (parts.length === 3) {
-            return parts[0] + '/' + parts[1] + '/' + parts[2];
-        }
-    }
     try {
-        var date = new Date(dateStr);
-        if (!isNaN(date.getTime())) {
-            var day = String(date.getDate()).padStart(2, '0');
-            var month = String(date.getMonth() + 1).padStart(2, '0');
-            var year = date.getFullYear();
-            return day + '/' + month + '/' + year;
+        var d = new Date(dateStr);
+        if (!isNaN(d.getTime())) {
+            return d.getDate().toString().padStart(2, '0') + '/' + (d.getMonth() + 1).toString().padStart(2, '0') + '/' + d.getFullYear();
         }
     } catch(e) {}
-    return dateStr;
-}
-
-function formatDateForInput(dateStr) {
-    if (!dateStr) return '';
-    var parts = dateStr.split(' ')[0].split('/');
-    if (parts.length === 3) {
-        return parts[2] + '-' + parts[1] + '-' + parts[0];
-    }
     return dateStr.split('T')[0];
 }
 
-function formatDuree(duree) {
-    if (!duree) return '-';
-    var dureeValue = duree;
-    if (typeof dureeValue === 'string') {
-        dureeValue = dureeValue.replace(',', '.');
-    }
-    var num = parseFloat(dureeValue);
-    if (isNaN(num)) return duree.toString();
-    num = Math.round(num * 10) / 10;
-    if (num === Math.floor(num)) {
-        return num + 'h';
-    } else {
-        return num.toString().replace('.', ',') + 'h';
-    }
+function formatHeure(timeStr) {
+    if (!timeStr) return '-';
+    return timeStr.substring(0, 5);
 }
 
-function truncateText(text, max) {
-    if (!text) return '-';
-    return text.length > max ? text.substring(0, max) + '...' : text;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// BADGES
-// ─────────────────────────────────────────────────────────────────────────────
-function getNomBadge(nom) {
-    return '<span style="font-weight:700;">' + escapeHtml(nom || '-') + '</span>';
-}
-
-function getMatriculeBadge(mat) {
-    return '<span style="background:#f1f3f5;color:#212529;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:700;border:1px solid #dee2e6;">' + escapeHtml(mat || '-') + '</span>';
-}
-
-function getClasseBadge(cls) {
-    return '<span style="background:#fff;color:#007bff;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;border:1px solid #007bff;">' +
-        '<i class="fas fa-folder" style="margin-right:4px;"></i>' + escapeHtml(cls) + '</span>';
-}
-
-function getTypeBadge(type) {
-    var t = (type || '').toLowerCase();
-    var bg = t === 'retard' ? '#ffc107' : '#6c757d';
-    var txt = t === 'retard' ? '#212529' : '#fff';
-    return '<span style="background:' + bg + ';color:' + txt + ';padding:3px 9px;border-radius:6px;font-size:11px;font-weight:700;text-transform:uppercase;">' + escapeHtml(type || '-') + '</span>';
-}
-
-function getJustifiedBadge(justif) {
-    var ok = (justif === true || justif === 1 || justif === 'True' || justif === 'true');
-    var bg = ok ? '#28a745' : '#dc3545';
-    var lbl = ok ? 'Oui' : 'Non';
-    return '<span style="background:' + bg + ';color:#fff;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;">' + lbl + '</span>';
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// SPINNER
-// ─────────────────────────────────────────────────────────────────────────────
 function showSpinner() {
     var s = document.getElementById('spinnerOverlay');
-    if (s) { s.style.display = 'flex'; s.style.visibility = 'visible'; s.style.opacity = '1'; }
+    if (s) { s.style.display = 'flex'; s.style.visibility = 'visible'; }
 }
 
 function hideSpinner() {
     var s = document.getElementById('spinnerOverlay');
-    if (s) { s.style.display = 'none'; s.style.visibility = 'hidden'; s.style.opacity = '0'; }
+    if (s) { s.style.display = 'none'; s.style.visibility = 'hidden'; }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MODALS
-// ─────────────────────────────────────────────────────────────────────────────
-function openModal(id) {
-    var modal = document.getElementById(id);
-    if (modal) {
-        modal.style.display = 'flex';
-        document.body.style.overflow = 'hidden';
+// ============================================================================
+// SWITCH ENTRE ONGLETS
+// ============================================================================
+function switchTab(tab, event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
     }
-}
-
-function closeModal(id) {
-    var modal = document.getElementById(id);
-    if (modal) {
-        modal.style.display = 'none';
-        document.body.style.overflow = '';
-    }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// GESTION DES CHAMPS SELON LE TYPE
-// ─────────────────────────────────────────────────────────────────────────────
-function setFieldsStateByType(isRetard) {
-    var timeGroup = document.getElementById('timeGroup');
-    var dureeGroup = document.getElementById('dureeGroup');
-    var dateFinGroup = document.getElementById('dateFinGroup');
+    currentTab = tab;
+    var tabs = document.querySelectorAll('.tab-btn');
+    var contents = document.querySelectorAll('.tab-content');
     
-    if (!isRetard) {
-        if (timeGroup) timeGroup.style.display = 'none';
-        if (dureeGroup) dureeGroup.style.display = 'none';
-        if (dateFinGroup) dateFinGroup.style.display = 'block';
+    for (var i = 0; i < tabs.length; i++) {
+        tabs[i].classList.remove('active');
+    }
+    for (var i = 0; i < contents.length; i++) {
+        contents[i].classList.remove('active');
+    }
+    
+    if (tab === 'absences') {
+        tabs[0].classList.add('active');
+        document.getElementById('tab-absences').classList.add('active');
+        loadAbsences();
     } else {
-        if (timeGroup) timeGroup.style.display = 'block';
-        if (dureeGroup) dureeGroup.style.display = 'block';
-        if (dateFinGroup) dateFinGroup.style.display = 'none';
+        tabs[1].classList.add('active');
+        document.getElementById('tab-retards').classList.add('active');
+        loadRetards();
     }
+    return false;
 }
 
-function setJustifiedFieldsState(isJustified) {
-    var motifGroup = document.getElementById('motifGroup');
-    if (motifGroup) {
-        motifGroup.style.display = (isJustified === true || isJustified === 'oui') ? 'block' : 'none';
-    }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// BARRE DE FILTRES (placée sous les statistiques)
-// ─────────────────────────────────────────────────────────────────────────────
-function createFilterControls() {
-    if (document.getElementById('abs-filter-container')) return;
-
-    var fc = document.createElement('div');
-    fc.id = 'abs-filter-container';
-    fc.style.cssText = 'margin:20px 0 20px;padding:14px 18px;background:linear-gradient(135deg,#f8f9fa,#e9ecef);border-radius:10px;display:flex;gap:14px;flex-wrap:wrap;align-items:flex-end;box-shadow:0 2px 8px rgba(0,0,0,.08);border:1px solid #dee2e6;';
-    fc.innerHTML = `
-        <div style="flex:2;min-width:200px;">
-            <label style="display:block;margin-bottom:6px;font-weight:600;color:#495057;font-size:13px;">
-                <i class="fas fa-search"></i> Recherche
-            </label>
-            <input type="text" id="abs-search-filter" placeholder="Nom, matricule..."
-                style="width:100%;padding:9px 12px;border:1px solid #ced4da;border-radius:6px;font-size:13px;">
-        </div>
-        <div style="min-width:150px;">
-            <label style="display:block;margin-bottom:6px;font-weight:600;color:#495057;font-size:13px;">
-                <i class="fas fa-filter"></i> Type
-            </label>
-            <select id="abs-type-filter" class="form-control">
-                <option value="">Tous</option>
-                <option value="absence">Absence</option>
-                <option value="retard">Retard</option>
-            </select>
-        </div>
-        <div style="min-width:150px;">
-            <label style="display:block;margin-bottom:6px;font-weight:600;color:#495057;font-size:13px;">
-                <i class="fas fa-check-circle"></i> Justifiée
-            </label>
-            <select id="abs-justif-filter" class="form-control">
-                <option value="">Tous</option>
-                <option value="oui">Oui</option>
-                <option value="non">Non</option>
-            </select>
-        </div>
-        <div style="min-width:130px;">
-            <label style="display:block;margin-bottom:6px;font-weight:600;color:#495057;font-size:13px;">
-                <i class="fas fa-list"></i> Lignes par page
-            </label>
-            <select id="abs-rows-per-page" class="form-control">
-                <option value="5">5</option>
-                <option value="10" selected>10</option>
-                <option value="20">20</option>
-                <option value="50">50</option>
-                <option value="100">100</option>
-            </select>
-        </div>
-        <button id="abs-reset-filters" type="button"
-            style="padding:9px 20px;background:#6c757d;color:white;border:none;border-radius:6px;cursor:pointer;font-size:13px;">
-            <i class="fas fa-undo"></i> Réinitialiser
-        </button>`;
-
-    // Insérer après les statistiques
-    var statsContainer = document.getElementById('absenceStatsContainer');
-    if (statsContainer && statsContainer.parentNode) {
-        statsContainer.parentNode.insertBefore(fc, statsContainer.nextSibling);
-    } else {
-        var dashCardBody = document.querySelector('.dash-card-body');
-        if (dashCardBody) {
-            dashCardBody.insertBefore(fc, dashCardBody.firstChild);
-        }
-    }
-
-    document.getElementById('abs-search-filter')?.addEventListener('input', filterAbsences);
-    document.getElementById('abs-type-filter')?.addEventListener('change', filterAbsences);
-    document.getElementById('abs-justif-filter')?.addEventListener('change', filterAbsences);
-    document.getElementById('abs-rows-per-page')?.addEventListener('change', function(e) {
-        absRowsPerPage = parseInt(e.target.value);
-        absPage = 1;
-        renderTable();
-    });
-    document.getElementById('abs-reset-filters')?.addEventListener('click', resetFilters);
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// CHARGEMENT DES DONNÉES
-// ─────────────────────────────────────────────────────────────────────────────
-async function loadAbsences() {
-    showSpinner();
-    try {
-        var res = await fetch(API_ABS.getAbsences);
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        var result = await res.json();
-        if (result.success) {
-            absencesData = result.data || [];
-            filteredAbs = [...absencesData];
-            applySort();
-            updateStats();
-            createFilterControls();
-            renderTable();
-        } else {
-            if (typeof Swal !== 'undefined') {
-                Swal.fire('Erreur', result.message || 'Erreur de chargement', 'error');
-            }
-        }
-    } catch (err) {
-        console.error('loadAbsences:', err);
-        if (typeof Swal !== 'undefined') {
-            Swal.fire('Erreur réseau', 'Impossible de charger les absences.', 'error');
-        }
-    } finally {
-        hideSpinner();
-    }
-}
-
-async function loadElevesSelect() {
+// ============================================================================
+// CHARGEMENT DES ÉLÈVES
+// ============================================================================
+async function loadEleves() {
     try {
         var res = await fetch(API_ABS.getEleves);
         if (!res.ok) return;
@@ -285,784 +107,687 @@ async function loadElevesSelect() {
         if (!result.success) return;
         
         var eleves = result.Eleves || [];
-        var sel = document.getElementById('absenceMatricule');
-        if (!sel) return;
         
-        sel.innerHTML = '<option value="">Sélectionner un élève...</option>';
-        for (var i = 0; i < eleves.length; i++) {
-            var e = eleves[i];
-            var opt = document.createElement('option');
-            opt.value = e.MATRICULE;
-            opt.textContent = e.MATRICULE + ' — ' + (e.NOM || '');
-            opt.dataset.nom = e.NOM || '';
-            opt.dataset.classe = e.CLASSE_NOM || '';
-            sel.appendChild(opt);
-            elevesLookup[e.MATRICULE] = { NOM: e.NOM || '', CLASSE_NOM: e.CLASSE_NOM || '' };
+        var selAbs = document.getElementById('absenceMatricule');
+        if (selAbs) {
+            selAbs.innerHTML = '<option value="">-- Sélectionner un élève --</option>';
+            for (var i = 0; i < eleves.length; i++) {
+                var e = eleves[i];
+                var opt = document.createElement('option');
+                opt.value = e.MATRICULE;
+                opt.textContent = e.MATRICULE + ' — ' + (e.NOM || '');
+                opt.dataset.nom = e.NOM || '';
+                opt.dataset.classe = e.CLASSE_NOM || '';
+                selAbs.appendChild(opt);
+                elevesLookup[e.MATRICULE] = { NOM: e.NOM || '', CLASSE_NOM: e.CLASSE_NOM || '' };
+            }
+        }
+        
+        var selRet = document.getElementById('retardMatricule');
+        if (selRet) {
+            selRet.innerHTML = '<option value="">-- Sélectionner un élève --</option>';
+            for (var j = 0; j < eleves.length; j++) {
+                var e2 = eleves[j];
+                var opt2 = document.createElement('option');
+                opt2.value = e2.MATRICULE;
+                opt2.textContent = e2.MATRICULE + ' — ' + (e2.NOM || '');
+                opt2.dataset.nom = e2.NOM || '';
+                opt2.dataset.classe = e2.CLASSE_NOM || '';
+                selRet.appendChild(opt2);
+            }
         }
     } catch (err) {
-        console.warn('loadElevesSelect:', err);
+        console.warn('loadEleves:', err);
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// GESTION DES CHAMPS DYNAMIQUES
-// ─────────────────────────────────────────────────────────────────────────────
-function onMatriculeChange() {
-    var sel = document.getElementById('absenceMatricule');
-    if (!sel) return;
-    var mat = sel.value;
-    var info = elevesLookup[mat] || {};
-    var fNom = document.getElementById('absenceStudent');
-    var fClasse = document.getElementById('absenceClasse');
-    if (fNom) fNom.value = info.NOM || '';
-    if (fClasse) fClasse.value = info.CLASSE_NOM || '';
-}
-
-function onTypeChange() {
-    var type = document.getElementById('absenceType')?.value;
-    var isRetard = (type === 'retard');
-    
-    setFieldsStateByType(isRetard);
-    
-    var dateEl = document.getElementById('absenceDate');
-    var dateFinEl = document.getElementById('absenceDateF');
-    
-    if (!isRetard && dateEl && dateFinEl) {
-        dateFinEl.value = dateEl.value;
-    }
-    
-    onJustifiedChange();
-}
-
-function onDateChange() {
-    var type = document.getElementById('absenceType')?.value;
-    var dateEl = document.getElementById('absenceDate');
-    var dateFinEl = document.getElementById('absenceDateF');
-    
-    if (type !== 'retard' && dateEl && dateFinEl) {
-        dateFinEl.value = dateEl.value;
+// ============================================================================
+// SECTION ABSENCES
+// ============================================================================
+async function loadAbsences() {
+    showSpinner();
+    try {
+        var res = await fetch(API_ABS.absences.list);
+        var result = await res.json();
+        if (result.success) {
+            absencesData = result.data || [];
+            updateAbsenceStats();
+            renderAbsencesTable();
+        } else {
+            console.error('Erreur chargement absences:', result.message);
+        }
+    } catch (err) {
+        console.error('loadAbsences:', err);
+    } finally {
+        hideSpinner();
     }
 }
 
-function onJustifiedChange() {
-    var justified = document.getElementById('absenceJustified')?.value;
-    setJustifiedFieldsState(justified === 'oui');
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// STATISTIQUES
-// ─────────────────────────────────────────────────────────────────────────────
-function updateStats() {
-    var totalAbsences = 0, totalRetards = 0, totalNonJust = 0;
+function updateAbsenceStats() {
+    var total = absencesData.length;
+    var nonJustifiees = 0;
     for (var i = 0; i < absencesData.length; i++) {
-        var type = (absencesData[i].TYPE || '').toLowerCase();
-        if (type === 'absence') totalAbsences++;
-        if (type === 'retard') totalRetards++;
-        if (!absencesData[i].JUSTIF) totalNonJust++;
+        if (!absencesData[i].JUSTIFIE) nonJustifiees++;
     }
+    var justifiees = total - nonJustifiees;
     
-    var elAbs = document.getElementById('totalAbsencesVal');
-    var elRet = document.getElementById('totalRetardsVal');
-    var elCri = document.getElementById('totalCritiquesVal');
-    if (elAbs) elAbs.textContent = totalAbsences;
-    if (elRet) elRet.textContent = totalRetards;
-    if (elCri) elCri.textContent = totalNonJust;
+    var totalEl = document.getElementById('totalAbsencesVal');
+    var nonJustEl = document.getElementById('nonJustifieesVal');
+    var justEl = document.getElementById('justifieesVal');
+    if (totalEl) totalEl.textContent = total;
+    if (nonJustEl) nonJustEl.textContent = nonJustifiees;
+    if (justEl) justEl.textContent = justifiees;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// TRI ET FILTRES
-// ─────────────────────────────────────────────────────────────────────────────
-function applySort() {
-    filteredAbs.sort(function(a, b) {
-        var va = (a[absSortCol] || '').toString().toLowerCase();
-        var vb = (b[absSortCol] || '').toString().toLowerCase();
-        if (va < vb) return absSortDir;
-        if (va > vb) return -absSortDir;
-        return 0;
-    });
-}
-
-function sortBy(column) {
-    if (absSortCol === column) {
-        absSortDir *= -1;
-    } else {
-        absSortCol = column;
-        absSortDir = -1;
-    }
-    applySort();
-    renderTable();
-}
-
-function filterAbsences() {
-    var searchInput = document.getElementById('abs-search-filter');
-    var typeSelect = document.getElementById('abs-type-filter');
-    var justifSelect = document.getElementById('abs-justif-filter');
-    
-    var search = searchInput ? searchInput.value.toLowerCase().trim() : '';
-    var type = typeSelect ? typeSelect.value : '';
-    var justif = justifSelect ? justifSelect.value : '';
-    
-    filteredAbs = absencesData.filter(function(a) {
-        var matchSearch = !search || (a.NOM || '').toLowerCase().includes(search) ||
-                          (a.MATRICULE || '').toLowerCase().includes(search);
-        var matchType = !type || (a.TYPE || '').toLowerCase() === type;
-        var matchJustif = !justif || (justif === 'oui' ? a.JUSTIF : !a.JUSTIF);
-        return matchSearch && matchType && matchJustif;
-    });
-    
-    applySort();
-    absPage = 1;
-    renderTable();
-}
-
-function resetFilters() {
-    var search = document.getElementById('abs-search-filter');
-    var type = document.getElementById('abs-type-filter');
-    var justif = document.getElementById('abs-justif-filter');
-    var rows = document.getElementById('abs-rows-per-page');
-    
-    if (search) search.value = '';
-    if (type) type.value = '';
-    if (justif) justif.value = '';
-    if (rows) rows.value = '10';
-    
-    absRowsPerPage = 10;
-    filteredAbs = [...absencesData];
-    applySort();
-    absPage = 1;
-    renderTable();
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// RENDU DU TABLEAU (version modifiée)
-// ─────────────────────────────────────────────────────────────────────────────
-function renderTable() {
+function renderAbsencesTable() {
     var tbody = document.getElementById('absencesTableBody');
     if (!tbody) return;
     
-    if (!filteredAbs || filteredAbs.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="11" style="text-align:center;padding:50px;">' +
-            '<i class="fas fa-search" style="font-size:40px;color:#ccc;display:block;margin-bottom:12px;"></i>' +
-            'Aucune absence trouvée</td></tr>';
-        updateCounter(0);
-        // Cacher la pagination
-        var pagContainer = document.getElementById('abs-pagination');
-        if (pagContainer) pagContainer.innerHTML = '';
-        return;
-    }
-    
-    var start = (absPage - 1) * absRowsPerPage;
-    var pageData = filteredAbs.slice(start, start + absRowsPerPage);
+    var start = (absPage - 1) * absRows;
+    var end = start + absRows;
+    var pageData = absencesData.slice(start, end);
+    var totalPages = Math.ceil(absencesData.length / absRows);
     
     tbody.innerHTML = '';
+    if (pageData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;">Aucune absence enregistrée</td></tr>';
+        updateAbsencePagination(totalPages);
+        return;
+    }
+    
     for (var i = 0; i < pageData.length; i++) {
-        var abs = pageData[i];
+        var a = pageData[i];
+        var justifiedBadge = a.JUSTIFIE ? '<span class="badge-justified">✓ Justifiée</span>' : '<span class="badge-not-justified">✗ Non justifiée</span>';
+        var justifyBtn = !a.JUSTIFIE ? '<button type="button" class="btn-action-justify" onclick="justifyAbsence(\'' + a.ID + '\')" title="Justifier"><i class="fas fa-check"></i></button>' : '';
+        
+        // Utiliser le motif (qui contient maintenant la justification)
+        var motifText = a.MOTIF || '-';
+        if (motifText.length > 50) motifText = motifText.substring(0, 47) + '...';
+        
         var row = tbody.insertRow();
-        
-        var btnJustif = '';
-        if (!abs.JUSTIF) {
-            btnJustif = '<button type="button" class="btn btn-sm btn-success" onclick="window.absencesManager.openJustifyModal(\'' + escapeHtml(abs.ID) + '\')" title="Justifier"><i class="fas fa-check"></i></button>';
-        }
-        
-        row.innerHTML =
-            '<td class="text-center">' + escapeHtml(abs.ANNEE_TEXTE || '-') + '</td>' +
-            '<td class="text-center">' + getMatriculeBadge(abs.MATRICULE) + '</td>' +
-            '<td class="text-center">' + getNomBadge(abs.NOM) + '</td>' +
-            '<td class="text-center">' + getClasseBadge(abs.CLASSE_NOM || '-') + '</td>' +
-            '<td class="text-center">' + getTypeBadge(abs.TYPE) + '<tr>' +
-            '<td class="text-center">' + escapeHtml(formatDate(abs.DATE_DEBUT)) + '</td>' +
-            '<td class="text-center">' + escapeHtml(formatDate(abs.DATE_FIN)) + '</td>' +
-            '<td class="text-center"><strong>' + escapeHtml(formatDuree(abs.DUREE)) + '</strong></td>' +
-            '<td class="text-center">' + getJustifiedBadge(abs.JUSTIF) + '</td>' +
-            '<td title="' + escapeHtml(abs.COMMENTAIRES || '') + '">' + truncateText(abs.COMMENTAIRES, 25) + '</td>' +
-            '<td>' +
-                '<div style="display:flex; gap:4px; justify-content:flex-start;">' +
-                    '<button type="button" class="btn btn-sm btn-primary" onclick="window.absencesManager.editAbsence(\'' + escapeHtml(abs.ID) + '\')" title="Modifier"><i class="fas fa-edit"></i></button>' +
-                    '<button type="button" class="btn btn-sm btn-danger" onclick="window.absencesManager.deleteAbsence(\'' + escapeHtml(abs.ID) + '\')" title="Supprimer"><i class="fas fa-trash"></i></button>' +
-                    btnJustif +
-                '</div>' +
-            '</td>';
+        row.insertCell(0).innerHTML = escapeHtml(a.NOM);
+        row.insertCell(1).innerHTML = escapeHtml(a.CLASSE_NOM);
+        row.insertCell(2).innerHTML = formatDate(a.DATE_DEBUT);
+        row.insertCell(3).innerHTML = formatDate(a.DATE_FIN);
+        row.insertCell(4).innerHTML = a.DUREE + ' jour(s)';
+        row.insertCell(5).innerHTML = justifiedBadge;
+        row.insertCell(6).innerHTML = escapeHtml(motifText);
+        row.insertCell(7).innerHTML = 
+            '<div class="action-buttons-group">' +
+            '<button type="button" class="btn-action-edit" onclick="editAbsence(\'' + a.ID + '\')" title="Modifier"><i class="fas fa-edit"></i></button>' +
+            justifyBtn +
+            '<button type="button" class="btn-action-delete" onclick="deleteAbsence(\'' + a.ID + '\')" title="Supprimer"><i class="fas fa-trash"></i></button>' +
+            '</div>';
     }
-    updateCounter(filteredAbs.length);
-    createPaginationControls();
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// PAGINATION
-// ─────────────────────────────────────────────────────────────────────────────
-function createPaginationControls() {
-    var totalPages = Math.ceil(filteredAbs.length / absRowsPerPage);
-    var old = document.getElementById('pagination-container');
-    if (old) old.remove();
     
-    if (totalPages <= 1) return;
-
-    var pc = document.createElement('div');
-    pc.id = 'pagination-container';
-    pc.style.cssText = 'margin:16px 0;display:flex;justify-content:center;align-items:center;gap:5px;flex-wrap:wrap;';
-
-    pc.appendChild(mkPageBtn('«', function() { goToPage(1); }, absPage === 1));
-    pc.appendChild(mkPageBtn('‹', function() { if (absPage > 1) goToPage(absPage - 1); }, absPage === 1));
-
-    var maxV = 5, startP = Math.max(1, absPage - 2), endP = Math.min(totalPages, startP + maxV - 1);
-    if (endP - startP + 1 < maxV) startP = Math.max(1, endP - maxV + 1);
-
-    if (startP > 1) {
-        pc.appendChild(mkPageBtn('1', function() { goToPage(1); }));
-        if (startP > 2) pc.appendChild(mkDots());
-    }
-    for (var i = startP; i <= endP; i++) {
-        (function(page) { pc.appendChild(mkPageBtn(page, function() { goToPage(page); }, page === absPage)); })(i);
-    }
-    if (endP < totalPages) {
-        if (endP < totalPages - 1) pc.appendChild(mkDots());
-        (function(tp) { pc.appendChild(mkPageBtn(tp, function() { goToPage(tp); })); })(totalPages);
-    }
-
-    pc.appendChild(mkPageBtn('›', function() { if (absPage < totalPages) goToPage(absPage + 1); }, absPage === totalPages));
-    pc.appendChild(mkPageBtn('»', function() { goToPage(totalPages); }, absPage === totalPages));
-
-    var table = document.querySelector('.dash-table');
-    if (table) table.after(pc);
+    updateAbsencePagination(totalPages);
 }
 
-function mkPageBtn(text, onClick, isDisabled) {
-    var btn = document.createElement('button');
-    btn.type = 'button';
-    btn.textContent = text;
-    var isActive = (text == absPage && !isNaN(text));
-    btn.style.cssText = 'padding:7px 13px;border:1px solid ' + (isActive || (!isDisabled && !isActive) ? '#007bff' : '#dee2e6') + ';' +
-        'background:' + (isActive ? '#007bff' : isDisabled ? '#e9ecef' : 'white') + ';' +
-        'color:' + (isActive ? 'white' : isDisabled ? '#6c757d' : '#007bff') + ';' +
-        'cursor:' + (isDisabled || isActive ? 'default' : 'pointer') + ';border-radius:6px;font-weight:' + (isActive ? '700' : '500') + ';min-width:38px;transition:all .15s;';
-    if (onClick && !isDisabled && !isActive) {
-        btn.addEventListener('click', onClick);
-        btn.addEventListener('mouseover', function() { btn.style.background = '#007bff'; btn.style.color = 'white'; });
-        btn.addEventListener('mouseout', function() { btn.style.background = 'white'; btn.style.color = '#007bff'; });
+function updateAbsencePagination(totalPages) {
+    var container = document.getElementById('abs-pagination');
+    if (!container) return;
+    
+    if (totalPages <= 1) {
+        container.innerHTML = '';
+        return;
     }
-    if (isDisabled) btn.disabled = true;
-    return btn;
+    
+    var html = '<div style="display:flex;justify-content:center;gap:5px;margin-top:15px;">';
+    for (var i = 1; i <= totalPages; i++) {
+        var activeClass = (i === absPage) ? 'btn-primary' : 'btn-outline-secondary';
+        html += '<button type="button" class="btn btn-sm ' + activeClass + '" onclick="goToAbsencePage(' + i + ')">' + i + '</button>';
+    }
+    html += '</div>';
+    container.innerHTML = html;
 }
 
-function mkDots() {
-    var s = document.createElement('span');
-    s.textContent = '…';
-    s.style.cssText = 'padding:7px 4px;color:#6c757d;';
-    return s;
-}
-
-function goToPage(page) {
+function goToAbsencePage(page) {
     absPage = page;
-    renderTable();
+    renderAbsencesTable();
 }
 
-// Modifier la fonction renderTable() pour appeler createPaginationControls à la fin :
-// Ajouter cette ligne à la fin de renderTable(), juste avant la dernière accolade :
-// createPaginationControls();
-
-// ─────────────────────────────────────────────────────────────────────────────
-// COMPTEUR
-// ─────────────────────────────────────────────────────────────────────────────
-function updateCounter(count) {
-    var el = document.getElementById('abs-counter');
-    if (el) {
-        el.innerHTML = '<i class="fas fa-database"></i> Affichage de <b>' + count + '</b> enregistrement(s)' +
-            (count !== absencesData.length ? ' sur ' + absencesData.length : '');
+function openAbsenceModal(event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
     }
+    currentAbsenceId = null;
+    document.getElementById('absenceMatricule').value = '';
+    document.getElementById('absenceDateDebut').value = new Date().toISOString().split('T')[0];
+    document.getElementById('absenceDateFin').value = new Date().toISOString().split('T')[0];
+    document.getElementById('absenceMotif').value = '';
+    document.getElementById('absenceJustifie').checked = false;
+    document.getElementById('absenceJustificationGroup').style.display = 'none';
+    document.getElementById('absenceModal').style.display = 'flex';
+    return false;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MODAL SIGNALER (AJOUT)
-// ─────────────────────────────────────────────────────────────────────────────
-function openSignalModal() {
-    currentAbsMode = 'add';
-    currentAbsId = null;
-    
-    var sel = document.getElementById('absenceMatricule');
-    if (sel) sel.value = '';
-    
-    var fields = ['absenceStudent', 'absenceClasse', 'absenceReason', 'absenceHeureDebut', 'absenceHeureFin'];
-    for (var i = 0; i < fields.length; i++) {
-        var el = document.getElementById(fields[i]);
-        if (el) el.value = '';
-    }
-    
-    var today = new Date().toISOString().split('T')[0];
-    var dateEl = document.getElementById('absenceDate');
-    if (dateEl) dateEl.value = today;
-    
-    var dateFinEl = document.getElementById('absenceDateF');
-    if (dateFinEl) dateFinEl.value = today;
-    
-    var duree = document.getElementById('absenceDuration');
-    if (duree) duree.value = '1';
-    
-    var fJustif = document.getElementById('absenceJustified');
-    if (fJustif) {
-        fJustif.value = 'non';
-        fJustif.disabled = false;
-        fJustif.style.backgroundColor = '#fff';
-        fJustif.style.cursor = 'pointer';
-    }
-    
-    // Désactiver les champs Élève et Classe
-    var studentField = document.getElementById('absenceStudent');
-    var classField = document.getElementById('absenceClasse');
-    if (studentField) {
-        studentField.disabled = true;
-        studentField.style.backgroundColor = '#e9ecef';
-        studentField.style.cursor = 'not-allowed';
-    }
-    if (classField) {
-        classField.disabled = true;
-        classField.style.backgroundColor = '#e9ecef';
-        classField.style.cursor = 'not-allowed';
-    }
-    
-    var timeGroup = document.getElementById('timeGroup');
-    var dureeGroup = document.getElementById('dureeGroup');
-    var dateFinGroup = document.getElementById('dateFinGroup');
-    if (timeGroup) timeGroup.style.display = 'none';
-    if (dureeGroup) dureeGroup.style.display = 'none';
-    if (dateFinGroup) dateFinGroup.style.display = 'block';
-    
-    var motifGroup = document.getElementById('motifGroup');
-    if (motifGroup) motifGroup.style.display = 'none';
-    
-    var typeSelect = document.getElementById('absenceType');
-    if (typeSelect) {
-        typeSelect.value = 'absence';
-    }
-    
-    var title = document.getElementById('signalModalTitle');
-    if (title) title.innerHTML = '<i class="fas fa-plus-circle"></i> Signaler absence / retard';
-    
-    openModal('signalAbsenceModal');
+function closeAbsenceModal() {
+    document.getElementById('absenceModal').style.display = 'none';
 }
 
-function closeSignalModal() {
-    closeModal('signalAbsenceModal');
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// SAUVEGARDE
-// ─────────────────────────────────────────────────────────────────────────────
 async function saveAbsence() {
-    console.log('[saveAbsence] Début de la sauvegarde...');
-    
-    var matricule = document.getElementById('absenceMatricule')?.value || '';
-    var type = document.getElementById('absenceType')?.value || 'absence';
-    var date = document.getElementById('absenceDate')?.value || '';
-    var dateFin = document.getElementById('absenceDateF')?.value || '';
-    var duree = document.getElementById('absenceDuration')?.value || '1';
-    var motif = document.getElementById('absenceReason')?.value || '';
-    var justified = document.getElementById('absenceJustified')?.value === 'oui';
-    var heureDebut = document.getElementById('absenceHeureDebut')?.value || '';
-    var heureFin = document.getElementById('absenceHeureFin')?.value || '';
-    
-    console.log('[saveAbsence] Données collectées:', {
-        matricule, type, date, dateFin, duree, motif, justified, heureDebut, heureFin
-    });
+    var matricule = document.getElementById('absenceMatricule').value;
+    var dateDebut = document.getElementById('absenceDateDebut').value;
+    var dateFin = document.getElementById('absenceDateFin').value;
+    var motif = document.getElementById('absenceMotif').value;
+    var justifie = document.getElementById('absenceJustifie').checked;
+    var justification = document.getElementById('absenceJustification').value;
     
     if (!matricule) {
-        if (typeof Swal !== 'undefined') {
-            Swal.fire('Erreur', 'Veuillez sélectionner un élève.', 'warning');
-        } else {
-            alert('Veuillez sélectionner un élève.');
-        }
+        Swal.fire('Erreur', 'Veuillez sélectionner un élève', 'warning');
+        return;
+    }
+    if (!dateDebut || !dateFin) {
+        Swal.fire('Erreur', 'Les dates sont requises', 'warning');
         return;
     }
     
-    if (!date) {
-        if (typeof Swal !== 'undefined') {
-            Swal.fire('Erreur', 'La date est obligatoire.', 'warning');
-        } else {
-            alert('La date est obligatoire.');
-        }
+    var eleve = elevesLookup[matricule];
+    if (!eleve) {
+        Swal.fire('Erreur', 'Élève non trouvé', 'error');
         return;
     }
-    
-    // Pour le type 'absence', on ignore les heures et la date fin = date
-    var dureeNumber = 1;
-    var finalDateFin = date;
-    
-    if (type === 'retard') {
-        dureeNumber = parseFloat(String(duree).replace(',', '.'));
-        if (isNaN(dureeNumber)) dureeNumber = 1;
-        finalDateFin = dateFin || date;
-    }
-    
-    var body = {
-        matricule: matricule,
-        type: type,
-        dateDebut: date,
-        dateFin: finalDateFin,
-        duree: dureeNumber,
-        motif: motif,
-        justifie: justified,
-        heureDebut: (type === 'retard') ? heureDebut : '',
-        heureFin: (type === 'retard') ? heureFin : ''
-    };
-    
-    if (currentAbsMode === 'edit' && currentAbsId) {
-        body.id = currentAbsId;
-    }
-    
-    var url = (currentAbsMode === 'edit') ? API_ABS.modifier : API_ABS.ajouter;
-    console.log('[saveAbsence] URL:', url);
-    console.log('[saveAbsence] Body:', body);
     
     showSpinner();
     try {
+        var url = currentAbsenceId ? API_ABS.absences.update : API_ABS.absences.add;
+        var body = {
+            id: currentAbsenceId,
+            matricule: matricule,
+            nom: eleve.NOM,
+            classe: eleve.CLASSE_NOM,
+            dateDebut: dateDebut,
+            dateFin: dateFin,
+            motif: motif,
+            justifie: justifie,
+            justification: justification
+        };
+        
         var res = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body)
         });
-        
-        console.log('[saveAbsence] Réponse status:', res.status);
-        
         var result = await res.json();
-        console.log('[saveAbsence] Résultat:', result);
         
         if (result.success) {
-            closeSignalModal();
-            if (typeof Swal !== 'undefined') {
-                Swal.fire({ icon: 'success', title: result.message || 'Opération réussie', timer: 1500, showConfirmButton: false });
-            }
+            Swal.fire({ icon: 'success', title: 'Succès', text: result.message, timer: 1500, showConfirmButton: false });
             setTimeout(function() {
+                closeAbsenceModal();
                 loadAbsences();
             }, 1500);
         } else {
-            if (typeof Swal !== 'undefined') {
-                Swal.fire('Erreur', result.message || 'Erreur inconnue.', 'error');
-            }
+            Swal.fire('Erreur', result.message, 'error');
         }
     } catch (err) {
-        console.error('[saveAbsence] Erreur:', err);
-        if (typeof Swal !== 'undefined') {
-            Swal.fire('Erreur réseau', err.message, 'error');
-        }
+        Swal.fire('Erreur', err.message, 'error');
     } finally {
         hideSpinner();
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MODIFICATION
-// ─────────────────────────────────────────────────────────────────────────────
 function editAbsence(id) {
-    var abs = null;
+    var absence = null;
     for (var i = 0; i < absencesData.length; i++) {
         if (absencesData[i].ID === id) {
-            abs = absencesData[i];
+            absence = absencesData[i];
             break;
         }
     }
-    if (!abs) {
-        console.error('Absence non trouvée:', id);
-        return;
-    }
+    if (!absence) return;
     
-    currentAbsMode = 'edit';
-    currentAbsId = id;
-    
-    var sel = document.getElementById('absenceMatricule');
-    if (sel) {
-        sel.value = abs.MATRICULE || '';
-        if (sel.value !== abs.MATRICULE && abs.MATRICULE) {
-            var opt = document.createElement('option');
-            opt.value = abs.MATRICULE;
-            opt.textContent = abs.MATRICULE + ' — ' + (abs.NOM || '');
-            sel.appendChild(opt);
-            sel.value = abs.MATRICULE;
-        }
-        onMatriculeChange();
-    }
-    
-    var fNom = document.getElementById('absenceStudent');
-    var fClasse = document.getElementById('absenceClasse');
-    var fType = document.getElementById('absenceType');
-    var fDate = document.getElementById('absenceDate');
-    var fDateFin = document.getElementById('absenceDateF');
-    var fHeureD = document.getElementById('absenceHeureDebut');
-    var fHeureF = document.getElementById('absenceHeureFin');
-    var fDuree = document.getElementById('absenceDuration');
-    var fReason = document.getElementById('absenceReason');
-    
-    // Désactiver les champs Élève et Classe
-    if (fNom) {
-        fNom.disabled = true;
-        fNom.style.backgroundColor = '#e9ecef';
-        fNom.style.cursor = 'not-allowed';
-        fNom.value = abs.NOM || '';
-    }
-    if (fClasse) {
-        fClasse.disabled = true;
-        fClasse.style.backgroundColor = '#e9ecef';
-        fClasse.style.cursor = 'not-allowed';
-        fClasse.value = abs.CLASSE_NOM || '';
-    }
-    
-    if (fType) fType.value = (abs.TYPE || 'absence').toLowerCase();
-    if (fDate) fDate.value = formatDateForInput(abs.DATE_DEBUT);
-    if (fDateFin) fDateFin.value = formatDateForInput(abs.DATE_FIN);
-    
-    var isRetard = (fType && fType.value === 'retard');
-    
-    if (fHeureD && abs.HEURE_DEBUT && isRetard) {
-        var heureDebutVal = abs.HEURE_DEBUT;
-        if (typeof heureDebutVal === 'string' && heureDebutVal.includes(':')) {
-            fHeureD.value = heureDebutVal.substring(0, 5);
-        } else if (heureDebutVal) {
-            fHeureD.value = heureDebutVal;
-        }
-    } else if (fHeureD) {
-        fHeureD.value = '';
-    }
-    
-    if (fHeureF && abs.HEURE_FIN && isRetard) {
-        var heureFinVal = abs.HEURE_FIN;
-        if (typeof heureFinVal === 'string' && heureFinVal.includes(':')) {
-            fHeureF.value = heureFinVal.substring(0, 5);
-        } else if (heureFinVal) {
-            fHeureF.value = heureFinVal;
-        }
-    } else if (fHeureF) {
-        fHeureF.value = '';
-    }
-    
-    if (fDuree) {
-        var dureeValue = abs.DUREE || (isRetard ? '1' : '');
-        if (typeof dureeValue === 'string' && dureeValue.indexOf(',') !== -1) {
-            dureeValue = dureeValue.replace(',', '.');
-        }
-        fDuree.value = isRetard ? (parseFloat(dureeValue) || 1) : '';
-    }
-    if (fReason) fReason.value = abs.COMMENTAIRES || '';
-    
-    var fJustif = document.getElementById('absenceJustified');
-    if (fJustif) {
-        var isJustified = (abs.JUSTIF === true || abs.JUSTIF === 1 || abs.JUSTIF === 'True' || abs.JUSTIF === 'true');
-        fJustif.value = isJustified ? 'oui' : 'non';
-        fJustif.disabled = true;
-        fJustif.style.backgroundColor = '#e9ecef';
-        fJustif.style.cursor = 'not-allowed';
-    }
-    
-    setFieldsStateByType(isRetard);
-    setJustifiedFieldsState(fJustif && fJustif.value === 'oui');
-    
-    var title = document.getElementById('signalModalTitle');
-    if (title) title.innerHTML = '<i class="fas fa-edit"></i> Modifier absence / retard';
-    
-    openModal('signalAbsenceModal');
+    currentAbsenceId = id;
+    document.getElementById('absenceMatricule').value = absence.MATRICULE;
+    document.getElementById('absenceDateDebut').value = absence.DATE_DEBUT;
+    document.getElementById('absenceDateFin').value = absence.DATE_FIN || absence.DATE_DEBUT;
+    document.getElementById('absenceMotif').value = absence.MOTIF || '';
+    document.getElementById('absenceJustifie').checked = absence.JUSTIFIE;
+    document.getElementById('absenceJustification').value = absence.JUSTIFICATION || '';
+    document.getElementById('absenceModal').style.display = 'flex';
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// JUSTIFICATION
-// ─────────────────────────────────────────────────────────────────────────────
-function openJustifyModal(id) {
-    currentAbsId = id;
-    var abs = null;
-    for (var i = 0; i < absencesData.length; i++) {
-        if (absencesData[i].ID === id) {
-            abs = absencesData[i];
-            break;
-        }
-    }
-    if (abs) {
-        var nameEl = document.getElementById('justifyStudentName');
-        if (nameEl) nameEl.textContent = abs.NOM || '';
-    }
-    
-    var dateEl = document.getElementById('justifyDate');
-    if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
-    
-    var reasonEl = document.getElementById('justifyReason');
-    if (reasonEl) reasonEl.value = '';
-    
-    openModal('justifyModal');
-}
-
-function closeJustifyModal() {
-    closeModal('justifyModal');
-    currentAbsId = null;
-}
-
-async function confirmJustify() {
-    if (!currentAbsId) return;
-    var reason = document.getElementById('justifyReason')?.value || '';
-    
-    showSpinner();
-    try {
-        var res = await fetch(API_ABS.modifier, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: currentAbsId, justifie: true, motif: reason })
-        });
-        var result = await res.json();
-        if (result.success) {
-            closeJustifyModal();
-            if (typeof Swal !== 'undefined') {
-                Swal.fire({ icon: 'success', title: 'Absence justifiée', timer: 1500, showConfirmButton: false });
-            }
-            setTimeout(loadAbsences, 1500);
-        } else {
-            if (typeof Swal !== 'undefined') Swal.fire('Erreur', result.message || 'Erreur.', 'error');
-        }
-    } catch (err) {
-        console.error(err);
-        if (typeof Swal !== 'undefined') Swal.fire('Erreur réseau', err.message, 'error');
-    } finally {
-        hideSpinner();
-    }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// SUPPRESSION
-// ─────────────────────────────────────────────────────────────────────────────
 async function deleteAbsence(id) {
-    if (typeof Swal !== 'undefined') {
-        var result = await Swal.fire({
-            title: 'Supprimer cette absence ?',
-            text: 'Cette action est irréversible.',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            confirmButtonText: 'Oui, supprimer',
-            cancelButtonText: 'Annuler'
-        });
-        if (!result.isConfirmed) return;
-    } else {
-        if (!confirm('Supprimer cette absence ?')) return;
-    }
+    var result = await Swal.fire({
+        title: 'Confirmation',
+        text: 'Voulez-vous vraiment supprimer cette absence ?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Oui, supprimer',
+        cancelButtonText: 'Annuler'
+    });
+    
+    if (!result.isConfirmed) return;
     
     showSpinner();
     try {
-        var res = await fetch(API_ABS.supprimer, {
+        var res = await fetch(API_ABS.absences.delete, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ id: id })
         });
-        var del = await res.json();
-        if (del.success) {
-            var newAbsences = [];
-            for (var i = 0; i < absencesData.length; i++) {
-                if (absencesData[i].ID !== id) newAbsences.push(absencesData[i]);
-            }
-            absencesData = newAbsences;
-            
-            var newFiltered = [];
-            for (var j = 0; j < filteredAbs.length; j++) {
-                if (filteredAbs[j].ID !== id) newFiltered.push(filteredAbs[j]);
-            }
-            filteredAbs = newFiltered;
-            
-            updateStats();
-            renderTable();
-            if (typeof Swal !== 'undefined') {
-                Swal.fire({ icon: 'success', title: del.message || 'Supprimé', timer: 1000, showConfirmButton: false });
-            }
+        var data = await res.json();
+        if (data.success) {
+            Swal.fire({ icon: 'success', title: 'Supprimé', timer: 1500, showConfirmButton: false });
+            loadAbsences();
         } else {
-            if (typeof Swal !== 'undefined') Swal.fire('Erreur', del.message || 'Erreur.', 'error');
+            Swal.fire('Erreur', data.message, 'error');
         }
     } catch (err) {
-        console.error(err);
-        if (typeof Swal !== 'undefined') Swal.fire('Erreur réseau', err.message, 'error');
+        Swal.fire('Erreur', err.message, 'error');
     } finally {
         hideSpinner();
     }
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// EXPORT CSV
-// ─────────────────────────────────────────────────────────────────────────────
-function exportToCsv() {
-    if (!filteredAbs.length) {
-        if (typeof Swal !== 'undefined') Swal.fire('Info', 'Aucune donnée à exporter', 'info');
-        return;
+async function justifyAbsence(id) {
+    var result = await Swal.fire({
+        title: 'Justifier l\'absence',
+        input: 'textarea',
+        inputPlaceholder: 'Motif de justification...',
+        inputAttributes: {
+            'aria-label': 'Motif de justification'
+        },
+        showCancelButton: true,
+        confirmButtonText: 'Justifier',
+        cancelButtonText: 'Annuler',
+        preConfirm: function(text) {
+            if (!text || !text.trim()) {
+                Swal.showValidationMessage('Veuillez saisir un motif de justification');
+                return false;
+            }
+            return text;
+        }
+    });
+    
+    if (!result.value) return;
+    
+    showSpinner();
+    try {
+        var res = await fetch(API_ABS.absences.justify, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: id, justification: result.value })
+        });
+        var data = await res.json();
+        if (data.success) {
+            Swal.fire({ 
+                icon: 'success', 
+                title: 'Absence justifiée', 
+                text: 'Le motif a été enregistré',
+                timer: 1500, 
+                showConfirmButton: false 
+            });
+            // Recharger complètement les données
+            await loadAbsences();
+        } else {
+            Swal.fire('Erreur', data.message, 'error');
+        }
+    } catch (err) {
+        console.error('Erreur justification:', err);
+        Swal.fire('Erreur', err.message, 'error');
+    } finally {
+        hideSpinner();
     }
-    var header = 'Année;Matricule;Élève;Classe;Type;Date;Date fin;Durée;Justifiée;Motif\n';
-    var rows = '';
-    for (var i = 0; i < filteredAbs.length; i++) {
-        var a = filteredAbs[i];
-        rows += [
-            a.ANNEE_TEXTE || '',
-            a.MATRICULE || '',
-            a.NOM || '',
-            a.CLASSE_NOM || '',
-            a.TYPE || '',
-            a.DATE_DEBUT || '',
-            a.DATE_FIN || '',
-            a.DUREE || '',
-            a.JUSTIF ? 'Oui' : 'Non',
-            (a.COMMENTAIRES || '').replace(/;/g, ',')
-        ].join(';') + '\n';
-    }
-    var blob = new Blob(['\uFEFF' + header + rows], { type: 'text/csv;charset=utf-8' });
-    var link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = 'Absences_' + new Date().toISOString().slice(0, 10) + '.csv';
-    link.click();
-    URL.revokeObjectURL(link.href);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// INITIALISATION
-// ─────────────────────────────────────────────────────────────────────────────
-function init() {
-    console.log('[Absences] Initialisation...');
-    
-    var typeSelect = document.getElementById('absenceType');
-    if (typeSelect) typeSelect.addEventListener('change', onTypeChange);
-    
-    var dateSelect = document.getElementById('absenceDate');
-    if (dateSelect) dateSelect.addEventListener('change', onDateChange);
-    
-    var justifiedSelect = document.getElementById('absenceJustified');
-    if (justifiedSelect) justifiedSelect.addEventListener('change', onJustifiedChange);
-    
-    var matriculeSelect = document.getElementById('absenceMatricule');
-    if (matriculeSelect) matriculeSelect.addEventListener('change', onMatriculeChange);
-    
-    loadAbsences();
-    loadElevesSelect();
-    
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            closeModal('signalAbsenceModal');
-            closeModal('justifyModal');
+// ============================================================================
+// SECTION RETARDS
+// ============================================================================
+async function loadRetards() {
+    showSpinner();
+    try {
+        var res = await fetch(API_ABS.retards.list);
+        var result = await res.json();
+        if (result.success) {
+            retardsData = result.data || [];
+            updateRetardStats();
+            renderRetardsTable();
+        } else {
+            console.error('Erreur chargement retards:', result.message);
         }
+    } catch (err) {
+        console.error('loadRetards:', err);
+    } finally {
+        hideSpinner();
+    }
+}
+
+function updateRetardStats() {
+    var total = retardsData.length;
+    var justifies = 0;
+    var totalDuree = 0;
+    for (var i = 0; i < retardsData.length; i++) {
+        if (retardsData[i].JUSTIFIE) justifies++;
+        totalDuree += parseInt(retardsData[i].DUREE) || 0;
+    }
+    var moyenne = retardsData.length > 0 ? Math.round(totalDuree / retardsData.length) : 0;
+    
+    var totalEl = document.getElementById('totalRetardsVal');
+    var justEl = document.getElementById('retardsJustifiesVal');
+    var moyEl = document.getElementById('moyenneRetardsVal');
+    if (totalEl) totalEl.textContent = total;
+    if (justEl) justEl.textContent = justifies;
+    if (moyEl) moyEl.textContent = moyenne;
+}
+
+function renderRetardsTable() {
+    var tbody = document.getElementById('retardsTableBody');
+    if (!tbody) return;
+    
+    var start = (retPage - 1) * retRows;
+    var end = start + retRows;
+    var pageData = retardsData.slice(start, end);
+    var totalPages = Math.ceil(retardsData.length / retRows);
+    
+    tbody.innerHTML = '';
+    if (pageData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:40px;">Aucun retard enregistré</td></tr>';
+        updateRetardPagination(totalPages);
+        return;
+    }
+    
+    for (var i = 0; i < pageData.length; i++) {
+        var r = pageData[i];
+        var justifiedBadge = r.JUSTIFIE ? '<span class="badge-justified">✓ Justifié</span>' : '<span class="badge-not-justified">✗ Non justifié</span>';
+        var justifyBtn = !r.JUSTIFIE ? '<button type="button" class="btn-action-justify" onclick="justifyRetard(\'' + r.ID + '\')" title="Justifier"><i class="fas fa-check"></i></button>' : '';
+        
+        // Utiliser le motif (qui contient maintenant la justification)
+        var motifText = r.MOTIF || '-';
+        if (motifText.length > 50) motifText = motifText.substring(0, 47) + '...';
+        
+        var row = tbody.insertRow();
+        row.insertCell(0).innerHTML = escapeHtml(r.NOM);
+        row.insertCell(1).innerHTML = escapeHtml(r.CLASSE_NOM);
+        row.insertCell(2).innerHTML = formatDate(r.DATE_RETARD);
+        row.insertCell(3).innerHTML = formatHeure(r.HEURE_ARRIVEE);
+        row.insertCell(4).innerHTML = formatHeure(r.HEURE_PREVUE);
+        row.insertCell(5).innerHTML = r.DUREE + ' min';
+        row.insertCell(6).innerHTML = justifiedBadge;
+        row.insertCell(7).innerHTML = escapeHtml(motifText);
+        row.insertCell(8).innerHTML = 
+            '<div class="action-buttons-group">' +
+            '<button type="button" class="btn-action-edit" onclick="editRetard(\'' + r.ID + '\')" title="Modifier"><i class="fas fa-edit"></i></button>' +
+            justifyBtn +
+            '<button type="button" class="btn-action-delete" onclick="deleteRetard(\'' + r.ID + '\')" title="Supprimer"><i class="fas fa-trash"></i></button>' +
+            '</div>';
+    }
+    
+    updateRetardPagination(totalPages);
+}
+
+function updateRetardPagination(totalPages) {
+    var container = document.getElementById('retard-pagination');
+    if (!container) return;
+    
+    if (totalPages <= 1) {
+        container.innerHTML = '';
+        return;
+    }
+    
+    var html = '<div style="display:flex;justify-content:center;gap:5px;margin-top:15px;">';
+    for (var i = 1; i <= totalPages; i++) {
+        var activeClass = (i === retPage) ? 'btn-primary' : 'btn-outline-secondary';
+        html += '<button type="button" class="btn btn-sm ' + activeClass + '" onclick="goToRetardPage(' + i + ')">' + i + '</button>';
+    }
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function goToRetardPage(page) {
+    retPage = page;
+    renderRetardsTable();
+}
+
+function openRetardModal(event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    currentRetardId = null;
+    document.getElementById('retardMatricule').value = '';
+    document.getElementById('retardDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('retardHeurePrevue').value = '08:00';
+    document.getElementById('retardHeureArrivee').value = '';
+    document.getElementById('retardMotif').value = '';
+    document.getElementById('retardJustifie').checked = false;
+    document.getElementById('retardJustificationGroup').style.display = 'none';
+    document.getElementById('retardModal').style.display = 'flex';
+    return false;
+}
+
+function closeRetardModal() {
+    document.getElementById('retardModal').style.display = 'none';
+}
+
+async function saveRetard() {
+    var matricule = document.getElementById('retardMatricule').value;
+    var date = document.getElementById('retardDate').value;
+    var heurePrevue = document.getElementById('retardHeurePrevue').value;
+    var heureArrivee = document.getElementById('retardHeureArrivee').value;
+    var motif = document.getElementById('retardMotif').value;
+    var justifie = document.getElementById('retardJustifie').checked;
+    var justification = document.getElementById('retardJustification').value;
+    
+    if (!matricule) {
+        Swal.fire('Erreur', 'Veuillez sélectionner un élève', 'warning');
+        return;
+    }
+    if (!date) {
+        Swal.fire('Erreur', 'La date est requise', 'warning');
+        return;
+    }
+    if (!heurePrevue || !heureArrivee) {
+        Swal.fire('Erreur', 'Les heures sont requises', 'warning');
+        return;
+    }
+    
+    var hPrev = parseInt(heurePrevue.split(':')[0]);
+    var mPrev = parseInt(heurePrevue.split(':')[1]);
+    var hArr = parseInt(heureArrivee.split(':')[0]);
+    var mArr = parseInt(heureArrivee.split(':')[1]);
+    var minutesPrevue = hPrev * 60 + mPrev;
+    var minutesArrivee = hArr * 60 + mArr;
+    var duree = Math.max(0, minutesArrivee - minutesPrevue);
+    
+    var eleve = elevesLookup[matricule];
+    if (!eleve) {
+        Swal.fire('Erreur', 'Élève non trouvé', 'error');
+        return;
+    }
+    
+    showSpinner();
+    try {
+        var url = currentRetardId ? API_ABS.retards.update : API_ABS.retards.add;
+        var body = {
+            id: currentRetardId,
+            matricule: matricule,
+            nom: eleve.NOM,
+            classe: eleve.CLASSE_NOM,
+            date: date,
+            heurePrevue: heurePrevue,
+            heureArrivee: heureArrivee,
+            duree: duree,
+            motif: motif,
+            justifie: justifie,
+            justification: justification
+        };
+        
+        var res = await fetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body)
+        });
+        var result = await res.json();
+        
+        if (result.success) {
+            Swal.fire({ icon: 'success', title: 'Succès', text: result.message, timer: 1500, showConfirmButton: false });
+            setTimeout(function() {
+                closeRetardModal();
+                loadRetards();
+            }, 1500);
+        } else {
+            Swal.fire('Erreur', result.message, 'error');
+        }
+    } catch (err) {
+        Swal.fire('Erreur', err.message, 'error');
+    } finally {
+        hideSpinner();
+    }
+}
+
+function editRetard(id) {
+    var retard = null;
+    for (var i = 0; i < retardsData.length; i++) {
+        if (retardsData[i].ID === id) {
+            retard = retardsData[i];
+            break;
+        }
+    }
+    if (!retard) return;
+    
+    currentRetardId = id;
+    document.getElementById('retardMatricule').value = retard.MATRICULE;
+    document.getElementById('retardDate').value = retard.DATE_RETARD;
+    document.getElementById('retardHeurePrevue').value = retard.HEURE_PREVUE.substring(0, 5);
+    document.getElementById('retardHeureArrivee').value = retard.HEURE_ARRIVEE.substring(0, 5);
+    document.getElementById('retardMotif').value = retard.MOTIF || '';
+    document.getElementById('retardJustifie').checked = retard.JUSTIFIE;
+    document.getElementById('retardJustification').value = retard.JUSTIFICATION || '';
+    document.getElementById('retardModal').style.display = 'flex';
+}
+
+async function deleteRetard(id) {
+    var result = await Swal.fire({
+        title: 'Confirmation',
+        text: 'Voulez-vous vraiment supprimer ce retard ?',
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: 'Oui, supprimer',
+        cancelButtonText: 'Annuler'
+    });
+    
+    if (!result.isConfirmed) return;
+    
+    showSpinner();
+    try {
+        var res = await fetch(API_ABS.retards.delete, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: id })
+        });
+        var data = await res.json();
+        if (data.success) {
+            Swal.fire({ icon: 'success', title: 'Supprimé', timer: 1500, showConfirmButton: false });
+            loadRetards();
+        } else {
+            Swal.fire('Erreur', data.message, 'error');
+        }
+    } catch (err) {
+        Swal.fire('Erreur', err.message, 'error');
+    } finally {
+        hideSpinner();
+    }
+}
+
+async function justifyRetard(id) {
+    var result = await Swal.fire({
+        title: 'Justifier le retard',
+        input: 'textarea',
+        inputPlaceholder: 'Motif de justification...',
+        inputAttributes: {
+            'aria-label': 'Motif de justification'
+        },
+        showCancelButton: true,
+        confirmButtonText: 'Justifier',
+        cancelButtonText: 'Annuler',
+        preConfirm: function(text) {
+            if (!text || !text.trim()) {
+                Swal.showValidationMessage('Veuillez saisir un motif de justification');
+                return false;
+            }
+            return text;
+        }
+    });
+    
+    if (!result.value) return;
+    
+    showSpinner();
+    try {
+        var res = await fetch(API_ABS.retards.justify, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: id, justification: result.value })
+        });
+        var data = await res.json();
+        if (data.success) {
+            Swal.fire({ 
+                icon: 'success', 
+                title: 'Retard justifié', 
+                text: 'Le motif a été enregistré',
+                timer: 1500, 
+                showConfirmButton: false 
+            });
+            // Recharger complètement les données
+            await loadRetards();
+        } else {
+            Swal.fire('Erreur', data.message, 'error');
+        }
+    } catch (err) {
+        console.error('Erreur justification:', err);
+        Swal.fire('Erreur', err.message, 'error');
+    } finally {
+        hideSpinner();
+    }
+}
+
+// ============================================================================
+// ÉCOUTEURS D'ÉVÉNEMENTS
+// ============================================================================
+var absenceJustifie = document.getElementById('absenceJustifie');
+if (absenceJustifie) {
+    absenceJustifie.addEventListener('change', function(e) {
+        var group = document.getElementById('absenceJustificationGroup');
+        if (group) group.style.display = e.target.checked ? 'block' : 'none';
     });
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// EXPOSITION GLOBALE
-// ─────────────────────────────────────────────────────────────────────────────
-window.absencesManager = {
-    init: init,
-    openSignalModal: openSignalModal,
-    closeSignalModal: closeSignalModal,
-    saveAbsence: saveAbsence,
-    editAbsence: editAbsence,
-    openJustifyModal: openJustifyModal,
-    closeJustifyModal: closeJustifyModal,
-    confirmJustify: confirmJustify,
-    deleteAbsence: deleteAbsence,
-    filterAbsences: filterAbsences,
-    resetFilters: resetFilters,
-    sortBy: sortBy,
-    goToPage: goToPage,
-    exportToCsv: exportToCsv,
-    onMatriculeChange: onMatriculeChange,
-    onTypeChange: onTypeChange,
-    onDateChange: onDateChange,
-    onJustifiedChange: onJustifiedChange
-};
+var retardJustifie = document.getElementById('retardJustifie');
+if (retardJustifie) {
+    retardJustifie.addEventListener('change', function(e) {
+        var group = document.getElementById('retardJustificationGroup');
+        if (group) group.style.display = e.target.checked ? 'block' : 'none';
+    });
+}
+
+// ============================================================================
+// INITIALISATION
+// ============================================================================
+async function init() {
+    await loadEleves();
+    loadAbsences();
+    loadRetards();
+}
 
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
 } else {
     init();
 }
+
+// Expositions globales
+window.switchTab = switchTab;
+window.openAbsenceModal = openAbsenceModal;
+window.closeAbsenceModal = closeAbsenceModal;
+window.saveAbsence = saveAbsence;
+window.editAbsence = editAbsence;
+window.deleteAbsence = deleteAbsence;
+window.justifyAbsence = justifyAbsence;
+window.goToAbsencePage = goToAbsencePage;
+window.openRetardModal = openRetardModal;
+window.closeRetardModal = closeRetardModal;
+window.saveRetard = saveRetard;
+window.editRetard = editRetard;
+window.deleteRetard = deleteRetard;
+window.justifyRetard = justifyRetard;
+window.goToRetardPage = goToRetardPage;

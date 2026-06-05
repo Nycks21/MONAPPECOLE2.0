@@ -52,7 +52,7 @@
         sidebar.classList.add('sidebar-open');
         sidebar.classList.remove('sidebar-collapsed');
         if (overlay) overlay.classList.add('visible');
-        document.body.style.overflow = 'hidden'; // empêche le scroll du fond
+        document.body.style.overflow = 'hidden';
     }
 
     function closeSidebarMobile() {
@@ -74,18 +74,15 @@
             contentWrapper.classList.toggle('sidebar-collapsed', isCollapsed);
         }
 
-        // Ajuste le left de la topbar si elle ne suit pas via CSS variable
         if (mainHeader) {
             mainHeader.style.left = isCollapsed ? '60px' : '250px';
         }
 
-        // Persister l'état
         try {
             localStorage.setItem(STORAGE_KEY, isCollapsed ? '1' : '0');
-        } catch (e) { /* localStorage peut être bloqué */ }
+        } catch (e) { }
     }
 
-    /* ─── Restaurer l'état desktop au chargement ─────────────────────── */
     function restoreDesktopState() {
         if (isMobile()) return;
         try {
@@ -94,17 +91,16 @@
                 if (contentWrapper) contentWrapper.classList.add('sidebar-collapsed');
                 if (mainHeader) mainHeader.style.left = '60px';
             }
-        } catch (e) { /* silencieux */ }
+        } catch (e) { }
     }
 
     /* ══════════════════════════════════════════════════
-       GESTIONNAIRE BURGER — délégation sur document
+       GESTIONNAIRE BURGER
     ══════════════════════════════════════════════════ */
     function onMenuToggleClick(e) {
         e.preventDefault();
         e.stopPropagation();
 
-        // Résoudre DOM si nécessaire (navigation SPA ou chargement tardif)
         if (!sidebar) resolveDOM();
         if (!sidebar) return;
 
@@ -124,7 +120,6 @@
         if (isToggle) onMenuToggleClick(e);
     });
 
-    /* ─── Fermer sidebar mobile si on clique sur un lien nav ──────── */
     function bindNavLinks() {
         if (!sidebar) return;
         sidebar.querySelectorAll('.nav-link').forEach(function (link) {
@@ -134,7 +129,7 @@
         });
     }
 
-    /* ─── Swipe mobile (touch) ────────────────────────────────────── */
+    /* ─── Swipe mobile ──────────────────────────────────────────────── */
     var touchStartX = 0;
     var touchStartY = 0;
 
@@ -148,22 +143,22 @@
         var dx = e.changedTouches[0].clientX - touchStartX;
         var dy = e.changedTouches[0].clientY - touchStartY;
 
-        // Ignorer les swipes principalement verticaux
         if (Math.abs(dy) > Math.abs(dx)) return;
 
-        if (dx < -60) closeSidebarMobile();          // swipe gauche → fermer
-        if (dx > 60 && touchStartX < 40) openSidebarMobile(); // swipe droit depuis le bord → ouvrir
+        if (dx < -60) closeSidebarMobile();
+        if (dx > 60 && touchStartX < 40) openSidebarMobile();
     }, { passive: true });
 
-    /* ─── Resize : nettoyer l'état mobile si on passe en desktop ───── */
+    /* ─── Resize ────────────────────────────────────────────────────── */
     var resizeTimer;
     window.addEventListener('resize', function () {
         clearTimeout(resizeTimer);
         resizeTimer = setTimeout(function () {
             if (!isMobile()) {
-                closeSidebarMobile();   // retire sidebar-open + overlay
+                closeSidebarMobile();
                 restoreDesktopState();
             }
+            setTimeout(setActiveMenu, 50);
         }, 100);
     });
 
@@ -204,6 +199,98 @@
     });
 
     /* ══════════════════════════════════════════════════
+       GESTION DU MENU ACTIF (TOUTE LA LOGIQUE ICI)
+    ══════════════════════════════════════════════════ */
+    
+    function setActiveMenu() {
+        var currentUrl = window.location.pathname.toLowerCase();
+        var menuLinks = document.querySelectorAll('.sidebar .nav-link');
+        
+        // Mapping des pages vers les codes de menu
+        var pageToMenu = {
+            'index.aspx': 'dashboard',
+            'dashboard': 'dashboard',
+            'eleves.aspx': 'eleves',
+            'absences.aspx': 'absences',
+            'bulletins.aspx': 'bulletins',
+            'frais.aspx': 'frais',
+            'niveaux.aspx': 'niveaux',
+            'salles.aspx': 'salles',
+            'classes.aspx': 'classes',
+            'matieres.aspx': 'matieres',
+            'utilitaires.aspx': 'importation',
+            'annee.aspx': 'annees',
+            'utilisateur.aspx': 'utilisateurs',
+            'requetes.aspx': 'requetes'
+        };
+        
+        // Déterminer la page active
+        var activePage = null;
+        for (var page in pageToMenu) {
+            if (currentUrl.indexOf(page) !== -1) {
+                activePage = pageToMenu[page];
+                break;
+            }
+        }
+        
+        // Cas particulier : page d'accueil
+        if (currentUrl === '/' || currentUrl.indexOf('index.aspx') !== -1 || currentUrl.indexOf('dashboard') !== -1) {
+            activePage = 'dashboard';
+        }
+        
+        // Cas particuliers pour les correspondances
+        if (currentUrl.indexOf('utilitaires') !== -1) {
+            activePage = 'importation';
+        }
+        if (currentUrl.indexOf('utilisateur') !== -1) {
+            activePage = 'utilisateurs';
+        }
+        if (currentUrl.indexOf('requete') !== -1) {
+            activePage = 'requetes';
+        }
+        if (currentUrl.indexOf('annee') !== -1 && currentUrl.indexOf('annee') !== -1) {
+            activePage = 'annees';
+        }
+        
+        // Appliquer la classe active
+        menuLinks.forEach(function(link) {
+            link.classList.remove('active');
+            var href = link.getAttribute('href');
+            if (href && activePage) {
+                if (href.indexOf(activePage) !== -1) {
+                    link.classList.add('active');
+                }
+            }
+        });
+        
+        // Debug (optionnel - à supprimer en production)
+        // console.log('Page active:', activePage);
+    }
+    
+    function addMenuHoverEffect() {
+        var menuLinks = document.querySelectorAll('.sidebar .nav-link');
+        menuLinks.forEach(function(link) {
+            link.removeEventListener('mouseenter', onMenuMouseEnter);
+            link.removeEventListener('mouseleave', onMenuMouseLeave);
+            link.addEventListener('mouseenter', onMenuMouseEnter);
+            link.addEventListener('mouseleave', onMenuMouseLeave);
+        });
+    }
+    
+    function onMenuMouseEnter() {
+        if (!this.classList.contains('active')) {
+            this.style.backgroundColor = '#e9ecef';
+            this.style.transition = 'all 0.2s';
+        }
+    }
+    
+    function onMenuMouseLeave() {
+        if (!this.classList.contains('active')) {
+            this.style.backgroundColor = '';
+        }
+    }
+
+    /* ══════════════════════════════════════════════════
        BADGE VERSION
     ══════════════════════════════════════════════════ */
     function injectVersionBadge() {
@@ -227,6 +314,12 @@
         restoreDesktopState();
         bindNavLinks();
         injectVersionBadge();
+        
+        // Initialiser le menu actif et les effets de survol
+        setTimeout(function() {
+            setActiveMenu();
+            addMenuHoverEffect();
+        }, 100);
     }
 
     if (document.readyState === 'loading') {
@@ -234,6 +327,13 @@
     } else {
         init();
     }
+    
+    // Exposer les fonctions pour les appels ultérieurs (AJAX, etc.)
+    window.setActiveMenu = setActiveMenu;
+    window.addMenuHoverEffect = addMenuHoverEffect;
+    window.refreshActiveMenu = function() {
+        setTimeout(setActiveMenu, 50);
+    };
 
 })();
 
@@ -251,7 +351,7 @@ function loadLang(lang) {
             localStorage.setItem('appLang', lang);
             applyTranslations();
         })
-        .catch(function () { /* fichier de langue absent — silencieux */ });
+        .catch(function () { });
 }
 
 function applyTranslations() {
@@ -275,6 +375,7 @@ function forceHideSpinner() {
     s.style.opacity = '0';
     s.setAttribute('aria-hidden', 'true');
 }
+
 function showSpinner() {
     var s = document.getElementById('spinnerOverlay');
     if (!s) return;
@@ -283,6 +384,7 @@ function showSpinner() {
     s.style.display = 'flex';
     s.removeAttribute('aria-hidden');
 }
+
 function hideSpinner() { forceHideSpinner(); }
 
 // ─────────────────────────────────────────────
@@ -304,18 +406,16 @@ function ajax(url, payload) {
 // ════════════════════════════════════════════════════════════════
 
 function initTreeview() {
-    const treeviewToggles = document.querySelectorAll('.treeview-toggle');
+    var treeviewToggles = document.querySelectorAll('.treeview-toggle');
     
-    treeviewToggles.forEach(toggle => {
-        // Supprimer les anciens écouteurs pour éviter les doublons
+    treeviewToggles.forEach(function(toggle) {
         toggle.removeEventListener('click', handleTreeviewClick);
         toggle.addEventListener('click', handleTreeviewClick);
     });
     
-    // Ouvrir l'élément actif
-    const activeLink = document.querySelector('.nav-treeview .nav-link.active');
+    var activeLink = document.querySelector('.nav-treeview .nav-link.active');
     if (activeLink) {
-        const parentTreeview = activeLink.closest('.has-treeview');
+        var parentTreeview = activeLink.closest('.has-treeview');
         if (parentTreeview) {
             parentTreeview.classList.add('open');
         }
@@ -326,45 +426,93 @@ function handleTreeviewClick(e) {
     e.preventDefault();
     e.stopPropagation();
     
-    const parentItem = this.closest('.has-treeview');
+    var parentItem = this.closest('.has-treeview');
     if (parentItem) {
         parentItem.classList.toggle('open');
     }
 }
 
-// Initialiser au chargement de la page
+// ============================================================================
+// ACTIVER LE MENU ACTIF - MÉTHODE SIMPLE
+// ============================================================================
+(function() {
+    // Obtenir le nom de la page courante
+    var currentPage = window.location.pathname.split('/').pop();
+    var currentFolder = window.location.pathname.split('/')[1] || '';
+    
+    // Mapping des pages vers les codes menu
+    var menuMapping = {
+        'index.aspx': 'dashboard',
+        'eleves.aspx': 'eleves',
+        'absences.aspx': 'absences',
+        'bulletins.aspx': 'bulletins',
+        'frais.aspx': 'frais',
+        'niveaux.aspx': 'niveaux',
+        'salles.aspx': 'salles',
+        'classes.aspx': 'classes',
+        'matieres.aspx': 'matieres',
+        'utilitaires.aspx': 'importation',
+        'annee.aspx': 'annees',
+        'utilisateur.aspx': 'utilisateurs',
+        'requetes.aspx': 'requetes'
+    };
+    
+    // Déterminer le menu actif
+    var activeMenu = menuMapping[currentPage];
+    
+    // Cas particulier pour dashboard
+    if (currentPage === '' || currentPage === 'index.aspx' || currentPage === 'dashboard') {
+        activeMenu = 'dashboard';
+    }
+    
+    // Cas particulier pour les dossiers
+    if (currentFolder === 'eleves') activeMenu = 'eleves';
+    if (currentFolder === 'absences') activeMenu = 'absences';
+    if (currentFolder === 'bulletins') activeMenu = 'bulletins';
+    if (currentFolder === 'frais') activeMenu = 'frais';
+    if (currentFolder === 'niveaux') activeMenu = 'niveaux';
+    if (currentFolder === 'salles') activeMenu = 'salles';
+    if (currentFolder === 'classes') activeMenu = 'classes';
+    if (currentFolder === 'matieres') activeMenu = 'matieres';
+    
+    // Appliquer la classe active
+    if (activeMenu) {
+        var menuLinks = document.querySelectorAll('.sidebar .nav-link');
+        for (var i = 0; i < menuLinks.length; i++) {
+            var link = menuLinks[i];
+            var menuCode = link.getAttribute('data-menu');
+            if (menuCode === activeMenu) {
+                link.classList.add('active');
+                break;
+            }
+        }
+    }
+    
+    // Ajouter l'effet de survol
+    var links = document.querySelectorAll('.sidebar .nav-link');
+    for (var i = 0; i < links.length; i++) {
+        links[i].addEventListener('mouseenter', function() {
+            if (!this.classList.contains('active')) {
+                this.style.backgroundColor = '#e9ecef';
+            }
+        });
+        links[i].addEventListener('mouseleave', function() {
+            if (!this.classList.contains('active')) {
+                this.style.backgroundColor = '';
+            }
+        });
+    }
+})();
+
 document.addEventListener('DOMContentLoaded', function() {
     initTreeview();
 });
 
-// Dans shell.js, vous pouvez maintenant filtrer les menus
-function filterMenusByPermissions() {
-    if (!window.userPermissions) return;
-    
-    // Cacher les menus non autorisés
-    document.querySelectorAll('.nav-link').forEach(link => {
-        const href = link.getAttribute('href');
-        if (href && href !== '#') {
-            // Extraire le code du menu à partir du href
-            let menuCode = '';
-            if (href.includes('eleves')) menuCode = 'eleves';
-            else if (href.includes('absences')) menuCode = 'absences';
-            else if (href.includes('frais')) menuCode = 'frais';
-            else if (href.includes('bulletins')) menuCode = 'bulletins';
-            else if (href.includes('niveaux')) menuCode = 'niveaux';
-            else if (href.includes('salles')) menuCode = 'salles';
-            else if (href.includes('classes')) menuCode = 'classes';
-            else if (href.includes('matieres')) menuCode = 'matieres';
-            else if (href.includes('utilitaires')) menuCode = 'utilitaires';
-            else if (href.includes('annee')) menuCode = 'annee';
-            else if (href.includes('utilisateur')) menuCode = 'utilisateur';
-            else if (href.includes('requete')) menuCode = 'requetes';
-            
-            if (menuCode && !window.userPermissions.includes(menuCode)) {
-                // Cacher le menu parent si tous les enfants sont cachés
-                const parentLi = link.closest('.nav-item');
-                if (parentLi) parentLi.style.display = 'none';
-            }
-        }
-    });
-}
+// ============================================================================
+// EXPOSITION GLOBALE DES FONCTIONS POUR LES AUTRES PAGES
+// ============================================================================
+window.forceHideSpinner = forceHideSpinner;
+window.showSpinner = showSpinner;
+window.hideSpinner = hideSpinner;
+window.ajax = ajax;
+window.loadLang = loadLang;
