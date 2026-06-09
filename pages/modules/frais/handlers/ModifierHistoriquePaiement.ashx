@@ -31,12 +31,18 @@ public class ModifierHistoriquePaiement : IHttpHandler, IRequiresSessionState
             var data = ser.Deserialize<dynamic>(body);
 
             Guid id = Guid.Parse(data["id"].ToString());
-            string matricule = data["matricule"];
+            string matricule = data["matricule"].ToString();
             decimal montant = Convert.ToDecimal(data["montant"]);
-            DateTime datePaiement = DateTime.Parse(data["datePaiement"].ToString());
-            string modePaiement = data["modePaiement"].ToString();
+            DateTime datePaie = DateTime.Parse(data["datePaiement"].ToString());
+            string modePaie = data["modePaiement"].ToString();
             string reference = data.ContainsKey("reference") ? data["reference"].ToString() : "";
             string commentaire = data.ContainsKey("commentaire") ? data["commentaire"].ToString() : "";
+
+            if (montant <= 0)
+            {
+                ctx.Response.Write("{\"success\":false,\"message\":\"Montant invalide\"}");
+                return;
+            }
 
             string connStr = ConfigurationManager.ConnectionStrings["MaConnexion"].ConnectionString;
 
@@ -47,65 +53,69 @@ public class ModifierHistoriquePaiement : IHttpHandler, IRequiresSessionState
                 {
                     try
                     {
-                        // Récupérer l'ancien montant du paiement
-                        string selectSql = @"
-                            SELECT MONTANT, FRAIS_ID 
-                            FROM HISTORIQUE_PAIEMENTS 
-                            WHERE ID = @id";
-                        
-                        Guid fraisId = Guid.Empty;
+                        // 1. Récupérer l'ancien montant et le FRAIS_ID
                         decimal ancienMontant = 0;
-                        
-                        using (var cmd = new SqlCommand(selectSql, conn, transaction))
+                        Guid fraisId = Guid.Empty;
+                        decimal ancienPaye = 0;
+
+                        using (var cmd = new SqlCommand(@"
+                            SELECT h.MONTANT, h.FRAIS_ID, f.PAYE
+                            FROM HISTORIQUE_PAIEMENTS h
+                            INNER JOIN FRAIS f ON h.FRAIS_ID = f.ID
+                            WHERE h.ID = @id", conn, transaction))
                         {
                             cmd.Parameters.AddWithValue("@id", id);
-                            using (var reader = cmd.ExecuteReader())
+                            using (var rdr = cmd.ExecuteReader())
                             {
-                                if (reader.Read())
+                                if (!rdr.Read())
                                 {
-                                    ancienMontant = reader.GetDecimal(0);
-                                    fraisId = reader.GetGuid(1);
+                                    transaction.Rollback();
+                                    ctx.Response.Write("{\"success\":false,\"message\":\"Paiement introuvable\"}");
+                                    return;
                                 }
+                                ancienMontant = rdr.GetDecimal(0);
+                                fraisId = rdr.GetGuid(1);
+                                ancienPaye = rdr.GetDecimal(2);
                             }
                         }
-                        
-                        // Mettre à jour l'historique
-                        string updateSql = @"
-                            UPDATE HISTORIQUE_PAIEMENTS 
+
+                        // 2. Mettre à jour HISTORIQUE_PAIEMENTS
+                        using (var cmd = new SqlCommand(@"
+                            UPDATE HISTORIQUE_PAIEMENTS
                             SET MONTANT = @montant,
-                                DATE_PAIEMENT = @datePaiement,
-                                MODE_PAIEMENT = @modePaiement,
-                                REFERENCE = @reference,
-                                COMMENTAIRE = @commentaire
-                            WHERE ID = @id";
-                        
-                        using (var cmd = new SqlCommand(updateSql, conn, transaction))
+                                DATE_PAIEMENT = @datePaie,
+                                MODE_PAIEMENT = @mode,
+                                REFERENCE = @ref,
+                                COMMENTAIRE = @comm
+                            WHERE ID = @id", conn, transaction))
                         {
                             cmd.Parameters.AddWithValue("@montant", montant);
-                            cmd.Parameters.AddWithValue("@datePaiement", datePaiement);
-                            cmd.Parameters.AddWithValue("@modePaiement", modePaiement);
-                            cmd.Parameters.AddWithValue("@reference", reference);
-                            cmd.Parameters.AddWithValue("@commentaire", commentaire);
+                            cmd.Parameters.AddWithValue("@datePaie", datePaie);
+                            cmd.Parameters.AddWithValue("@mode", modePaie);
+                            cmd.Parameters.AddWithValue("@ref", string.IsNullOrEmpty(reference) ? (object)DBNull.Value : reference);
+                            cmd.Parameters.AddWithValue("@comm", string.IsNullOrEmpty(commentaire) ? (object)DBNull.Value : commentaire);
                             cmd.Parameters.AddWithValue("@id", id);
                             cmd.ExecuteNonQuery();
                         }
+
+                        // 3. Mettre à jour PAYE dans FRAIS (RESTE, PROGRESSION, STATUT sont calculés automatiquement)
+                        decimal nouveauPaye = ancienPaye - ancienMontant + montant;
                         
-                        // Mettre à jour la table FRAIS (ajuster le PAYE)
                         string updateFraisSql = @"
-                            UPDATE FRAIS 
-                            SET PAYE = PAYE - @ancienMontant + @nouveauMontant,
+                            UPDATE FRAIS
+                            SET PAYE = @nouveauPaye,
                                 UPDATED_AT = GETDATE()
                             WHERE ID = @fraisId";
-                        
+
                         using (var cmd = new SqlCommand(updateFraisSql, conn, transaction))
                         {
-                            cmd.Parameters.AddWithValue("@ancienMontant", ancienMontant);
-                            cmd.Parameters.AddWithValue("@nouveauMontant", montant);
+                            cmd.Parameters.AddWithValue("@nouveauPaye", nouveauPaye);
                             cmd.Parameters.AddWithValue("@fraisId", fraisId);
                             cmd.ExecuteNonQuery();
                         }
-                        
+
                         transaction.Commit();
+                        ctx.Response.Write("{\"success\":true,\"message\":\"Paiement modifié avec succès\"}");
                     }
                     catch
                     {
@@ -114,8 +124,6 @@ public class ModifierHistoriquePaiement : IHttpHandler, IRequiresSessionState
                     }
                 }
             }
-
-            ctx.Response.Write("{\"success\":true,\"message\":\"Paiement modifié avec succès\"}");
         }
         catch (Exception ex)
         {

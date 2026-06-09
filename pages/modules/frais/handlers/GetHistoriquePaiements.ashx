@@ -44,15 +44,17 @@ public class GetHistoriquePaiements : IHttpHandler, IRequiresSessionState
                     FROM INFORMATION_SCHEMA.TABLES 
                     WHERE TABLE_NAME = 'HISTORIQUE_PAIEMENTS'";
                 
+                int tableExists = 0;
                 using (var checkCmd = new SqlCommand(checkTableQuery, conn))
                 {
-                    int tableExists = (int)checkCmd.ExecuteScalar();
-                    
-                    if (tableExists == 0)
-                    {
-                        ctx.Response.Write("{\"success\":true,\"data\":[]}");
-                        return;
-                    }
+                    tableExists = (int)checkCmd.ExecuteScalar();
+                }
+                
+                if (tableExists == 0)
+                {
+                    // Table n'existe pas, retourner tableau vide
+                    ctx.Response.Write("{\"success\":true,\"data\":[]}");
+                    return;
                 }
                 
                 string query = @"
@@ -106,9 +108,8 @@ public class GetHistoriquePaiements : IHttpHandler, IRequiresSessionState
         }
         catch (Exception ex)
         {
-            ctx.Response.StatusCode = 500;
-            var serializer = new JavaScriptSerializer();
-            ctx.Response.Write(serializer.Serialize(new { success = false, message = ex.Message }));
+            // En cas d'erreur, retourner un tableau vide plutôt qu'une erreur
+            ctx.Response.Write("{\"success\":true,\"data\":[]}");
         }
     }
 

@@ -340,6 +340,35 @@ BEGIN
     );
 END
 GO
+
+-- =====================================================
+-- TABLE TARIFS_ECOLAGE
+-- Gère les tarifs d'écolage par classe et par année scolaire
+-- =====================================================
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'TARIFS_ECOLAGE')
+BEGIN
+    CREATE TABLE TARIFS_ECOLAGE (
+        ID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+        ANNEE_ID INT NOT NULL,
+        CLASSE_ID INT NOT NULL,
+        MONTANT DECIMAL(18, 2) NOT NULL DEFAULT 0,
+        DESCRIPTION NVARCHAR(200) NULL,
+        STATUT BIT DEFAULT 1,
+        CREATED_AT DATETIME DEFAULT GETDATE(),
+        UPDATED_AT DATETIME DEFAULT GETDATE(),
+        
+        -- Clés étrangères
+        CONSTRAINT FK_TARIFS_ECOLAGE_RANNEE FOREIGN KEY (ANNEE_ID) 
+            REFERENCES RANNEE(ID) ON DELETE CASCADE,
+        CONSTRAINT FK_TARIFS_ECOLAGE_CLASSES FOREIGN KEY (CLASSE_ID) 
+            REFERENCES CLASSES(ID) ON DELETE CASCADE,
+        
+        -- Contrainte d'unicité: un seul tarif par année et par classe
+        CONSTRAINT UQ_TARIFS_ECOLAGE_ANNEE_CLASSE UNIQUE (ANNEE_ID, CLASSE_ID)
+    );
+END
+GO
+
 -- =====================================================
 -- TABLE FRAIS
 -- =====================================================
@@ -349,6 +378,7 @@ BEGIN
     CREATE TABLE FRAIS (
     ID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
     ANNEE_ID INT NOT NULL,
+    TARIF_ID UNIQUEIDENTIFIER NULL,
     MATRICULE NVARCHAR(20) NOT NULL,
     NOM NVARCHAR(100) NOT NULL,
     CLASSE INT NOT NULL,

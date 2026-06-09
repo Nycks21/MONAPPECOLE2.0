@@ -1,5 +1,6 @@
 <%@ WebHandler Language="C#" Class="SupprimerHistoriquePaiement" %>
 using System;
+using System.Collections.Generic;
 using System.Configuration;
 using System.Data.SqlClient;
 using System.IO;
@@ -28,10 +29,15 @@ public class SupprimerHistoriquePaiement : IHttpHandler, IRequiresSessionState
                 body = reader.ReadToEnd();
 
             var ser = new JavaScriptSerializer();
-            var data = ser.Deserialize<dynamic>(body);
+            var data = ser.Deserialize<Dictionary<string, object>>(body);
+
+            if (data == null || !data.ContainsKey("id"))
+            {
+                ctx.Response.Write("{\"success\":false,\"message\":\"Données invalides\"}");
+                return;
+            }
 
             Guid id = Guid.Parse(data["id"].ToString());
-            string matricule = data["matricule"];
 
             string connStr = ConfigurationManager.ConnectionStrings["MaConnexion"].ConnectionString;
 
@@ -42,51 +48,64 @@ public class SupprimerHistoriquePaiement : IHttpHandler, IRequiresSessionState
                 {
                     try
                     {
-                        // Récupérer le montant et FRAIS_ID avant suppression
-                        string selectSql = @"
-                            SELECT MONTANT, FRAIS_ID 
-                            FROM HISTORIQUE_PAIEMENTS 
-                            WHERE ID = @id";
-                        
+                        // 1. Récupérer le montant et le FRAIS_ID avant suppression
                         decimal montant = 0;
                         Guid fraisId = Guid.Empty;
-                        
-                        using (var cmd = new SqlCommand(selectSql, conn, transaction))
+
+                        using (var cmd = new SqlCommand(
+                            "SELECT MONTANT, FRAIS_ID FROM HISTORIQUE_PAIEMENTS WHERE ID = @id",
+                            conn, transaction))
                         {
                             cmd.Parameters.AddWithValue("@id", id);
-                            using (var reader = cmd.ExecuteReader())
+                            using (var rdr = cmd.ExecuteReader())
                             {
-                                if (reader.Read())
+                                if (!rdr.Read())
                                 {
-                                    montant = reader.GetDecimal(0);
-                                    fraisId = reader.GetGuid(1);
+                                    transaction.Rollback();
+                                    ctx.Response.Write("{\"success\":false,\"message\":\"Paiement introuvable\"}");
+                                    return;
                                 }
+                                montant = rdr.GetDecimal(0);
+                                fraisId = rdr.GetGuid(1);
                             }
                         }
-                        
-                        // Supprimer l'historique
-                        string deleteSql = "DELETE FROM HISTORIQUE_PAIEMENTS WHERE ID = @id";
-                        using (var cmd = new SqlCommand(deleteSql, conn, transaction))
+
+                        // 2. Supprimer l'historique
+                        using (var cmd = new SqlCommand(
+                            "DELETE FROM HISTORIQUE_PAIEMENTS WHERE ID = @id",
+                            conn, transaction))
                         {
                             cmd.Parameters.AddWithValue("@id", id);
                             cmd.ExecuteNonQuery();
                         }
-                        
-                        // Mettre à jour la table FRAIS (diminuer le PAYE)
-                        string updateFraisSql = @"
-                            UPDATE FRAIS 
-                            SET PAYE = PAYE - @montant,
-                                UPDATED_AT = GETDATE()
+
+                        // 3. Recalculer FRAIS (soustraire le montant supprimé)
+                        string updateSql = @"
+                            UPDATE FRAIS
+                            SET PAYE        = CASE WHEN PAYE - @montant < 0 THEN 0 ELSE PAYE - @montant END,
+                                RESTE       = CASE WHEN TOTAL - (PAYE - @montant) < 0 THEN 0
+                                                   WHEN PAYE - @montant < 0 THEN TOTAL
+                                                   ELSE TOTAL - (PAYE - @montant) END,
+                                PROGRESSION = CASE WHEN TOTAL > 0 AND PAYE - @montant > 0
+                                                   THEN ROUND(((PAYE - @montant) / TOTAL) * 100, 2)
+                                                   ELSE 0 END,
+                                STATUT      = CASE
+                                                WHEN TOTAL <= (PAYE - @montant) AND (PAYE - @montant) > 0 THEN N'Terminé'
+                                                WHEN (PAYE - @montant) > 0                               THEN N'En cours'
+                                                ELSE N'Non payé'
+                                              END,
+                                UPDATED_AT  = GETDATE()
                             WHERE ID = @fraisId";
-                        
-                        using (var cmd = new SqlCommand(updateFraisSql, conn, transaction))
+
+                        using (var cmd = new SqlCommand(updateSql, conn, transaction))
                         {
                             cmd.Parameters.AddWithValue("@montant", montant);
                             cmd.Parameters.AddWithValue("@fraisId", fraisId);
                             cmd.ExecuteNonQuery();
                         }
-                        
+
                         transaction.Commit();
+                        ctx.Response.Write("{\"success\":true,\"message\":\"Paiement supprimé avec succès\"}");
                     }
                     catch
                     {
@@ -95,8 +114,6 @@ public class SupprimerHistoriquePaiement : IHttpHandler, IRequiresSessionState
                     }
                 }
             }
-
-            ctx.Response.Write("{\"success\":true,\"message\":\"Paiement supprimé avec succès\"}");
         }
         catch (Exception ex)
         {
