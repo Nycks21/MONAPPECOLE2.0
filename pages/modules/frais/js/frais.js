@@ -459,23 +459,36 @@ async function _getCurrentAnneeId() {
 }
 
 async function savePayment() {
-    var matricule  = (document.getElementById('paymentStudent')  || {}).value;
-    var montant    = parseFloat((document.getElementById('paymentAmount') || {}).value);
-    var date       = (document.getElementById('paymentDate')     || {}).value;
-    var mode       = (document.getElementById('paymentMethod')   || {}).value;
-    var reference  = (document.getElementById('paymentRef')      || {}).value;
-    var commentaire= (document.getElementById('paymentComment')  || {}).value;
+    var matricule   = (document.getElementById('paymentStudent')  || {}).value;
+    var montant     = parseFloat((document.getElementById('paymentAmount') || {}).value);
+    var mois        = (document.getElementById('paymentMonth')     || {}).value;
+    var annee       = (document.getElementById('paymentYear')      || {}).value;
+    var date        = (document.getElementById('paymentDate')      || {}).value;
+    var mode        = (document.getElementById('paymentMethod')    || {}).value;
+    var reference   = (document.getElementById('paymentRef')       || {}).value;
+    var commentaire = (document.getElementById('paymentComment')   || {}).value;
 
-    if (!matricule)     { Swal.fire('Erreur', 'Veuillez sélectionner un élève.', 'warning'); return; }
+    if (!matricule)          { Swal.fire('Erreur', 'Veuillez sélectionner un élève.', 'warning'); return; }
     if (!montant || montant <= 0) { Swal.fire('Erreur', 'Le montant doit être supérieur à 0.', 'warning'); return; }
-    if (!date)          { Swal.fire('Erreur', 'La date est obligatoire.', 'warning'); return; }
+    if (!mois)               { Swal.fire('Erreur', 'Veuillez sélectionner le mois.', 'warning'); return; }
+    if (!annee)              { Swal.fire('Erreur', 'Veuillez saisir l\'année.', 'warning'); return; }
+    if (!date)               { Swal.fire('Erreur', 'La date est obligatoire.', 'warning'); return; }
 
     showSpinner();
     try {
         var res = await fetch(API_FRAIS.ajouterPaiement, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ matricule, montant, datePaiement: date, modePaiement: mode, reference, commentaire })
+            body: JSON.stringify({ 
+                matricule, 
+                montant, 
+                moisPaiement: mois,
+                annee: annee,
+                datePaiement: date, 
+                modePaiement: mode, 
+                reference, 
+                commentaire 
+            })
         });
         var result = await res.json();
         if (result.success) {
@@ -491,7 +504,6 @@ async function savePayment() {
         hideSpinner();
     }
 }
-
 // ─────────────────────────────────────────────────────────────────────────────
 // MISE À JOUR / RECALCUL
 // ─────────────────────────────────────────────────────────────────────────────
@@ -640,35 +652,36 @@ async function viewPaymentHistory(matricule, nom) {
 // ─────────────────────────────────────────────────────────────────────────────
 // MODIFIER UN PAIEMENT HISTORIQUE
 // ─────────────────────────────────────────────────────────────────────────────
-function openEditHistoriqueModal(historyId, matricule, nom, ancienMontant, datePaiement, modePaiement, reference, commentaire) {
+function openEditHistoriqueModal(historyId, matricule, nom, ancienMontant, datePaiement, modePaiement, reference, commentaire, mois, annee) {
     _editHistoryId  = historyId;
     _editMatricule  = matricule;
     _editNom        = nom;
 
-    document.getElementById('editStudentName').value   = nom;
-    document.getElementById('editMontant').value        = ancienMontant;
-    document.getElementById('editDatePaiement').value   = (datePaiement || '').replace(' ', 'T').substring(0, 16);
-    document.getElementById('editModePaiement').value   = modePaiement;
-    document.getElementById('editReference').value      = reference  || '';
-    document.getElementById('editCommentaire').value    = commentaire || '';
+    document.getElementById('editStudentName').value     = nom;
+    document.getElementById('editMontant').value         = ancienMontant;
+    document.getElementById('editPaymentMonth').value    = mois || '';
+    document.getElementById('editPaymentYear').value     = annee || '';
+    document.getElementById('editDatePaiement').value    = (datePaiement || '').replace(' ', 'T').substring(0, 16);
+    document.getElementById('editModePaiement').value    = modePaiement;
+    document.getElementById('editReference').value       = reference  || '';
+    document.getElementById('editCommentaire').value     = commentaire || '';
 
-    // Fermer le Swal de l'historique avant d'ouvrir la modale
     if (typeof Swal !== 'undefined' && Swal.isVisible && Swal.isVisible()) Swal.close();
-
     openModal('editHistoriqueModal');
 }
 
 async function confirmEditHistorique() {
-    var montant     = parseFloat(document.getElementById('editMontant').value);
-    var datePaiement= document.getElementById('editDatePaiement').value;
-    var modePaiement= document.getElementById('editModePaiement').value;
-    var reference   = document.getElementById('editReference').value;
-    var commentaire = document.getElementById('editCommentaire').value;
+    var montant      = parseFloat(document.getElementById('editMontant').value);
+    var mois         = document.getElementById('editPaymentMonth').value;
+    var annee        = document.getElementById('editPaymentYear').value;
+    var datePaiement = document.getElementById('editDatePaiement').value;
+    var modePaiement = document.getElementById('editModePaiement').value;
+    var reference    = document.getElementById('editReference').value;
+    var commentaire  = document.getElementById('editCommentaire').value;
 
     if (!montant || montant <= 0) { Swal.fire('Erreur', 'Le montant doit être supérieur à 0', 'warning'); return; }
     if (!datePaiement)            { Swal.fire('Erreur', 'La date est obligatoire', 'warning'); return; }
 
-    // Sauvegarder les valeurs avant de fermer la modale
     var savedMatricule = _editMatricule;
     var savedNom       = _editNom;
     var savedHistoryId = _editHistoryId;
@@ -678,19 +691,27 @@ async function confirmEditHistorique() {
         var res = await fetch(API_FRAIS.modifierHistorique, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: savedHistoryId, matricule: savedMatricule,
-                montant, datePaiement, modePaiement, reference, commentaire })
+            body: JSON.stringify({ 
+                id: savedHistoryId, 
+                matricule: savedMatricule,
+                montant, 
+                moisPaiement: mois,
+                annee: annee,
+                datePaiement, 
+                modePaiement, 
+                reference, 
+                commentaire 
+            })
         });
         var data = await res.json();
 
         if (data.success) {
-            // Effacer les variables MAINTENANT
             _editHistoryId = null; _editMatricule = null; _editNom = null;
             closeEditHistoriqueModal();
             Swal.fire({ icon: 'success', title: 'Modifié', text: 'Paiement modifié avec succès', timer: 1500, showConfirmButton: false });
             setTimeout(function() {
                 loadFrais();
-                viewPaymentHistory(savedMatricule, savedNom);  // Rouvrir l'historique
+                viewPaymentHistory(savedMatricule, savedNom);
             }, 1600);
         } else {
             Swal.fire('Erreur', data.message || 'Erreur lors de la modification', 'error');

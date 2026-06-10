@@ -52,27 +52,66 @@ public class GetHistoriquePaiements : IHttpHandler, IRequiresSessionState
                 
                 if (tableExists == 0)
                 {
-                    // Table n'existe pas, retourner tableau vide
                     ctx.Response.Write("{\"success\":true,\"data\":[]}");
                     return;
                 }
                 
-                string query = @"
-                    SELECT h.ID, h.MATRICULE, h.NOM, 
-                           ISNULL(c.NOM, 'Non défini') AS CLASSE_NOM,
-                           h.MONTANT, h.DATE_PAIEMENT, h.MODE_PAIEMENT, 
-                           ISNULL(h.REFERENCE, '') AS REFERENCE, 
-                           ISNULL(h.COMMENTAIRE, '') AS COMMENTAIRE, 
-                           ISNULL(h.USERNAME, 'Système') AS USERNAME,
-                           ISNULL(h.ANCIEN_PAYE, 0) AS ANCIEN_PAYE, 
-                           ISNULL(h.NOUVEAU_PAYE, 0) AS NOUVEAU_PAYE,
-                           ISNULL(h.ANCIEN_RESTE, 0) AS ANCIEN_RESTE, 
-                           ISNULL(h.NOUVEAU_RESTE, 0) AS NOUVEAU_RESTE,
-                           h.CREATED_AT
-                    FROM HISTORIQUE_PAIEMENTS h
-                    LEFT JOIN CLASSES c ON h.CLASSE = c.ID
-                    WHERE h.MATRICULE = @matricule
-                    ORDER BY h.DATE_PAIEMENT DESC";
+                // Vérifier si les colonnes MOIS et ANNEE existent
+                bool hasMoisAnnee = false;
+                string checkColumnsQuery = @"
+                    SELECT COUNT(*) 
+                    FROM INFORMATION_SCHEMA.COLUMNS 
+                    WHERE TABLE_NAME = 'HISTORIQUE_PAIEMENTS' 
+                    AND COLUMN_NAME IN ('MOIS', 'ANNEE')";
+                
+                using (var checkCmd = new SqlCommand(checkColumnsQuery, conn))
+                {
+                    hasMoisAnnee = (int)checkCmd.ExecuteScalar() == 2;
+                }
+                
+                string query;
+                if (hasMoisAnnee)
+                {
+                    query = @"
+                        SELECT h.ID, h.MATRICULE, h.NOM, 
+                               ISNULL(c.NOM, 'Non défini') AS CLASSE_NOM,
+                               h.MONTANT, h.DATE_PAIEMENT, h.MODE_PAIEMENT, 
+                               ISNULL(h.REFERENCE, '') AS REFERENCE, 
+                               ISNULL(h.COMMENTAIRE, '') AS COMMENTAIRE, 
+                               ISNULL(h.USERNAME, 'Système') AS USERNAME,
+                               ISNULL(h.ANCIEN_PAYE, 0) AS ANCIEN_PAYE, 
+                               ISNULL(h.NOUVEAU_PAYE, 0) AS NOUVEAU_PAYE,
+                               ISNULL(h.ANCIEN_RESTE, 0) AS ANCIEN_RESTE, 
+                               ISNULL(h.NOUVEAU_RESTE, 0) AS NOUVEAU_RESTE,
+                               ISNULL(h.MOIS, '') AS MOIS,
+                               ISNULL(h.ANNEE, '') AS ANNEE,
+                               h.CREATED_AT
+                        FROM HISTORIQUE_PAIEMENTS h
+                        LEFT JOIN CLASSES c ON h.CLASSE = c.ID
+                        WHERE h.MATRICULE = @matricule
+                        ORDER BY h.DATE_PAIEMENT DESC";
+                }
+                else
+                {
+                    query = @"
+                        SELECT h.ID, h.MATRICULE, h.NOM, 
+                               ISNULL(c.NOM, 'Non défini') AS CLASSE_NOM,
+                               h.MONTANT, h.DATE_PAIEMENT, h.MODE_PAIEMENT, 
+                               ISNULL(h.REFERENCE, '') AS REFERENCE, 
+                               ISNULL(h.COMMENTAIRE, '') AS COMMENTAIRE, 
+                               ISNULL(h.USERNAME, 'Système') AS USERNAME,
+                               ISNULL(h.ANCIEN_PAYE, 0) AS ANCIEN_PAYE, 
+                               ISNULL(h.NOUVEAU_PAYE, 0) AS NOUVEAU_PAYE,
+                               ISNULL(h.ANCIEN_RESTE, 0) AS ANCIEN_RESTE, 
+                               ISNULL(h.NOUVEAU_RESTE, 0) AS NOUVEAU_RESTE,
+                               '' AS MOIS,
+                               '' AS ANNEE,
+                               h.CREATED_AT
+                        FROM HISTORIQUE_PAIEMENTS h
+                        LEFT JOIN CLASSES c ON h.CLASSE = c.ID
+                        WHERE h.MATRICULE = @matricule
+                        ORDER BY h.DATE_PAIEMENT DESC";
+                }
                 
                 using (var cmd = new SqlCommand(query, conn))
                 {
@@ -81,7 +120,8 @@ public class GetHistoriquePaiements : IHttpHandler, IRequiresSessionState
                     {
                         while (rdr.Read())
                         {
-                            list.Add(new {
+                            var item = new
+                            {
                                 ID = rdr["ID"].ToString(),
                                 MATRICULE = rdr["MATRICULE"].ToString(),
                                 NOM = rdr["NOM"].ToString(),
@@ -96,8 +136,11 @@ public class GetHistoriquePaiements : IHttpHandler, IRequiresSessionState
                                 NOUVEAU_PAYE = Convert.ToDecimal(rdr["NOUVEAU_PAYE"]),
                                 ANCIEN_RESTE = Convert.ToDecimal(rdr["ANCIEN_RESTE"]),
                                 NOUVEAU_RESTE = Convert.ToDecimal(rdr["NOUVEAU_RESTE"]),
+                                MOIS = rdr["MOIS"].ToString(),
+                                ANNEE = rdr["ANNEE"].ToString(),
                                 CREATED_AT = Convert.ToDateTime(rdr["CREATED_AT"]).ToString("yyyy-MM-dd HH:mm:ss")
-                            });
+                            };
+                            list.Add(item);
                         }
                     }
                 }

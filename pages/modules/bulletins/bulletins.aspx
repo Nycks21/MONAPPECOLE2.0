@@ -122,6 +122,7 @@
                         <section class="content" id="section-bulletins">
 
                             <!-- BARRE DE FILTRES FILTRÉE PAR RÔLE -->
+                            <!-- BARRE DE FILTRES -->
                             <div class="dash-card" style="margin-bottom:16px;">
                                 <div class="dash-card-body" style="padding:14px 20px;">
                                     <div style="display:flex; align-items:flex-end; flex-wrap:wrap; gap:14px;">
@@ -129,51 +130,75 @@
                                         <div
                                             style="display:flex; flex-direction:column; gap:5px; min-width:180px; flex:1;">
                                             <label
-                                                style="font-size:11px; font-weight:600; color:#6c757d; text-transform:uppercase; letter-spacing:.5px;">
-                                                Matière
-                                            </label>
-                                            <%-- Peuplé dynamiquement par JS via l'API --%>
-                                                <select id="ddlMatiere" class="form-control form-control-sm"
-                                                    style="height:36px;">
-                                                    <option value="">-- Sélectionner une matière --</option>
-                                                </select>
+                                                style="font-size:11px; font-weight:600; color:#6c757d;">Matière</label>
+                                            <select id="ddlMatiere" class="form-control form-control-sm"
+                                                style="height:36px;">
+                                                <option value="">-- Sélectionner une matière --</option>
+                                            </select>
                                         </div>
 
                                         <div
                                             style="display:flex; flex-direction:column; gap:5px; min-width:180px; flex:1;">
                                             <label
-                                                style="font-size:11px; font-weight:600; color:#6c757d; text-transform:uppercase; letter-spacing:.5px;">
-                                                Classe
-                                            </label>
-                                            <%-- Peuplé dynamiquement par JS via l'API --%>
-                                                <select id="ddlClasse" class="form-control form-control-sm"
-                                                    onchange="onClasseChange()" style="height:36px;">
-                                                    <option value="">-- Sélectionner une classe --</option>
-                                                </select>
+                                                style="font-size:11px; font-weight:600; color:#6c757d;">Classe</label>
+                                            <select id="ddlClasse" class="form-control form-control-sm" disabled
+                                                style="height:36px;">
+                                                <option value="">-- Choisissez une matière d'abord --</option>
+                                            </select>
                                         </div>
 
                                         <div style="display:flex; flex-direction:column; gap:5px; min-width:160px;">
                                             <label
-                                                style="font-size:11px; font-weight:600; color:#6c757d; text-transform:uppercase; letter-spacing:.5px;">
-                                                Période
-                                            </label>
+                                                style="font-size:11px; font-weight:600; color:#6c757d;">Période</label>
                                             <select id="ddlPeriode" class="form-control form-control-sm"
                                                 style="height:36px;">
                                                 <option value="">-- Sélectionner --</option>
                                                 <option value="T1">Trimestre 1</option>
                                                 <option value="T2">Trimestre 2</option>
                                                 <option value="T3">Trimestre 3</option>
-                                                <option value="Sem1">Semestre 1</option>
-                                                <option value="Sem2">Semestre 2</option>
                                             </select>
                                         </div>
 
                                         <button class="btn btn-primary btn-sm" id="btnAfficherListe"
-                                            style="height:36px; padding:0 18px; white-space:nowrap;">
+                                            style="height:36px; padding:0 18px;">
                                             <i class="fas fa-list"></i> Afficher la liste
                                         </button>
 
                                     </div>
+
+                                    <!-- LIGNE DES COEFFICIENTS GLOBAUX (visible seulement après affichage) -->
+                                    <div id="coeffGlobalPanel"
+                                        style="display:none; margin-top:15px; padding-top:12px; border-top:1px solid #dee2e6;">
+                                        <div style="display:flex; align-items:center; gap:20px; flex-wrap:wrap;">
+                                            <span style="font-size:12px; font-weight:600; color:#495057;">
+                                                <i class="fas fa-sliders-h"></i> Coefficients globaux :
+                                            </span>
+                                            <div class="coeff-global-group">
+                                                <label class="coeff-global-label">Note 1 :</label>
+                                                <input type="number" id="globalCoeff1"
+                                                    class="form-control form-control-sm coeff-global-input" value="1"
+                                                    step="1" min="0" max="10" style="width:80px;">
+                                            </div>
+                                            <div class="coeff-global-group">
+                                                <label class="coeff-global-label">Note 2 :</label>
+                                                <input type="number" id="globalCoeff2"
+                                                    class="form-control form-control-sm coeff-global-input" value="1"
+                                                    step="1" min="0" max="10" style="width:80px;">
+                                            </div>
+                                            <div class="coeff-global-group">
+                                                <label class="coeff-global-label">Examen :</label>
+                                                <input type="number" id="globalCoeffProjet"
+                                                    class="form-control form-control-sm coeff-global-input" value="2"
+                                                    step="1" min="0" max="10" style="width:80px;">
+                                            </div>
+                                            <button type="button" id="btnAppliquerCoeffs"
+                                                class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-check"></i> Appliquer à tous
+                                            </button>
+                                            <span id="coeffMessage" style="font-size:11px; color:#6c757d;"></span>
+                                        </div>
+                                    </div>
+
                                 </div>
                             </div>
 

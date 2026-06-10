@@ -45,6 +45,10 @@ public class AjouterPaiementFrais : IHttpHandler, IRequiresSessionState
             string modePaiement = GetStringValue(data, "modePaiement");
             string reference = GetStringValue(data, "reference");
             string commentaire = GetStringValue(data, "commentaire");
+            
+            // Optionnel : lire mois et annee si présents
+            string moisPaiement = GetStringValue(data, "moisPaiement");
+            string annee = GetStringValue(data, "annee");
 
             if (string.IsNullOrEmpty(matricule))
             {
@@ -89,7 +93,7 @@ public class AjouterPaiementFrais : IHttpHandler, IRequiresSessionState
                 {
                     try
                     {
-                        // 1. Récupérer les infos actuelles (avant mise à jour)
+                        // 1. Récupérer les infos actuelles
                         string selectSql = @"
                             SELECT ID, TOTAL, PAYE, CLASSE, NOM, ANNEE_ID 
                             FROM FRAIS 
@@ -126,19 +130,43 @@ public class AjouterPaiementFrais : IHttpHandler, IRequiresSessionState
                         }
 
                         decimal nouveauPaye = ancienPaye + montant;
-                        // RESTE, PROGRESSION, STATUT se calculent automatiquement via les colonnes calculées
 
-                        // 2. Mettre à jour FRAIS (UNIQUEMENT PAYE et les infos de paiement)
-                        // NE PAS toucher à RESTE, PROGRESSION, STATUT
-                        string updateSql = @"
-                            UPDATE FRAIS 
-                            SET PAYE = @nouveauPaye,
-                                MODEPAIE = @modePaiement,
-                                REFERENCE = @reference,
-                                COMMENTAIRE = @commentaire,
-                                DERNIER_PAIEMENT = @datePaiement,
-                                UPDATED_AT = GETDATE()
-                            WHERE ID = @fraisId";
+                        // 2. Vérifier si les colonnes MOIS et ANNEE existent
+                        bool hasMoisAnnee = false;
+                        string checkColumnsSql = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'FRAIS' AND COLUMN_NAME IN ('MOIS', 'ANNEE')";
+                        using (var checkCmd = new SqlCommand(checkColumnsSql, conn, transaction))
+                        {
+                            hasMoisAnnee = (int)checkCmd.ExecuteScalar() == 2;
+                        }
+
+                        // 3. Mettre à jour FRAIS
+                        string updateSql;
+                        if (hasMoisAnnee)
+                        {
+                            updateSql = @"
+                                UPDATE FRAIS 
+                                SET PAYE = @nouveauPaye,
+                                    MOIS = @moisPaiement,
+                                    ANNEE = @annee,
+                                    MODEPAIE = @modePaiement,
+                                    REFERENCE = @reference,
+                                    COMMENTAIRE = @commentaire,
+                                    DERNIER_PAIEMENT = @datePaiement,
+                                    UPDATED_AT = GETDATE()
+                                WHERE ID = @fraisId";
+                        }
+                        else
+                        {
+                            updateSql = @"
+                                UPDATE FRAIS 
+                                SET PAYE = @nouveauPaye,
+                                    MODEPAIE = @modePaiement,
+                                    REFERENCE = @reference,
+                                    COMMENTAIRE = @commentaire,
+                                    DERNIER_PAIEMENT = @datePaiement,
+                                    UPDATED_AT = GETDATE()
+                                WHERE ID = @fraisId";
+                        }
                         
                         using (var cmd = new SqlCommand(updateSql, conn, transaction))
                         {
@@ -148,11 +176,17 @@ public class AjouterPaiementFrais : IHttpHandler, IRequiresSessionState
                             cmd.Parameters.AddWithValue("@commentaire", string.IsNullOrEmpty(commentaire) ? (object)DBNull.Value : commentaire);
                             cmd.Parameters.AddWithValue("@datePaiement", datePaiement);
                             cmd.Parameters.AddWithValue("@fraisId", fraisId);
+                            
+                            if (hasMoisAnnee)
+                            {
+                                cmd.Parameters.AddWithValue("@moisPaiement", string.IsNullOrEmpty(moisPaiement) ? (object)DBNull.Value : moisPaiement);
+                                cmd.Parameters.AddWithValue("@annee", string.IsNullOrEmpty(annee) ? (object)DBNull.Value : annee);
+                            }
+                            
                             cmd.ExecuteNonQuery();
                         }
 
-                        // 3. Insérer dans l'historique des paiements
-                        // Note: NOUVEAU_TOTAL reste égal à ANCIEN_TOTAL (TOTAL ne change pas)
+                        // 4. Insérer dans l'historique
                         decimal ancienReste = ancienTotal - ancienPaye;
                         decimal nouveauReste = ancienTotal - nouveauPaye;
                         

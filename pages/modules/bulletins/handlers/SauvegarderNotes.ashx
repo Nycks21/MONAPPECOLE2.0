@@ -1,5 +1,4 @@
-<%@ WebHandler Language="C#" Class="SauvegarderNotes" %>
-
+<%@ WebHandler Language="C#" Class="SauvegarderCoeffs" %>
 using System;
 using System.Configuration;
 using System.Data.SqlClient;
@@ -8,10 +7,8 @@ using System.Web;
 using System.Web.Script.Serialization;
 using System.Web.SessionState;
 
-public class SauvegarderNotes : IHttpHandler, IRequiresSessionState
+public class SauvegarderCoeffs : IHttpHandler, IRequiresSessionState
 {
-    private static readonly string connStr = ConfigurationManager.ConnectionStrings["MaConnexion"].ConnectionString;
-
     public void ProcessRequest(HttpContext ctx)
     {
         ctx.Response.ContentType = "application/json";
@@ -28,79 +25,115 @@ public class SauvegarderNotes : IHttpHandler, IRequiresSessionState
         {
             string body;
             using (var reader = new StreamReader(ctx.Request.InputStream))
+            {
                 body = reader.ReadToEnd();
+            }
 
             var ser = new JavaScriptSerializer();
-            var payload = ser.Deserialize<NotesPayload>(body);
+            
+            // Extraire les valeurs manuellement
+            string matiereId = ExtractValue(body, "matiereId");
+            string classeId = ExtractValue(body, "classeId");
+            string periode = ExtractValue(body, "periode");
+            string coeff1Str = ExtractValue(body, "coeff1");
+            string coeff2Str = ExtractValue(body, "coeff2");
+            string coeffProjetStr = ExtractValue(body, "coeffProjet");
+            
+            int coeff1 = 1;
+            int coeff2 = 1;
+            int coeffProjet = 2;
+            
+            if (!string.IsNullOrEmpty(coeff1Str)) int.TryParse(coeff1Str, out coeff1);
+            if (!string.IsNullOrEmpty(coeff2Str)) int.TryParse(coeff2Str, out coeff2);
+            if (!string.IsNullOrEmpty(coeffProjetStr)) int.TryParse(coeffProjetStr, out coeffProjet);
 
+            if (string.IsNullOrEmpty(matiereId) || string.IsNullOrEmpty(classeId) || string.IsNullOrEmpty(periode))
+            {
+                ctx.Response.Write("{\"success\":false,\"message\":\"Paramètres manquants\"}");
+                return;
+            }
+
+            string connStr = ConfigurationManager.ConnectionStrings["MaConnexion"].ConnectionString;
+            
             using (var conn = new SqlConnection(connStr))
             {
                 conn.Open();
 
-                string sql = @"UPDATE BULLETINS 
-                               SET NOTE1 = @note1, 
-                                   NOTE2 = @note2, 
-                                   NOTE_PROJET = @noteProjet, 
-                                   APPRECIATION = @appreciation,
-                                   STATUT = 'En cours',
-                                   UPDATED_AT = GETDATE()
-                               WHERE ELEVE_MATRICULE = @matricule 
-                               AND MATIERE_ID = @matiereId 
-                               AND PERIODE = @periode";
+                string sql = @"
+                    IF EXISTS (SELECT 1 FROM BULLETINS_COEFFS 
+                               WHERE MATIERE_ID = @matiereId AND CLASSE_ID = @classeId AND PERIODE = @periode)
+                    BEGIN
+                        UPDATE BULLETINS_COEFFS 
+                        SET COEFF1 = @coeff1,
+                            COEFF2 = @coeff2,
+                            COEFF_PROJET = @coeffProjet,
+                            UPDATED_AT = GETDATE()
+                        WHERE MATIERE_ID = @matiereId AND CLASSE_ID = @classeId AND PERIODE = @periode
+                    END
+                    ELSE
+                    BEGIN
+                        INSERT INTO BULLETINS_COEFFS (ID, MATIERE_ID, CLASSE_ID, PERIODE, COEFF1, COEFF2, COEFF_PROJET, CREATED_AT, UPDATED_AT)
+                        VALUES (NEWID(), @matiereId, @classeId, @periode, @coeff1, @coeff2, @coeffProjet, GETDATE(), GETDATE())
+                    END";
 
                 using (var cmd = new SqlCommand(sql, conn))
                 {
-                    cmd.Parameters.AddWithValue("@note1", payload.NOTE1.HasValue ? (object)payload.NOTE1.Value : DBNull.Value);
-                    cmd.Parameters.AddWithValue("@note2", payload.NOTE2.HasValue ? (object)payload.NOTE2.Value : DBNull.Value);
-                    cmd.Parameters.AddWithValue("@noteProjet", payload.NOTE_PROJET.HasValue ? (object)payload.NOTE_PROJET.Value : DBNull.Value);
-                    cmd.Parameters.AddWithValue("@appreciation", string.IsNullOrEmpty(payload.APPRECIATION) ? (object)DBNull.Value : payload.APPRECIATION);
-                    cmd.Parameters.AddWithValue("@matricule", payload.ELEVE_MATRICULE);
-                    cmd.Parameters.AddWithValue("@matiereId", new Guid(payload.MATIERE_ID));
-                    cmd.Parameters.AddWithValue("@periode", payload.PERIODE);
-
-                    int rowsAffected = cmd.ExecuteNonQuery();
-                    
-                    if (rowsAffected == 0)
-                    {
-                        // Si le bulletin n'existe pas, le créer
-                        string insertSql = @"INSERT INTO BULLETINS 
-                            (ELEVE_MATRICULE, MATIERE_ID, NOTE1, NOTE2, NOTE_PROJET, APPRECIATION, PERIODE, STATUT, CREATED_AT, UPDATED_AT) 
-                            VALUES (@matricule, @matiereId, @note1, @note2, @noteProjet, @appreciation, @periode, 'En cours', GETDATE(), GETDATE())";
-                        
-                        using (var insertCmd = new SqlCommand(insertSql, conn))
-                        {
-                            insertCmd.Parameters.AddWithValue("@matricule", payload.ELEVE_MATRICULE);
-                            insertCmd.Parameters.AddWithValue("@matiereId", new Guid(payload.MATIERE_ID));
-                            insertCmd.Parameters.AddWithValue("@note1", payload.NOTE1.HasValue ? (object)payload.NOTE1.Value : DBNull.Value);
-                            insertCmd.Parameters.AddWithValue("@note2", payload.NOTE2.HasValue ? (object)payload.NOTE2.Value : DBNull.Value);
-                            insertCmd.Parameters.AddWithValue("@noteProjet", payload.NOTE_PROJET.HasValue ? (object)payload.NOTE_PROJET.Value : DBNull.Value);
-                            insertCmd.Parameters.AddWithValue("@appreciation", string.IsNullOrEmpty(payload.APPRECIATION) ? (object)DBNull.Value : payload.APPRECIATION);
-                            insertCmd.Parameters.AddWithValue("@periode", payload.PERIODE);
-                            insertCmd.ExecuteNonQuery();
-                        }
-                    }
+                    cmd.Parameters.AddWithValue("@matiereId", new Guid(matiereId));
+                    cmd.Parameters.AddWithValue("@classeId", Convert.ToInt32(classeId));
+                    cmd.Parameters.AddWithValue("@periode", periode);
+                    cmd.Parameters.AddWithValue("@coeff1", coeff1);
+                    cmd.Parameters.AddWithValue("@coeff2", coeff2);
+                    cmd.Parameters.AddWithValue("@coeffProjet", coeffProjet);
+                    cmd.ExecuteNonQuery();
                 }
             }
 
-            ctx.Response.Write("{\"success\":true,\"message\":\"Notes sauvegardées\"}");
+            ctx.Response.Write("{\"success\":true,\"message\":\"Coefficients sauvegardés\"}");
         }
         catch (Exception ex)
         {
             ctx.Response.StatusCode = 500;
-            ctx.Response.Write("{\"success\":false,\"message\":\"" + ex.Message.Replace("\"", "'") + "\"}");
+            string errorMsg = ex.Message.Replace("\"", "'").Replace("\r", " ").Replace("\n", " ");
+            ctx.Response.Write("{\"success\":false,\"message\":\"" + errorMsg + "\"}");
+        }
+    }
+
+    private string ExtractValue(string json, string key)
+    {
+        if (string.IsNullOrEmpty(json)) return "";
+        
+        string searchKey = "\"" + key + "\"";
+        int keyIndex = json.IndexOf(searchKey);
+        if (keyIndex == -1) return "";
+        
+        int colonIndex = json.IndexOf(":", keyIndex);
+        if (colonIndex == -1) return "";
+        
+        int startIndex = colonIndex + 1;
+        while (startIndex < json.Length && (json[startIndex] == ' ' || json[startIndex] == '\t'))
+        {
+            startIndex++;
+        }
+        
+        if (startIndex >= json.Length) return "";
+        
+        if (json[startIndex] == '"')
+        {
+            startIndex++;
+            int endIndex = json.IndexOf("\"", startIndex);
+            if (endIndex == -1) return "";
+            return json.Substring(startIndex, endIndex - startIndex);
+        }
+        else
+        {
+            int endIndex = startIndex;
+            while (endIndex < json.Length && json[endIndex] != ',' && json[endIndex] != '}' && json[endIndex] != ' ')
+            {
+                endIndex++;
+            }
+            return json.Substring(startIndex, endIndex - startIndex);
         }
     }
 
     public bool IsReusable { get { return false; } }
-    
-    private class NotesPayload
-    {
-        public string ELEVE_MATRICULE { get; set; }
-        public string MATIERE_ID { get; set; }
-        public string PERIODE { get; set; }
-        public decimal? NOTE1 { get; set; }
-        public decimal? NOTE2 { get; set; }
-        public decimal? NOTE_PROJET { get; set; }
-        public string APPRECIATION { get; set; }
-    }
 }

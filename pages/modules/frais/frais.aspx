@@ -688,6 +688,28 @@
                                 step="1000" min="0">
                         </div>
                         <div class="form-group">
+                            <label>Ecolage mois de *</label>
+                            <select id="paymentMonth" class="form-control">
+                                <option value="">-- Sélectionner le mois --</option>
+                                <option value="1">Janvier</option>
+                                <option value="2">Février</option>
+                                <option value="3">Mars</option>
+                                <option value="4">Avril</option>
+                                <option value="5">Mai</option>
+                                <option value="6">Juin</option>
+                                <option value="7">Juillet</option>
+                                <option value="8">Aout</option>
+                                <option value="9">Septembre</option>
+                                <option value="10">Octobre</option>
+                                <option value="11">Novembre</option>
+                                <option value="12">Décembre</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Année *</label>
+                            <input type="text" id="paymentYear" class="form-control" placeholder="Année">
+                        </div>
+                        <div class="form-group">
                             <label>Date du paiement *</label>
                             <input type="date" id="paymentDate" class="form-control">
                         </div>
@@ -736,6 +758,28 @@
                         <div class="form-group">
                             <label>Montant (Ar) *</label>
                             <input type="number" id="editMontant" class="form-control" step="1000" min="0">
+                        </div>
+                        <div class="form-group">
+                            <label>Ecolage mois de *</label>
+                            <select id="editPaymentMonth" class="form-control">
+                                <option value="">-- Sélectionner le mois --</option>
+                                <option value="1">Janvier</option>
+                                <option value="2">Février</option>
+                                <option value="3">Mars</option>
+                                <option value="4">Avril</option>
+                                <option value="5">Mai</option>
+                                <option value="6">Juin</option>
+                                <option value="7">Juillet</option>
+                                <option value="8">Aout</option>
+                                <option value="9">Septembre</option>
+                                <option value="10">Octobre</option>
+                                <option value="11">Novembre</option>
+                                <option value="12">Décembre</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Année *</label>
+                            <input type="text" id="editPaymentYear" class="form-control" placeholder="Année">
                         </div>
                         <div class="form-group">
                             <label>Date du paiement *</label>

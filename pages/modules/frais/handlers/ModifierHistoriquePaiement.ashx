@@ -28,7 +28,13 @@ public class ModifierHistoriquePaiement : IHttpHandler, IRequiresSessionState
                 body = reader.ReadToEnd();
 
             var ser = new JavaScriptSerializer();
-            var data = ser.Deserialize<dynamic>(body);
+            var data = ser.Deserialize<Dictionary<string, object>>(body);
+
+            if (data == null)
+            {
+                ctx.Response.Write("{\"success\":false,\"message\":\"Données invalides\"}");
+                return;
+            }
 
             Guid id = Guid.Parse(data["id"].ToString());
             string matricule = data["matricule"].ToString();
@@ -37,6 +43,10 @@ public class ModifierHistoriquePaiement : IHttpHandler, IRequiresSessionState
             string modePaie = data["modePaiement"].ToString();
             string reference = data.ContainsKey("reference") ? data["reference"].ToString() : "";
             string commentaire = data.ContainsKey("commentaire") ? data["commentaire"].ToString() : "";
+            
+            // NOUVEAUX CHAMPS
+            string moisPaiement = data.ContainsKey("moisPaiement") ? data["moisPaiement"].ToString() : "";
+            string annee = data.ContainsKey("annee") ? data["annee"].ToString() : "";
 
             if (montant <= 0)
             {
@@ -79,10 +89,12 @@ public class ModifierHistoriquePaiement : IHttpHandler, IRequiresSessionState
                             }
                         }
 
-                        // 2. Mettre à jour HISTORIQUE_PAIEMENTS
+                        // 2. Mettre à jour HISTORIQUE_PAIEMENTS avec MOIS et ANNEE
                         using (var cmd = new SqlCommand(@"
                             UPDATE HISTORIQUE_PAIEMENTS
                             SET MONTANT = @montant,
+                                MOIS = @moisPaiement,
+                                ANNEE = @annee,
                                 DATE_PAIEMENT = @datePaie,
                                 MODE_PAIEMENT = @mode,
                                 REFERENCE = @ref,
@@ -90,6 +102,8 @@ public class ModifierHistoriquePaiement : IHttpHandler, IRequiresSessionState
                             WHERE ID = @id", conn, transaction))
                         {
                             cmd.Parameters.AddWithValue("@montant", montant);
+                            cmd.Parameters.AddWithValue("@moisPaiement", string.IsNullOrEmpty(moisPaiement) ? (object)DBNull.Value : moisPaiement);
+                            cmd.Parameters.AddWithValue("@annee", string.IsNullOrEmpty(annee) ? (object)DBNull.Value : annee);
                             cmd.Parameters.AddWithValue("@datePaie", datePaie);
                             cmd.Parameters.AddWithValue("@mode", modePaie);
                             cmd.Parameters.AddWithValue("@ref", string.IsNullOrEmpty(reference) ? (object)DBNull.Value : reference);
@@ -98,18 +112,22 @@ public class ModifierHistoriquePaiement : IHttpHandler, IRequiresSessionState
                             cmd.ExecuteNonQuery();
                         }
 
-                        // 3. Mettre à jour PAYE dans FRAIS (RESTE, PROGRESSION, STATUT sont calculés automatiquement)
+                        // 3. Mettre à jour PAYE dans FRAIS
                         decimal nouveauPaye = ancienPaye - ancienMontant + montant;
                         
                         string updateFraisSql = @"
                             UPDATE FRAIS
                             SET PAYE = @nouveauPaye,
+                                MOIS = @moisPaiement,
+                                ANNEE = @annee,
                                 UPDATED_AT = GETDATE()
                             WHERE ID = @fraisId";
 
                         using (var cmd = new SqlCommand(updateFraisSql, conn, transaction))
                         {
                             cmd.Parameters.AddWithValue("@nouveauPaye", nouveauPaye);
+                            cmd.Parameters.AddWithValue("@moisPaiement", string.IsNullOrEmpty(moisPaiement) ? (object)DBNull.Value : moisPaiement);
+                            cmd.Parameters.AddWithValue("@annee", string.IsNullOrEmpty(annee) ? (object)DBNull.Value : annee);
                             cmd.Parameters.AddWithValue("@fraisId", fraisId);
                             cmd.ExecuteNonQuery();
                         }
@@ -117,7 +135,7 @@ public class ModifierHistoriquePaiement : IHttpHandler, IRequiresSessionState
                         transaction.Commit();
                         ctx.Response.Write("{\"success\":true,\"message\":\"Paiement modifié avec succès\"}");
                     }
-                    catch
+                    catch (Exception ex)
                     {
                         transaction.Rollback();
                         throw;
