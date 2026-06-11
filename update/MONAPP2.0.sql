@@ -486,8 +486,6 @@ BEGIN
         MATRICULE NVARCHAR(20) NOT NULL,
         NOM NVARCHAR(100) NOT NULL,
         CLASSE INT NOT NULL,
-        MOIS NVARCHAR(20) NULL,
-        ANNEE NVARCHAR(10) NULL,
 
         -- Valeurs numériques avec virgule (Precision 18, échelle 2)
         TOTAL DECIMAL(18, 2) NULL DEFAULT 0,

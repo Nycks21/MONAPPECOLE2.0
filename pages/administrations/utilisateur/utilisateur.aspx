@@ -144,7 +144,7 @@
                                     <table class="dash-table"
                                         style="table-layout: fixed; width: 1200px; min-width: 100%; border-collapse: collapse;">
                                         <thead>
-                                            <tr style="background-color: #f8f9fa; text-align: center;">
+                                            <tr style="background-color: #f8f9fa; text-align: left;">
                                                 <th style="width: 180px;">Nom d'utilisateur</th>
                                                 <th style="width: 180px;">Nom complet</th>
                                                 <th style="width: 180px;">Email</th>

@@ -536,7 +536,6 @@
                                             <option value="">Toutes les classes</option>
                                         </select>
                                         <div class="search-box">
-                                            <i class="fas fa-search"></i>
                                             <input type="text" class="form-control" id="fraisSearch"
                                                 placeholder="Rechercher élève, matricule...">
                                         </div>
@@ -628,7 +627,7 @@
                                                 <tr style="background-color: #f8f9fa; text-align: center;">
                                                     <th>Année scolaire</th>
                                                     <th>Classe</th>
-                                                    <th>Montant (Ar)</th>
+                                                    <th>Montant (MGA)</th>
                                                     <th>Description</th>
                                                     <th>Statut</th>
                                                     <th>Actions</th>
@@ -678,12 +677,12 @@
                         </div>
                         <div id="paymentInfo" class="payment-detail" style="display: none;">
                             <p><strong>Informations du compte :</strong></p>
-                            <p>Montant total: <span id="infoTotal">0</span> Ar</p>
-                            <p>Déjà payé: <span id="infoPaye">0</span> Ar</p>
-                            <p>Reste à payer: <span id="infoReste" style="font-weight: bold;">0</span> Ar</p>
+                            <p>Montant total: <span id="infoTotal">0</span> MGA</p>
+                            <p>Déjà payé: <span id="infoPaye">0</span> MGA</p>
+                            <p>Reste à payer: <span id="infoReste" style="font-weight: bold;">0</span> MGA</p>
                         </div>
                         <div class="form-group">
-                            <label>Montant du paiement (Ar) *</label>
+                            <label>Montant du paiement (MGA) *</label>
                             <input type="number" id="paymentAmount" class="form-control" placeholder="Saisir le montant"
                                 step="1000" min="0">
                         </div>
@@ -691,18 +690,18 @@
                             <label>Ecolage mois de *</label>
                             <select id="paymentMonth" class="form-control">
                                 <option value="">-- Sélectionner le mois --</option>
-                                <option value="1">Janvier</option>
-                                <option value="2">Février</option>
-                                <option value="3">Mars</option>
-                                <option value="4">Avril</option>
-                                <option value="5">Mai</option>
-                                <option value="6">Juin</option>
-                                <option value="7">Juillet</option>
-                                <option value="8">Aout</option>
-                                <option value="9">Septembre</option>
-                                <option value="10">Octobre</option>
-                                <option value="11">Novembre</option>
-                                <option value="12">Décembre</option>
+                                <option value="Janvier">Janvier</option>
+                                <option value="Février">Février</option>
+                                <option value="Mars">Mars</option>
+                                <option value="Avril">Avril</option>
+                                <option value="Mai">Mai</option>
+                                <option value="Juin">Juin</option>
+                                <option value="Juillet">Juillet</option>
+                                <option value="Aout">Aout</option>
+                                <option value="Septembre">Septembre</option>
+                                <option value="Octobre">Octobre</option>
+                                <option value="Novembre">Novembre</option>
+                                <option value="Décembre">Décembre</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -756,25 +755,25 @@
                                 style="background:#e9ecef;">
                         </div>
                         <div class="form-group">
-                            <label>Montant (Ar) *</label>
+                            <label>Montant (MGA) *</label>
                             <input type="number" id="editMontant" class="form-control" step="1000" min="0">
                         </div>
                         <div class="form-group">
                             <label>Ecolage mois de *</label>
                             <select id="editPaymentMonth" class="form-control">
                                 <option value="">-- Sélectionner le mois --</option>
-                                <option value="1">Janvier</option>
-                                <option value="2">Février</option>
-                                <option value="3">Mars</option>
-                                <option value="4">Avril</option>
-                                <option value="5">Mai</option>
-                                <option value="6">Juin</option>
-                                <option value="7">Juillet</option>
-                                <option value="8">Aout</option>
-                                <option value="9">Septembre</option>
-                                <option value="10">Octobre</option>
-                                <option value="11">Novembre</option>
-                                <option value="12">Décembre</option>
+                                <option value="Janvier">Janvier</option>
+                                <option value="Février">Février</option>
+                                <option value="Mars">Mars</option>
+                                <option value="Avril">Avril</option>
+                                <option value="Mai">Mai</option>
+                                <option value="Juin">Juin</option>
+                                <option value="Juillet">Juillet</option>
+                                <option value="Aout">Aout</option>
+                                <option value="Septembre">Septembre</option>
+                                <option value="Octobre">Octobre</option>
+                                <option value="Novembre">Novembre</option>
+                                <option value="Décembre">Décembre</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -836,7 +835,7 @@
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>Montant (Ar) *</label>
+                            <label>Montant (MGA) *</label>
                             <input type="number" id="tarifMontant" class="form-control" placeholder="Saisir le montant"
                                 step="1000" min="0">
                         </div>

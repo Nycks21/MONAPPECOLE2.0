@@ -40,7 +40,8 @@ protected void Page_Load(object sender, EventArgs e)
                 query += ", ISNULL(MENU_PERMISSIONS, '[]') AS MENU_PERMISSIONS";
             }
             
-            query += " FROM USERS ORDER BY NOM ASC";
+            // EXCLURE les SuperAdmin (ROLEID = 0) de la liste
+            query += " FROM USERS WHERE ROLEID != 0 ORDER BY NOM ASC";
 
             using (SqlCommand cmd = new SqlCommand(query, conn))
             using (SqlDataReader reader = cmd.ExecuteReader())
