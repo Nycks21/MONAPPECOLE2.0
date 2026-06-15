@@ -1,10 +1,8 @@
-﻿﻿﻿<%@ Page Language="C#" ResponseEncoding="utf-8" EnableSessionState="True" %>
+﻿﻿<%@ Page Language="C#" ResponseEncoding="utf-8" EnableSessionState="True" %>
 <%@ Import Namespace="System.Data.SqlClient" %>
 <%@ Import Namespace="System.Web.Script.Serialization" %>
 <%@ Import Namespace="System.Configuration" %>
 <%@ Import Namespace="System.Collections.Generic" %>
-<%@ Import Namespace="System.Security.Cryptography" %>
-<%@ Import Namespace="System.Text" %>
 
 <script runat="server">
 private string connStr = ConfigurationManager.ConnectionStrings["MaConnexion"].ConnectionString;
@@ -12,13 +10,12 @@ private string connStr = ConfigurationManager.ConnectionStrings["MaConnexion"].C
 protected void Page_Load(object sender, EventArgs e)
 {
     Response.ContentType = "application/json";
-    Response.ContentEncoding = System.Text.Encoding.UTF8;
+    Response.ContentEncoding = new System.Text.UTF8Encoding(false);
     Response.Clear();
     Response.Cache.SetNoStore();
 
     try
     {
-        // Gestion des requêtes OPTIONS (CORS preflight)
         if (Request.HttpMethod == "OPTIONS")
         {
             Response.StatusCode = 200;
@@ -33,7 +30,6 @@ protected void Page_Load(object sender, EventArgs e)
             return;
         }
 
-        // Lire le corps de la requête
         string jsonString = "";
         using (var reader = new System.IO.StreamReader(Request.InputStream))
         {
@@ -65,7 +61,6 @@ protected void Page_Load(object sender, EventArgs e)
             return;
         }
 
-        // Extraction des valeurs avec vérification
         string username = GetStringValue(data, "USERNAME");
         string nom = GetStringValue(data, "NOM");
         string password = GetStringValue(data, "PWD");
@@ -74,9 +69,8 @@ protected void Page_Load(object sender, EventArgs e)
         int roleId = GetIntValue(data, "ROLEID", 1);
         int active = GetIntValue(data, "ACTIVE", 1);
         
-        // Récupérer les permissions si présentes
         List<string> permissions = new List<string>();
-        if (data.ContainsKey("PERMISSIONS"))
+        if (data.ContainsKey("PERMISSIONS") && data["PERMISSIONS"] != null)
         {
             object permsObj = data["PERMISSIONS"];
             if (permsObj is ArrayList)
@@ -88,7 +82,6 @@ protected void Page_Load(object sender, EventArgs e)
             }
         }
 
-        // Validation
         if (string.IsNullOrEmpty(username))
         {
             WriteResponse(false, "Le nom d'utilisateur est requis");
@@ -115,21 +108,16 @@ protected void Page_Load(object sender, EventArgs e)
             return;
         }
 
-        // Validation email simple
         if (!IsValidEmail(email))
         {
             WriteResponse(false, "Format d'email invalide");
             return;
         }
 
-        // Hash du mot de passe
-        string hashedPassword = HashPassword(password);
-
         using (SqlConnection conn = new SqlConnection(connStr))
         {
             conn.Open();
 
-            // Vérifier si l'utilisateur existe déjà
             using (SqlCommand checkCmd = new SqlCommand("SELECT COUNT(*) FROM USERS WHERE USERNAME = @USERNAME", conn))
             {
                 checkCmd.Parameters.AddWithValue("@USERNAME", username);
@@ -141,35 +129,43 @@ protected void Page_Load(object sender, EventArgs e)
                 }
             }
 
-            // Insérer l'utilisateur
+            // Sérialiser les permissions en JSON
+            string permissionsJson = serializer.Serialize(permissions);
+
             using (SqlCommand cmd = new SqlCommand(
-                @"INSERT INTO USERS (USERNAME, NOM, PWD, EMAIL, ROLEID, TELEPHONE, ACTIVE, CREATED_AT)
+                @"INSERT INTO USERS (USERNAME, NOM, PWD, EMAIL, ROLEID, TELEPHONE, ACTIVE, MENU_PERMISSIONS, CREATED_AT, UPDATED_AT)
                   OUTPUT INSERTED.IDUSER
-                  VALUES (@USERNAME, @NOM, @PWD, @EMAIL, @ROLEID, @TELEPHONE, @ACTIVE, GETDATE())", conn))
+                  VALUES (@USERNAME, @NOM, @PWD, @EMAIL, @ROLEID, @TELEPHONE, @ACTIVE, @MENU_PERMISSIONS, GETDATE(), GETDATE())", conn))
             {
                 cmd.Parameters.AddWithValue("@USERNAME", username);
                 cmd.Parameters.AddWithValue("@NOM", nom);
-                cmd.Parameters.AddWithValue("@PWD", hashedPassword);
+                cmd.Parameters.AddWithValue("@PWD", password);  // Mot de passe en clair
                 cmd.Parameters.AddWithValue("@EMAIL", email);
                 cmd.Parameters.AddWithValue("@ROLEID", roleId);
                 cmd.Parameters.AddWithValue("@TELEPHONE", string.IsNullOrEmpty(telephone) ? (object)DBNull.Value : telephone);
                 cmd.Parameters.AddWithValue("@ACTIVE", active);
+                cmd.Parameters.AddWithValue("@MENU_PERMISSIONS", permissionsJson);
 
                 int newUserId = (int)cmd.ExecuteScalar();
-                
-                // Sauvegarder les permissions si présentes
-                if (permissions.Count > 0)
-                {
-                    SavePermissions(newUserId, permissions, conn);
-                }
                 
                 WriteResponse(true, "Utilisateur ajouté avec succès", newUserId);
             }
         }
     }
-    catch (SqlException ex) when (ex.Number == 2627)
+    catch (SqlException ex)
     {
-        WriteResponse(false, "Ce nom d'utilisateur existe déjà");
+        if (ex.Number == 2627)
+        {
+            WriteResponse(false, "Ce nom d'utilisateur existe déjà");
+        }
+        else if (ex.Number == 547)
+        {
+            WriteResponse(false, "Violation de contrainte de clé étrangère");
+        }
+        else
+        {
+            WriteResponse(false, "Erreur SQL: " + ex.Message);
+        }
     }
     catch (Exception ex)
     {
@@ -214,28 +210,6 @@ private bool IsValidEmail(string email)
     }
 }
 
-private void SavePermissions(int userId, List<string> permissions, SqlConnection conn)
-{
-    // Supprimer les anciennes permissions
-    using (SqlCommand deleteCmd = new SqlCommand("DELETE FROM USER_PERMISSIONS WHERE USER_ID = @USER_ID", conn))
-    {
-        deleteCmd.Parameters.AddWithValue("@USER_ID", userId);
-        deleteCmd.ExecuteNonQuery();
-    }
-
-    // Ajouter les nouvelles permissions
-    foreach (string perm in permissions)
-    {
-        using (SqlCommand insertCmd = new SqlCommand(
-            "INSERT INTO USER_PERMISSIONS (USER_ID, PERMISSION_NAME) VALUES (@USER_ID, @PERMISSION_NAME)", conn))
-        {
-            insertCmd.Parameters.AddWithValue("@USER_ID", userId);
-            insertCmd.Parameters.AddWithValue("@PERMISSION_NAME", perm);
-            insertCmd.ExecuteNonQuery();
-        }
-    }
-}
-
 private void WriteResponse(bool success, string message, int userId = 0)
 {
     var serializer = new JavaScriptSerializer();
@@ -247,14 +221,5 @@ private void WriteResponse(bool success, string message, int userId = 0)
         response["userId"] = userId;
     }
     Response.Write(serializer.Serialize(response));
-}
-
-private string HashPassword(string password)
-{
-    using (SHA256 sha256 = SHA256.Create())
-    {
-        byte[] hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
-        return Convert.ToBase64String(hashedBytes);
-    }
 }
 </script>

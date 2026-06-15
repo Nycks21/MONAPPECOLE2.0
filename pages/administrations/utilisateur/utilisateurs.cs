@@ -18,5 +18,7 @@ public partial class utilisateurs : System.Web.UI.Page
             string script = "document.body.classList.add('superadmin-mode');";
             ClientScript.RegisterStartupScript(this.GetType(), "superadmin", script, true);
         }
+        
+        hfUserRole.Value = AuthHelper.GetUserRole();
     }
 }

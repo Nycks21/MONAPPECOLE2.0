@@ -17,6 +17,7 @@
 
     <body class="hold-transition" data-version="<%=AuthHelper.Version %>">
         <form id="form1" runat="server">
+            <asp:HiddenField ID="hfUserRole" runat="server" />
             <div class="wrapper">
 
                 <!-- ═══ TOPBAR ═══ -->
@@ -29,6 +30,13 @@
                         </li>
                     </ul>
                     <ul class="navbar-nav">
+                        <li class="nav-item">
+                            <span><i class="fas fa-moon"></i> Mode sombre</span>
+                            <label class="switch">
+                                <input type="checkbox" id="toggleDarkMode">
+                                <span class="slider round"></span>
+                            </label>
+                        </li>
                         <!-- Notifications -->
                         <li class="nav-item">
                             <a class="nav-link" id="notifToggle" title="Notifications">
@@ -60,6 +68,12 @@
                         <li class="nav-item">
                             <a class="nav-link" id="fullscreenToggle" title="Plein écran">
                                 <i class="fas fa-expand-arrows-alt"></i>
+                            </a>
+                        </li>
+
+                        <li class="nav-item">
+                            <a class="nav-link" id="toggleSidebarBtn" title="Paramètres" style="cursor: pointer;">
+                                <i class="fas fa-cog"></i>
                             </a>
                         </li>
                     </ul>
@@ -182,12 +196,15 @@
                             </div>
                         </div>
                         <div class="row">
-                            <div class="col-md-6">
+                            <div class="col-md-12">
                                 <div class="form-group">
                                     <label>Nom complet *</label>
                                     <input type="text" id="Nom" class="form-control" placeholder="Nom et prénom">
                                 </div>
                             </div>
+                        </div>
+
+                        <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label>Email *</label>
@@ -195,8 +212,7 @@
                                         placeholder="email@ecole.com">
                                 </div>
                             </div>
-                        </div>
-                        <div class="row">
+
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label>Rôle</label>
@@ -205,11 +221,23 @@
                                         <option value="Professeur">Professeur</option>
                                         <option value="Secrétaire">Secrétaire</option>
                                         <option value="Comptable">Comptable</option>
-                                        <option value="CPE">CPE</option>
-                                        <option value="Parent">Parent</option>
+                                        <option value="User">User</option>
                                     </select>
                                 </div>
                             </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label>Mot de passe</label>
+                                    <input type="password" id="userPassword" class="form-control"
+                                        placeholder="Mot de passe">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label>Téléphone</label>
@@ -217,15 +245,7 @@
                                         placeholder="032 12 345 67">
                                 </div>
                             </div>
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label>Mot de passe</label>
-                                    <input type="password" id="userPassword" class="form-control"
-                                        placeholder="Mot de passe">
-                                </div>
-                            </div>
+
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label>Statut</label>
@@ -236,14 +256,16 @@
                                 </div>
                             </div>
                         </div>
+
                         <!-- Dans la modal addUserModal, après le champ Statut, ajoutez : -->
 
                         <div class="row">
                             <div class="col-md-12">
                                 <div class="form-group">
                                     <label style="display: block; margin-bottom: 10px; font-weight: 600;">
-                                        <i class="fas fa-lock"></i> Permissions et accès :
+                                        <i class="fas fa-lock"></i> Permissions et accès au menu :
                                     </label>
+
                                     <div
                                         style="display: flex; flex-wrap: wrap; gap: 15px; padding: 10px; background: #f8f9fa; border-radius: 8px;">
                                         <div style="display: flex; align-items: center;">
@@ -317,6 +339,7 @@
                             </div>
                         </div>
                     </div>
+
                     <div class="modal-footer">
                         <button class="btn btn-primary" onclick="saveUser()"><i class="fas fa-save"></i>
                             Enregistrer</button>
@@ -325,6 +348,52 @@
                 </div>
             </div>
 
+            <!-- Control Sidebar (Barre latérale droite) -->
+            <aside class="control-sidebar control-sidebar-dark" id="controlSidebar"
+                style="position: fixed;top: 0;right: -300px;width: 300px;padding: 20px;height: 100%;background: #343a40;color: #fff;transition: right 0.3s ease-in-out;z-index: 1050;box-shadow: -2px 0 5px rgba(0,0,0,0.2);overflow-y: auto;">
+                <div class="p-3">
+                    <div
+                        style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #4a5259; padding-bottom: 10px; margin-bottom: 15px;">
+                        <h5 style="margin: 0; color: #fff;">
+                            <i class="fas fa-cog"></i> Paramètres
+                        </h5>
+                        <button type="button" id="closeSidebarBtn"
+                            style="background: none; border: none; color: #fff; font-size: 20px; cursor: pointer;">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+
+                    <div id="licenceExpirationInfo" class="mb-3" style="color: #adb5bd; font-size: 0.85em;">
+                        <i class="fas fa-calendar-alt"></i> Licence expirée le :
+                        <strong id="expirationDateStr">
+                            <%= AuthHelper.GetExpirationDateString() %>
+                        </strong>
+                    </div>
+
+                    <div class="mb-3" style="color: #adb5bd; font-size: 0.85em;">
+                        <i class="fas fa-users"></i> Utilisateur max :
+                            <strong id="maxUsersCount">
+                                <%= AuthHelper.GetMaxUsersString() %>
+                            </strong>
+                    </div>
+
+                    <hr style="border-color: #4a5259;">
+
+                    <div class="mb-3" style="padding: 10px;">
+                        <button type="button" id="btnBackup" class="btn btn-danger btn-block"
+                            onclick="backupDatabase()">
+                            <i class="fas fa-database"></i> Télécharger la sauvegarde
+                        </button>
+                    </div>
+
+                    <hr style="border-color: #4a5259;">
+                </div>
+            </aside>
+
+            <!-- Overlay pour fermer le sidebar quand on clique à l'extérieur -->
+            <div id="sidebarOverlay"
+                style="position: fixed;top: 0;left: 0;width: 100%;height: 100%;background: rgba(0,0,0,0.5);z-index: 1040;display: none;cursor: pointer;">
+            </div>
 
             <!-- ═══ SPINNER ═══ -->
             <div id="spinnerOverlay" aria-hidden="true" style="display:none;visibility:hidden;">
