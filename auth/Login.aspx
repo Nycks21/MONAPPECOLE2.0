@@ -29,6 +29,7 @@
             <div class="card-body">
                 <p class="login-box-msg">Connexion</p>
                 <form id="form1" runat="server">
+                    <asp:HiddenField ID="hfTimerEnabled" runat="server" Value="false" />
                     <asp:Label ID="lblLicenceInfo" runat="server" ForeColor="Red" CssClass="mb-2 d-block" Font-Bold="true"></asp:Label>
                     <asp:Label ID="lblUserLimitInfo" runat="server" ForeColor="Red" CssClass="mb-2 d-block" Font-Bold="true"></asp:Label>
                     <asp:Label ID="lblMessage" runat="server" ForeColor="Red" CssClass="mb-2 d-block"></asp:Label>

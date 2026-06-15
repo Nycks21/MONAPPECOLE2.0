@@ -2,14 +2,7 @@
    global.js — Gestion Scolaire
    Version unifiée — conflits résolus, logiques préservées
    ═══════════════════════════════════════════════════════════════
-
-   Comportement sidebar :
-     • Desktop  : .main-sidebar  ↔  .sidebar-collapsed  (250px → 60px)
-                  .content-wrapper ↔  .sidebar-collapsed  (margin-left suit)
-                  .main-header  :  left suit via CSS (left: var(--sidebar-w))
-     • Mobile   : .main-sidebar  ↔  .sidebar-open  (slide-in depuis -250px)
-                  + overlay pour fermer en cliquant dehors ou swipe gauche
-═══════════════════════════════════════════════════════════════ */
+*/
 
 (function () {
     'use strict';
@@ -207,7 +200,6 @@
         var currentPage = currentPath.split('/').pop();
         var activeMenu = null;
 
-        // Mapping des pages vers les codes menu
         var menuMapping = {
             'index.aspx': 'dashboard',
             'eleves.aspx': 'eleves',
@@ -226,38 +218,25 @@
 
         activeMenu = menuMapping[currentPage];
 
-        // Cas particulier pour dashboard
         if (currentPage === '' || currentPage === 'index.aspx' || currentPage === 'dashboard' || currentPath === '/' || currentPath.indexOf('dashboard') !== -1) {
             activeMenu = 'dashboard';
         }
 
-        // =====================================================
-        // CAS PARTICULIERS POUR TOUS LES CHEMINS
-        // =====================================================
-
-        // Modules
         if (currentPath.indexOf('/eleves/') !== -1) activeMenu = 'eleves';
         if (currentPath.indexOf('/absences/') !== -1) activeMenu = 'absences';
         if (currentPath.indexOf('/bulletins/') !== -1) activeMenu = 'bulletins';
         if (currentPath.indexOf('/frais/') !== -1) activeMenu = 'frais';
-
-        // Paramètres
         if (currentPath.indexOf('/niveaux/') !== -1) activeMenu = 'niveaux';
         if (currentPath.indexOf('/salles/') !== -1) activeMenu = 'salles';
         if (currentPath.indexOf('/classes/') !== -1) activeMenu = 'classes';
         if (currentPath.indexOf('/matieres/') !== -1) activeMenu = 'matieres';
-
-        // Administrations
         if (currentPath.indexOf('/utilitaires/') !== -1) activeMenu = 'importation';
         if (currentPath.indexOf('/annee/') !== -1) activeMenu = 'annees';
         if (currentPath.indexOf('/utilisateur/') !== -1) activeMenu = 'utilisateurs';
         if (currentPath.indexOf('/requete/') !== -1) activeMenu = 'requetes';
-
-        // Accueil
         if (currentPath.indexOf('/dashboard/') !== -1) activeMenu = 'dashboard';
         if (currentPath.indexOf('/accueil/') !== -1) activeMenu = 'dashboard';
 
-        // Appliquer la classe active
         var menuLinks = document.querySelectorAll('.sidebar .nav-link');
         for (var i = 0; i < menuLinks.length; i++) {
             var link = menuLinks[i];
@@ -297,9 +276,7 @@
        BADGE VERSION
     ══════════════════════════════════════════════════ */
     function injectVersionBadge() {
-        var version = document.body
-            ? document.body.getAttribute('data-version')
-            : null;
+        var version = document.body ? document.body.getAttribute('data-version') : null;
         if (!version || document.getElementById('appVersionBadge')) return;
 
         var badge = document.createElement('div');
@@ -318,7 +295,6 @@
         bindNavLinks();
         injectVersionBadge();
 
-        // Initialiser le menu actif et les effets de survol
         setTimeout(function () {
             setActiveMenu();
             addMenuHoverEffect();
@@ -331,16 +307,14 @@
         init();
     }
 
-    // Exposer les fonctions pour les appels ultérieurs
     window.setActiveMenu = setActiveMenu;
     window.refreshActiveMenu = function () {
         setTimeout(setActiveMenu, 50);
     };
-
 })();
 
 /* ══════════════════════════════════════════════════
-   i18n — Exposé globalement (toutes les pages)
+   i18n — Exposé globalement
 ══════════════════════════════════════════════════ */
 var i18n = {};
 
@@ -391,9 +365,6 @@ function showSpinner() {
 
 function hideSpinner() { forceHideSpinner(); }
 
-// ─────────────────────────────────────────────
-// AJAX — helper générique
-// ─────────────────────────────────────────────
 function ajax(url, payload) {
     return fetch(url, {
         method: 'POST',
@@ -413,7 +384,6 @@ function initDarkMode() {
     const toggle = document.getElementById('toggleDarkMode');
     if (!toggle) return;
 
-    // Vérifier si un mode est sauvegardé dans localStorage
     const savedMode = localStorage.getItem('darkMode');
     if (savedMode === 'enabled') {
         document.body.classList.add('dark-mode');
@@ -431,9 +401,10 @@ function initDarkMode() {
     });
 }
 
-// ════════════════════════════════════════════════════════════════
+// ============================================================================
 // TREE VIEW / ACCORDÉON
-// ════════════════════════════════════════════════════════════════
+// ============================================================================
+
 function initTreeview() {
     var treeviewToggles = document.querySelectorAll('.treeview-toggle');
 
@@ -464,193 +435,144 @@ function handleTreeviewClick(e) {
 
 document.addEventListener('DOMContentLoaded', function () {
     initTreeview();
+    initDarkMode();
 });
 
-// ============================================================
-// MAINTENANCE - DÉCONNECTION AUTOMATIQUE
-// ============================================================
+// ============================================================================
+// MAINTENANCE - BLOCAGE ET DÉCONNECTION (VERSION UNIFIÉE)
+// ============================================================================
 
-let maintenanceCheckerInterval = null;
-let maintenanceCountdownInterval = null;
+let globalMaintenanceCheck = null;
+let globalCountdownInterval = null;
 
 function startMaintenanceChecker() {
-    if (maintenanceCheckerInterval) clearInterval(maintenanceCheckerInterval);
-
-    maintenanceCheckerInterval = setInterval(async () => {
+    if (globalMaintenanceCheck) clearInterval(globalMaintenanceCheck);
+    
+    globalMaintenanceCheck = setInterval(async () => {
         try {
-            const response = await fetch('api/CheckMaintenance.aspx');
+            const response = await fetch('api/CheckBlockStatus.aspx');
             const data = await response.json();
-
-            if (data.isMaintenance && data.maintenanceTime) {
-                showMaintenanceWarning(data.maintenanceTime);
+            
+            if (data.isBlocked && data.blockedUntil) {
+                showBlockedBanner(data.blockedUntil);
             }
         } catch (e) {
-            console.log('Erreur vérification maintenance:', e);
+            // Ignorer
         }
-    }, 10000); // Vérifier toutes les 10 secondes
+    }, 3000);
 }
 
-function showMaintenanceWarning(maintenanceTime) {
-    // Vérifier si le message existe déjà
-    if (document.getElementById('maintenanceBanner')) return;
-
-    // Récupérer la version depuis l'attribut data-version ou l'élément footer
-    const versionElement = document.querySelector('[data-version]');
-    const version = versionElement ? versionElement.getAttribute('data-version') : '2.1.16';
-
-    // Créer la bannière de maintenance
+function showBlockedBanner(blockedUntil) {
+    if (document.getElementById('blockedBannerGlobal')) return;
+    
     const banner = document.createElement('div');
-    banner.id = 'maintenanceBanner';
+    banner.id = 'blockedBannerGlobal';
     banner.style.cssText = `
         position: fixed;
-        bottom: 0;
+        top: 0;
         left: 0;
         right: 0;
         background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
         color: white;
-        padding: 12px 20px;
+        padding: 20px;
         z-index: 99999;
-        box-shadow: 0 -4px 15px rgba(0,0,0,0.3);
         font-family: 'Segoe UI', Arial, sans-serif;
         text-align: center;
-        animation: slideUp 0.5s ease;
+        box-shadow: 0 2px 15px rgba(0,0,0,0.3);
+        animation: slideDownGlobal 0.5s ease;
     `;
-
+    
     banner.innerHTML = `
-        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
-            <div style="display: flex; align-items: center; gap: 12px;">
-                <i class="fas fa-database" style="font-size: 24px;"></i>
-                <div style="text-align: left;">
-                    <div style="font-weight: bold; font-size: 14px;">⚠️ MAINTENANCE PROGRAMMÉE</div>
-                    <div style="font-size: 12px; opacity: 0.9;">La base de données sera sauvegardée</div>
-                </div>
+        <div style="display: flex; align-items: center; justify-content: center; gap: 20px; flex-wrap: wrap;">
+            <i class="fas fa-database" style="font-size: 32px;"></i>
+            <div>
+                <strong style="font-size: 18px;">🔒 MAINTENANCE EN COURS</strong><br>
+                <span style="font-size: 14px;">Sauvegarde de la base de données en cours</span>
             </div>
-            <div style="display: flex; align-items: center; gap: 20px;">
-                <div style="text-align: right;">
-                    <div style="font-size: 11px; opacity: 0.8;">Déconnexion automatique dans</div>
-                    <div id="maintenanceCountdownDisplay" style="font-size: 28px; font-weight: bold; font-family: monospace;">--:--</div>
-                </div>
-                <div style="width: 1px; height: 40px; background: rgba(255,255,255,0.3);"></div>
-                <div style="text-align: left;">
-                    <div style="font-size: 10px; opacity: 0.7;">Version</div>
-                    <div style="font-size: 12px; font-weight: bold;">v${version}</div>
-                </div>
+            <div style="background: rgba(255,255,255,0.2); padding: 10px 20px; border-radius: 50px;">
+                <span style="font-size: 14px;">Reconnexion dans</span><br>
+                <span id="globalCountdownDisplay" style="font-size: 28px; font-weight: bold; font-family: monospace;">--:--</span>
             </div>
         </div>
-        <div style="margin-top: 10px; height: 3px; background: rgba(255,255,255,0.3); border-radius: 3px; overflow: hidden;">
-            <div id="maintenanceProgressBar" style="width: 0%; height: 100%; background: white; transition: width 1s linear;"></div>
+        <div style="width: 100%; height: 4px; background: rgba(255,255,255,0.3); border-radius: 4px; margin-top: 15px;">
+            <div id="globalProgressBar" style="width: 0%; height: 100%; background: #ffc107; transition: width 1s linear;"></div>
         </div>
     `;
-
+    
     document.body.appendChild(banner);
-
-    // Ajouter les styles d'animation
-    if (!document.getElementById('maintenanceStyles')) {
-        const style = document.createElement('style');
-        style.id = 'maintenanceStyles';
-        style.textContent = `
-            @keyframes slideUp {
-                from { transform: translateY(100%); opacity: 0; }
-                to { transform: translateY(0); opacity: 1; }
-            }
-            @keyframes pulse {
-                0%, 100% { opacity: 1; }
-                50% { opacity: 0.7; }
-            }
-        `;
-        document.head.appendChild(style);
-    }
-
-    // Démarrer le compte à rebours
-    startMaintenanceCountdown(maintenanceTime);
+    
+    // Désactiver l'interface
+    document.querySelectorAll('button, a, input, select, .nav-link, .btn').forEach(el => {
+        el.style.pointerEvents = 'none';
+        el.style.opacity = '0.5';
+    });
+    
+    startGlobalCountdown(blockedUntil);
 }
 
-function startMaintenanceCountdown(targetTime) {
-    if (maintenanceCountdownInterval) clearInterval(maintenanceCountdownInterval);
-
-    const target = new Date();
-    const [hours, minutes] = targetTime.split(':');
-    target.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-
-    // Si l'heure est déjà passée, ajouter un jour
-    if (target < new Date()) {
-        target.setDate(target.getDate() + 1);
-    }
-
-    maintenanceCountdownInterval = setInterval(() => {
+function startGlobalCountdown(targetTime) {
+    if (globalCountdownInterval) clearInterval(globalCountdownInterval);
+    
+    const target = new Date(targetTime);
+    const maxDuration = 60 * 1000; // 1 MINUTE (60 secondes)
+    
+    globalCountdownInterval = setInterval(() => {
         const now = new Date();
         const diff = target - now;
-
+        
         if (diff <= 0) {
-            clearInterval(maintenanceCountdownInterval);
-            // Déconnecter l'utilisateur
-            disconnectUserForMaintenance();
+            clearInterval(globalCountdownInterval);
+            window.location.reload();
         } else {
-            const minutesLeft = Math.floor(diff / 60000);
-            const secondsLeft = Math.floor((diff % 60000) / 1000);
-
-            const display = document.getElementById('maintenanceCountdownDisplay');
-            if (display) {
-                display.textContent = `${String(minutesLeft).padStart(2, '0')}:${String(secondsLeft).padStart(2, '0')}`;
-
-                // Faire clignoter si moins de 30 secondes
-                if (diff < 30000) {
-                    display.style.animation = 'pulse 1s infinite';
-                    display.style.color = '#ffeb3b';
-                }
+            const secondsLeft = Math.floor(diff / 1000);
+            const minutesLeft = Math.floor(secondsLeft / 60);
+            const secsLeft = secondsLeft % 60;
+            
+            const countdownEl = document.getElementById('globalCountdownDisplay');
+            const progressEl = document.getElementById('globalProgressBar');
+            
+            if (countdownEl) {
+                countdownEl.textContent = `${minutesLeft}:${secsLeft.toString().padStart(2, '0')}`;
             }
-
-            // Mettre à jour la barre de progression
-            const progressBar = document.getElementById('maintenanceProgressBar');
-            if (progressBar) {
-                const maxDuration = 5 * 60 * 1000; // 5 minutes max
-                const percent = Math.min(100, (1 - (diff / maxDuration)) * 100);
-                progressBar.style.width = `${percent}%`;
+            if (progressEl) {
+                const percent = (1 - (diff / maxDuration)) * 100;
+                progressEl.style.width = `${Math.min(100, percent)}%`;
             }
         }
     }, 1000);
 }
 
-async function disconnectUserForMaintenance() {
-    try {
-        // Afficher un message final
-        const banner = document.getElementById('maintenanceBanner');
-        if (banner) {
-            banner.style.background = '#28a745';
-            banner.innerHTML = `
-                <div style="display: flex; align-items: center; justify-content: center; gap: 15px;">
-                    <i class="fas fa-sync-alt fa-spin" style="font-size: 28px;"></i>
-                    <div style="text-align: center;">
-                        <div style="font-weight: bold; font-size: 16px;">🔄 Maintenance en cours</div>
-                        <div style="font-size: 13px;">Redirection vers la page de connexion...</div>
-                    </div>
-                </div>
-            `;
+// Ajouter les styles UNIQUEMENT si non existants
+if (!document.getElementById('globalAnimationStyles')) {
+    const styleSheet = document.createElement('style');
+    styleSheet.id = 'globalAnimationStyles';
+    styleSheet.textContent = `
+        @keyframes slideDownGlobal {
+            from { transform: translateY(-100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
         }
+    `;
+    document.head.appendChild(styleSheet);
+}
 
-        // Attendre 3 secondes avant redirection
-        setTimeout(() => {
-            window.location.href = '../../../auth/Login.aspx?msg=maintenance';
-        }, 3000);
-
-    } catch (e) {
-        console.error('Erreur déconnexion:', e);
-        window.location.href = '../../../auth/Login.aspx?msg=maintenance';
+// Démarrer la vérification
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+        startMaintenanceChecker();
+    });
+} else {
+    if (typeof window._globalMaintenanceStarted === 'undefined') {
+        window._globalMaintenanceStarted = true;
+        startMaintenanceChecker();
     }
 }
 
-// Démarrer le vérificateur au chargement de la page
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', startMaintenanceChecker);
-} else {
-    startMaintenanceChecker();
-}
-
 // ============================================================================
-// EXPOSITION GLOBALE DES FONCTIONS POUR LES AUTRES PAGES
+// EXPOSITION GLOBALE
 // ============================================================================
 window.forceHideSpinner = forceHideSpinner;
 window.showSpinner = showSpinner;
 window.hideSpinner = hideSpinner;
 window.ajax = ajax;
 window.loadLang = loadLang;
+window.initDarkMode = initDarkMode;

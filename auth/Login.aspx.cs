@@ -29,9 +29,28 @@ public partial class Login : Page
         {
             HideMessages();
 
-            if (Request.QueryString["msg"] == "other_pc")
+            // Gérer les messages toast pour la déconnexion
+            string msg = Request.QueryString["msg"];
+            
+            if (msg == "maintenance")
             {
-                ShowError("⚠️ Compte déjà connecté ailleurs.");
+                ShowToast("🔒 Maintenance en cours", "Vous avez été déconnecté pour cause de maintenance. Veuillez patienter.", "warning");
+            }
+            else if (msg == "disconnected")
+            {
+                ShowToast("🔌 Déconnexion", "Vous avez été déconnecté par l'administrateur. Veuillez vous reconnecter.", "info");
+            }
+            else if (msg == "session_expired")
+            {
+                ShowToast("⏰ Session expirée", "Votre session a expiré. Veuillez vous reconnecter.", "warning");
+            }
+            else if (msg == "blocked")
+            {
+                ShowToast("🔒 Compte bloqué", "Compte temporairement bloqué. Maintenance en cours. Veuillez réessayer dans 1 minute.", "error");
+            }
+            else if (msg == "other_pc")
+            {
+                ShowToast("⚠️ Connexion ailleurs", "Vous avez été déconnecté car une autre session a été ouverte.", "warning");
             }
 
             DateTime expirationDate;
@@ -78,6 +97,54 @@ public partial class Login : Page
         }
     }
 
+    // ============================================================
+    // AFFICHER UN TOAST (notification)
+    // ============================================================
+
+    private void ShowToast(string title, string message, string type = "info")
+    {
+        string icon = "";
+        string bgColor = "";
+        
+        switch (type)
+        {
+            case "success":
+                icon = "✅";
+                bgColor = "#28a745";
+                break;
+            case "error":
+                icon = "❌";
+                bgColor = "#dc3545";
+                break;
+            case "warning":
+                icon = "⚠️";
+                bgColor = "#ffc107";
+                break;
+            default:
+                icon = "ℹ️";
+                bgColor = "#17a2b8";
+                break;
+        }
+        
+        string script = @"
+            Swal.fire({
+                toast: true,
+                position: 'top-end',
+                icon: '" + type + @"',
+                title: '" + title.Replace("'", "\\'") + @"',
+                text: '" + message.Replace("'", "\\'") + @"',
+                showConfirmButton: false,
+                timer: 5000,
+                timerProgressBar: true,
+                didOpen: (toast) => {
+                    toast.addEventListener('mouseenter', Swal.stopTimer);
+                    toast.addEventListener('mouseleave', Swal.resumeTimer);
+                }
+            });";
+        
+        ScriptManager.RegisterStartupScript(this, GetType(), "toast_" + Guid.NewGuid().ToString(), script, true);
+    }
+
     protected void btnLogin_Click(object sender, EventArgs e)
     {
         DateTime lockoutEnd = Session[SK_LOCKOUT_END] as DateTime? ?? DateTime.MinValue;
@@ -118,8 +185,9 @@ public partial class Login : Page
         int roleId;
         string nomComplet;
         string errorMessage;
+        int minutesLeft = 0;
 
-        if (!AuthenticateUser(username, password, out idUser, out roleId, out nomComplet, out errorMessage))
+        if (!AuthenticateUser(username, password, out idUser, out roleId, out nomComplet, out errorMessage, out minutesLeft))
         {
             int attempts = (Session[SK_ATTEMPTS] as int? ?? 0) + 1;
             Session[SK_ATTEMPTS] = attempts;
@@ -136,7 +204,16 @@ public partial class Login : Page
             }
             else
             {
-                ShowError(errorMessage + " — " + remaining + " tentative(s) restante(s) avant blocage.");
+                // Si c'est un blocage maintenance, afficher le message spécifique
+                if (errorMessage.Contains("bloqué") && minutesLeft > 0)
+                {
+                    ShowError("⚠️ Compte temporairement bloqué. Maintenance en cours. Veuillez réessayer dans " + minutesLeft + " minute(s).");
+                    StartLoginCountdown(minutesLeft * 60);
+                }
+                else
+                {
+                    ShowError(errorMessage + " — " + remaining + " tentative(s) restante(s) avant blocage.");
+                }
             }
             return;
         }
@@ -164,7 +241,6 @@ public partial class Login : Page
             cmd.ExecuteNonQuery();
         }
 
-        // Dans la méthode btnLogin_Click, après l'authentification réussie
         Session.Clear();
         Session["authenticated"] = true;
         Session["IDUSER"] = idUser;
@@ -173,12 +249,9 @@ public partial class Login : Page
         Session["SESSION_TOKEN"] = newToken;
         Session["PC"] = currentPC;
 
-        // ============================================================
-        // STOCKER LES CLASSES ET MATIÈRES AUTORISÉES UNIQUEMENT POUR LES PROFESSEURS
-        // ============================================================
         var serializer = new System.Web.Script.Serialization.JavaScriptSerializer();
 
-        if (roleId == 3) // Professeur uniquement
+        if (roleId == 3)
         {
             var classesAutorisees = GetClassesForProfessor(idUser);
             var matieresAutorisees = GetMatieresForProfessor(idUser);
@@ -188,18 +261,67 @@ public partial class Login : Page
         }
         else
         {
-            // Pour les autres rôles (Admin, SuperAdmin, etc.), pas de restriction
             Session["ClassesAutorisees"] = "[]";
             Session["MatieresAutorisees"] = "[]";
         }
-        // ============================================================
 
         Response.Redirect("~/pages/accueil/dashboards/index.aspx", false);
         Context.ApplicationInstance.CompleteRequest();
     }
 
     // ============================================================
-    // NOUVELLES MÉTHODES POUR RÉCUPÉRER LES CLASSES ET MATIÈRES DU PROFESSEUR
+    // COMPTE À REBOURS SUR LE BOUTON DE CONNEXION
+    // ============================================================
+
+    private void StartLoginCountdown(int seconds)
+    {
+        string script = @"
+            (function() {
+                var btn = document.getElementById('" + btnLogin.ClientID + @"');
+                if (!btn) return;
+                
+                var remaining = " + seconds + @";
+                var originalText = btn.value;
+                btn.disabled = true;
+                btn.style.opacity = '0.6';
+                btn.style.cursor = 'not-allowed';
+                btn.style.backgroundColor = '#6c757d';
+                
+                var interval = setInterval(function() {
+                    remaining--;
+                    if (remaining <= 0) {
+                        clearInterval(interval);
+                        btn.disabled = false;
+                        btn.style.opacity = '1';
+                        btn.style.cursor = 'pointer';
+                        btn.style.backgroundColor = '#28a745';
+                        btn.value = originalText;
+                        
+                        Swal.fire({
+                            toast: true,
+                            position: 'top-end',
+                            icon: 'success',
+                            title: '✅ Vous pouvez maintenant vous connecter',
+                            showConfirmButton: false,
+                            timer: 3000
+                        });
+                    } else {
+                        var minutes = Math.floor(remaining / 60);
+                        var secs = remaining % 60;
+                        if (minutes > 0) {
+                            btn.value = '⏳ Patientez ' + minutes + ' min ' + secs + 's';
+                        } else {
+                            btn.value = '⏳ Patientez ' + secs + 's';
+                        }
+                    }
+                }, 1000);
+            })();";
+        
+        ScriptManager.RegisterStartupScript(this, GetType(), "loginCountdown", script, true);
+    }
+
+    // ============================================================
+    // MÉTHODES POUR RÉCUPÉRER LES CLASSES ET MATIÈRES DU PROFESSEUR
     // ============================================================
 
     private List<object> GetClassesForProfessor(int professeurId)
@@ -207,7 +329,6 @@ public partial class Login : Page
         var classes = new List<object>();
         using (SqlConnection conn = new SqlConnection(connStr))
         {
-            // Récupérer les classes où le professeur enseigne
             string sql = @"SELECT DISTINCT c.ID, c.NOM 
                         FROM CLASSES c
                         INNER JOIN MATIERES m ON m.CLASSE_ID = c.ID
@@ -234,7 +355,6 @@ public partial class Login : Page
         var matieres = new List<object>();
         using (SqlConnection conn = new SqlConnection(connStr))
         {
-            // Récupérer les matières avec leur classe associée
             string sql = @"SELECT m.ID, m.NOM, m.COEFFICIENT, m.CLASSE_ID, c.NOM AS CLASSE_NOM
                         FROM MATIERES m
                         INNER JOIN CLASSES c ON m.CLASSE_ID = c.ID
@@ -248,14 +368,13 @@ public partial class Login : Page
             {
                 var matiere = new
                 {
-                    ID = reader["ID"].ToString(),  // GUID correct
+                    ID = reader["ID"].ToString(),
                     NOM = reader["NOM"].ToString(),
                     COEFFICIENT = reader["COEFFICIENT"] != DBNull.Value ? Convert.ToDecimal(reader["COEFFICIENT"]) : 1,
                     CLASSE_ID = reader["CLASSE_ID"] != DBNull.Value ? Convert.ToInt32(reader["CLASSE_ID"]) : 0,
                     CLASSE_NOM = reader["CLASSE_NOM"] != DBNull.Value ? reader["CLASSE_NOM"].ToString() : ""
                 };
                 matieres.Add(matiere);
-                Console.WriteLine(string.Format("Matière chargée: {0} - ID: {1}", matiere.NOM, matiere.ID));
             }
         }
         return matieres;
@@ -263,20 +382,40 @@ public partial class Login : Page
 
     // ============================================================
 
-    private bool AuthenticateUser(string username, string password, out int idUser, out int roleId, out string nomComplet, out string errorMessage)
+    private bool AuthenticateUser(string username, string password, out int idUser, out int roleId, out string nomComplet, out string errorMessage, out int minutesLeft)
     {
         idUser = 0;
         roleId = 0;
         nomComplet = "";
         errorMessage = "";
+        minutesLeft = 0;
 
         using (SqlConnection conn = new SqlConnection(connStr))
         {
-            SqlCommand cmd = new SqlCommand(@"
-                SELECT IDUSER, ROLEID, ACTIVE, NOM
-                FROM USERS
-                WHERE USERNAME = @u AND PWD = @p", conn);
-
+            bool hasBlockedUntilColumn = false;
+            string checkColumnSql = @"
+                SELECT COUNT(*) 
+                FROM INFORMATION_SCHEMA.COLUMNS 
+                WHERE TABLE_NAME = 'USERS' AND COLUMN_NAME = 'BLOCKED_UNTIL'";
+            
+            using (SqlCommand checkCmd = new SqlCommand(checkColumnSql, conn))
+            {
+                conn.Open();
+                hasBlockedUntilColumn = (int)checkCmd.ExecuteScalar() > 0;
+                conn.Close();
+            }
+            
+            string sql = @"
+                SELECT IDUSER, ROLEID, ACTIVE, NOM";
+            
+            if (hasBlockedUntilColumn)
+            {
+                sql += ", BLOCKED_UNTIL";
+            }
+            
+            sql += " FROM USERS WHERE USERNAME = @u AND PWD = @p";
+            
+            SqlCommand cmd = new SqlCommand(sql, conn);
             cmd.Parameters.AddWithValue("@u", username);
             cmd.Parameters.AddWithValue("@p", password);
 
@@ -296,6 +435,22 @@ public partial class Login : Page
                     idUser = Convert.ToInt32(rd["IDUSER"]);
                     roleId = Convert.ToInt32(rd["ROLEID"]);
                     nomComplet = rd["NOM"].ToString();
+
+                    if (roleId != 0 && hasBlockedUntilColumn)
+                    {
+                        if (rd["BLOCKED_UNTIL"] != DBNull.Value)
+                        {
+                            DateTime blockedUntil = Convert.ToDateTime(rd["BLOCKED_UNTIL"]);
+                            if (blockedUntil > DateTime.Now)
+                            {
+                                TimeSpan remaining = blockedUntil - DateTime.Now;
+                                minutesLeft = (int)Math.Ceiling(remaining.TotalMinutes);
+                                errorMessage = string.Format("⚠️ Compte temporairement bloqué. Maintenance en cours. Veuillez réessayer dans {0} minute(s).", minutesLeft);
+                                return false;
+                            }
+                        }
+                    }
+
                     return true;
                 }
             }
@@ -320,24 +475,8 @@ public partial class Login : Page
                 }
             }
         }
-        catch (SqlException ex)
-        {
-            lblUserLimitInfo.Text = "Connexion à la base de données impossible. Vérifiez le serveur SQL.";
-            lblUserLimitInfo.Visible = true;
-            lblUserLimitInfo.Style["background-color"] = "#fff5f5";
-            lblUserLimitInfo.Style["border"] = "1px solid red";
-            lblUserLimitInfo.Style["border-radius"] = "8px";
-            lblUserLimitInfo.Style["padding"] = "10px";
-            lblUserLimitInfo.Style["display"] = "block";
-            lblUserLimitInfo.Style["text-align"] = "center";
-            lblUserLimitInfo.ForeColor = System.Drawing.Color.Red;
-            lblUserLimitInfo.Font.Bold = true;
-            System.Diagnostics.Trace.WriteLine(ex.ToString());
-            return false;
-        }
         catch (Exception ex)
         {
-            AfficherErreur("Une erreur inattendue est survenue.");
             System.Diagnostics.Trace.WriteLine(ex.ToString());
             return false;
         }
@@ -347,27 +486,6 @@ public partial class Login : Page
     {
         pnlErreur.Visible = true;
         lblErreur.Text = message;
-    }
-
-    private void AfficherErreurToastEtOption500(string message)
-    {
-        string msg = message.Replace("'", "\\'");
-        string script = @"
-            Swal.fire({
-                toast: true,
-                position: 'top-end',
-                icon: 'error',
-                title: '" + msg + @"',
-                showConfirmButton: true,
-                confirmButtonText: 'Plus de détails',
-                showCancelButton: true,
-                cancelButtonText: 'Rester ici'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    window.location.href = '/pages/error/Error500.aspx';
-                }
-            });";
-        ScriptManager.RegisterStartupScript(this, this.GetType(), "toastAvecOption500", script, true);
     }
 
     private LicenceStatus CheckLicence(out DateTime expirationDate, out int maxUsers)
@@ -461,17 +579,21 @@ public partial class Login : Page
                 var btn = document.getElementById('" + btnLogin.ClientID + @"');
                 if (!btn) return;
                 btn.disabled = true;
+                btn.style.opacity = '0.6';
+                btn.style.cursor = 'not-allowed';
                 var remaining = " + secondsLeft + @";
                 var orig = btn.value;
-                btn.value = 'Patienter ' + remaining + 's\u2026';
+                btn.value = '⏳ Patienter ' + remaining + 's';
                 var iv = setInterval(function() {
                     remaining--;
                     if (remaining <= 0) {
                         clearInterval(iv);
                         btn.disabled = false;
+                        btn.style.opacity = '1';
+                        btn.style.cursor = 'pointer';
                         btn.value = orig;
                     } else {
-                        btn.value = 'Patienter ' + remaining + 's\u2026';
+                        btn.value = '⏳ Patienter ' + remaining + 's';
                     }
                 }, 1000);
             })();";

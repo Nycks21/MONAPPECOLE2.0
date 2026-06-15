@@ -1059,7 +1059,7 @@ function initSidebar() {
 // ============================================================================
 
 async function backupDatabase() {
-    // Vérifier d'abord si l'utilisateur est SuperAdmin
+    // Vérifier si l'utilisateur est SuperAdmin
     const userRole = document.getElementById('hfUserRole')?.value;
     if (userRole !== '0') {
         Swal.fire({
@@ -1071,74 +1071,122 @@ async function backupDatabase() {
         return;
     }
     
-    // Demander confirmation avec horaire
-    const { value: selectedTime } = await Swal.fire({
+    const result = await Swal.fire({
         title: '🔄 Sauvegarde de la base de données',
         html: `
             <div style="text-align: left;">
                 <p><strong>⚠️ Attention :</strong></p>
                 <ul>
-                    <li>Tous les utilisateurs (sauf vous) seront déconnectés</li>
-                    <li>La base sera en mode maintenance pendant quelques minutes</li>
+                    <li>Tous les autres utilisateurs seront <strong>immédiatement déconnectés</strong></li>
+                    <li>Ils seront bloqués pendant <strong>1 minute</strong></li>
                     <li>Une sauvegarde complète sera créée</li>
                 </ul>
                 <br>
-                <label for="backupTime" style="font-weight: bold;">📅 Heure de la sauvegarde :</label>
-                <input type="time" id="backupTime" class="swal2-input" value="${getDefaultTime()}">
-                <p style="font-size: 12px; color: #6c757d; margin-top: 5px;">
-                    <i class="fas fa-info-circle"></i> La sauvegarde s'effectuera dans 5 minutes si aucune heure n'est spécifiée
-                </p>
+                <div style="padding: 10px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 5px;">
+                    <i class="fas fa-info-circle"></i> 
+                    <strong>Les autres utilisateurs verront un message de maintenance et seront redirigés.</strong>
+                </div>
             </div>
         `,
         icon: 'warning',
         showCancelButton: true,
         confirmButtonText: '📀 Démarrer la sauvegarde',
         cancelButtonText: 'Annuler',
-        confirmButtonColor: '#28a745',
-        preConfirm: () => {
-            const time = document.getElementById('backupTime').value;
-            return time;
-        }
+        confirmButtonColor: '#28a745'
     });
     
-    if (!selectedTime) return;
+    if (!result.isConfirmed) return;
     
     showSpinner();
     
     try {
-        // Phase 1 : Préparer la sauvegarde et avertir les utilisateurs
-        const prepareResponse = await fetch(`api/BackupDatabase.aspx?action=prepare&time=${encodeURIComponent(selectedTime)}`);
-        const prepareData = await prepareResponse.json();
+        // Étape 1 : DÉCONNECTER IMMÉDIATEMENT TOUS LES AUTRES UTILISATEURS
+        console.log('🔌 Déconnexion des autres utilisateurs...');
+        await disconnectAllOtherUsers();
         
-        if (!prepareData.success) {
-            Swal.fire({ icon: 'error', title: 'Erreur', text: prepareData.message });
-            return;
-        }
+        // Étape 2 : Bloquer les connexions pendant 1 minute
+        console.log('🔒 Blocage des connexions pour 1 minute...');
+        await blockOtherUsers(1); // 1 minute
         
-        // Afficher la confirmation
-        await Swal.fire({
-            title: '✅ Sauvegarde programmée',
-            html: `
-                <p>La sauvegarde est programmée à <strong>${selectedTime}</strong></p>
-                <p>Un message sera envoyé à tous les utilisateurs.</p>
-                <div class="progress" style="height: 20px; margin-top: 15px;">
-                    <div id="countdownProgress" class="progress-bar" style="width: 0%; background-color: #28a745;"></div>
-                </div>
-                <p id="countdownMessage" style="margin-top: 10px; font-size: 12px;">Attente...</p>
-            `,
-            icon: 'info',
-            showConfirmButton: false,
-            allowOutsideClick: false,
-            didOpen: () => {
-                startCountdownToBackup(selectedTime);
+        // Étape 3 : Exécuter la sauvegarde
+        console.log('💾 Exécution de la sauvegarde...');
+        const response = await fetch('api/BackupDatabase.aspx?action=execute');
+        
+        if (response.ok) {
+            const contentType = response.headers.get('content-type');
+            
+            if (contentType && contentType.includes('application/octet-stream')) {
+                const contentDisposition = response.headers.get('Content-Disposition');
+                let filename = `backup_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.bak`;
+                if (contentDisposition) {
+                    const match = contentDisposition.match(/filename=(.+)/);
+                    if (match && match[1]) filename = match[1];
+                }
+                
+                const blob = await response.blob();
+                const fileSize = (blob.size / 1024 / 1024).toFixed(2);
+                
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+                
+                await Swal.fire({
+                    icon: 'success',
+                    title: '✅ Sauvegarde terminée',
+                    html: `
+                        <div style="text-align: left;">
+                            <p><strong>La base de données a été sauvegardée avec succès !</strong></p>
+                            <hr style="margin: 15px 0;">
+                            <p><i class="fas fa-database"></i> <strong>Fichier :</strong> ${filename}</p>
+                            <p><i class="fas fa-hdd"></i> <strong>Taille :</strong> ${fileSize} Mo</p>
+                            <p><i class="fas fa-users"></i> <strong>Utilisateurs déconnectés :</strong> Tous les autres utilisateurs ont été déconnectés.</p>
+                        </div>
+                    `,
+                    confirmButtonText: 'OK',
+                    confirmButtonColor: '#28a745'
+                });
+                
+                location.reload();
+            } else {
+                const error = await response.json();
+                await Swal.fire({ icon: 'error', title: 'Erreur', text: error.message || 'Erreur lors de la sauvegarde' });
             }
-        });
-        
+        } else {
+            const error = await response.json();
+            await Swal.fire({ icon: 'error', title: 'Erreur', text: error.message || 'Erreur serveur' });
+        }
     } catch (err) {
         console.error('Erreur:', err);
-        Swal.fire({ icon: 'error', title: 'Erreur', text: err.message });
+        await Swal.fire({ icon: 'error', title: 'Erreur', text: err.message });
     } finally {
         hideSpinner();
+    }
+}
+
+// ============================================================================
+// DÉCONNECTION IMMÉDIATE DE TOUS LES AUTRES UTILISATEURS
+// ============================================================================
+
+async function disconnectAllOtherUsers() {
+    try {
+        const response = await fetch('api/DisconnectAllUsers.aspx', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
+        const data = await response.json();
+        console.log('Résultat déconnexion:', data);
+        
+        if (data.count > 0) {
+            console.log(`${data.count} utilisateur(s) déconnecté(s)`);
+        }
+        return data;
+    } catch (err) {
+        console.error('Erreur déconnexion:', err);
     }
 }
 
@@ -1387,6 +1435,50 @@ style.textContent = `
     }
 `;
 document.head.appendChild(style);
+
+// ============================================================================
+// DÉCONNECTION IMMÉDIATE DES AUTRES UTILISATEURS
+// ============================================================================
+
+async function disconnectOtherUsers() {
+    try {
+        const response = await fetch('api/DisconnectUsers.aspx', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                message: 'Maintenance programmée - Veuillez vous reconnecter dans 5 minutes',
+                duration: 5 // minutes
+            })
+        });
+        const data = await response.json();
+        console.log('Déconnexion des utilisateurs:', data);
+        return data;
+    } catch (err) {
+        console.error('Erreur déconnexion:', err);
+    }
+}
+
+// ============================================================================
+// BLOQUER LES AUTRES UTILISATEURS
+// ============================================================================
+
+async function blockOtherUsers(minutes = 1) {
+    try {
+        const response = await fetch('api/BlockUsers.aspx', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                duration: minutes,
+                message: 'Maintenance en cours - Veuillez patienter ' + minutes + ' minute(s)'
+            })
+        });
+        const data = await response.json();
+        console.log('Blocage des utilisateurs:', data);
+        return data;
+    } catch (err) {
+        console.error('Erreur blocage:', err);
+    }
+}
 
 // ============================================================================
 // EXPORT
