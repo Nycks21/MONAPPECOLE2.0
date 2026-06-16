@@ -349,107 +349,124 @@
             </div>
 
             <!-- MODAL RESTAURATION AVANCÉE -->
-<div id="restoreModal" class="modal">
-    <div class="modal-content" style="max-width:700px;">
-        <div class="modal-header" style="background: linear-gradient(135deg, #70e4bd 0%, #0a835b 100%); color: white;">
-            <h3><i class="fas fa-undo-alt"></i> Restauration de la base de données</h3>
-            <button type="button" onclick="closeModal('restoreModal')"
-                style="background:none; border:none; color:white; font-size:24px; cursor:pointer;">&times;</button>
-        </div>
-        <div class="modal-body">
-            <!-- Étape 1 : Sélection de la source -->
-            <div class="restore-step" id="restoreStep1">
-                <div style="display: flex; gap: 15px; margin-bottom: 15px;">
-                    <button class="btn btn-primary" onclick="selectRestoreSource('local')" id="btnSourceLocal">
-                        <i class="fas fa-folder-open"></i> Fichier local
-                    </button>
-                    <button class="btn btn-secondary" onclick="selectRestoreSource('backup')" id="btnSourceBackup">
-                        <i class="fas fa-history"></i> Sauvegardes existantes
-                    </button>
-                </div>
-                
-                <!-- Source locale -->
-                <div id="restoreSourceLocal" style="display: none;">
-                    <div class="form-group">
-                        <label>Fichier de sauvegarde (.bak) *</label>
-                        <div style="display: flex; gap: 10px; align-items: center;">
-                            <input type="text" id="restoreFilePath" class="form-control" placeholder="Sélectionner un fichier .bak" readonly style="flex:1;">
-                            <button type="button" class="btn btn-secondary" onclick="document.getElementById('restoreFileInput').click();">
-                                <i class="fas fa-folder-open"></i> Parcourir
-                            </button>
-                        </div>
-                        <input type="file" id="restoreFileInput" accept=".bak" style="display:none;" onchange="handleRestoreFileSelect(event)">
-                        <p style="font-size: 11px; color: #6c757d; margin-top: 5px;">
-                            <i class="fas fa-info-circle"></i> Taille maximale : 100 Mo (format .bak)
-                        </p>
+            <div id="restoreModal" class="modal">
+                <div class="modal-content" style="max-width:700px;">
+                    <div class="modal-header"
+                        style="background: linear-gradient(135deg, #70e4bd 0%, #0a835b 100%); color: white;">
+                        <h3><i class="fas fa-undo-alt"></i> Restauration de la base de données</h3>
+                        <button type="button" onclick="closeModal('restoreModal')"
+                            style="background:none; border:none; color:white; font-size:24px; cursor:pointer;">&times;</button>
                     </div>
-                </div>
-                
-                <!-- Sauvegardes existantes -->
-                <div id="restoreSourceBackup" style="display: none;">
-                    <div class="form-group">
-                        <label>Sélectionner une sauvegarde existante :</label>
-                        <div id="backupListContainer" style="max-height: 200px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 6px;">
-                            <div id="backupList" style="padding: 10px;">
-                                <p style="text-align: center; color: #6c757d;">Chargement des sauvegardes...</p>
+                    <div class="modal-body">
+                        <!-- Étape 1 : Sélection de la source -->
+                        <div class="restore-step" id="restoreStep1">
+                            <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+                                <button class="btn btn-warning" onclick="selectRestoreSource('local')"
+                                    id="btnSourceLocal">
+                                    <i class="fas fa-folder-open"></i> Fichier local
+                                </button>
+                                <button class="btn btn-secondary" onclick="selectRestoreSource('backup')"
+                                    id="btnSourceBackup">
+                                    <i class="fas fa-history"></i> Sauvegardes existantes
+                                </button>
+                            </div>
+
+                            <!-- Source locale -->
+                            <div id="restoreSourceLocal" style="display: none;">
+                                <div class="form-group">
+                                    <label>Fichier de sauvegarde (.bak) *</label>
+                                    <div style="display: flex; gap: 10px; align-items: center;">
+                                        <input type="text" id="restoreFilePath" class="form-control"
+                                            placeholder="Sélectionner un fichier .bak" readonly style="flex:1;">
+                                        <button type="button" class="btn btn-primary"
+                                            onclick="document.getElementById('restoreFileInput').click();">
+                                            <i class="fas fa-folder-open"></i> Parcourir
+                                        </button>
+                                    </div>
+                                    <input type="file" id="restoreFileInput" accept=".bak" style="display:none;"
+                                        onchange="handleRestoreFileSelect(event)">
+                                    <p style="font-size: 11px; color: #6c757d; margin-top: 5px;">
+                                        <i class="fas fa-info-circle"></i> Taille maximale : 100 Mo (format .bak)
+                                    </p>
+                                </div>
+                            </div>
+
+                            <!-- Sauvegardes existantes -->
+                            <div id="restoreSourceBackup" style="display: none;">
+                                <div class="form-group">
+                                    <label>Sélectionner une sauvegarde existante :</label>
+                                    <div id="backupListContainer"
+                                        style="max-height: 200px; overflow-y: auto; border: 1px solid #dee2e6; border-radius: 6px;">
+                                        <div id="backupList" style="padding: 10px;">
+                                            <p style="text-align: center; color: #6c757d;">Chargement des sauvegardes...
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Étape 2 : Informations -->
+                        <div id="restoreStep2"
+                            style="display: none; margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                                <div>
+                                    <label style="font-weight: 600; color: #495057;">Fichier :</label>
+                                    <span id="restoreFileInfo" style="display: block; padding: 5px 0;">-</span>
+                                </div>
+                                <div>
+                                    <label style="font-weight: 600; color: #495057;">Taille :</label>
+                                    <span id="restoreSizeInfo" style="display: block; padding: 5px 0;">-</span>
+                                </div>
+                                <div>
+                                    <label style="font-weight: 600; color: #495057;">Date :</label>
+                                    <span id="restoreDateInfo" style="display: block; padding: 5px 0;">-</span>
+                                </div>
+                                <div>
+                                    <label style="font-weight: 600; color: #495057;">Base cible :</label>
+                                    <span id="restoreDbInfo" style="display: block; padding: 5px 0;">MONAPPECOLE2</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Progression -->
+                        <div id="restoreProgressContainer" style="display: none; margin-top: 15px;">
+                            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                                <span style="font-size: 13px; font-weight: 600;">Restauration en cours...</span>
+                                <span id="restoreProgressPercent"
+                                    style="font-size: 13px; font-weight: bold; color: #28a745;">0%</span>
+                            </div>
+                            <div
+                                style="width: 100%; height: 10px; background: #e9ecef; border-radius: 5px; overflow: hidden;">
+                                <div id="restoreProgressBar"
+                                    style="width: 0%; height: 100%; background: linear-gradient(90deg, #28a745, #20c997); transition: width 0.5s;">
+                                </div>
+                            </div>
+                            <p id="restoreStatusMessage" style="font-size: 12px; color: #6c757d; margin-top: 8px;">
+                                Initialisation...</p>
+                        </div>
+
+                        <!-- Logs -->
+                        <div id="restoreLogs" style="display: none; margin-top: 15px;">
+                            <label style="font-weight: 600;">Journal des opérations :</label>
+                            <div style="background: #1e1e1e; color: #d4d4d4; padding: 10px; border-radius: 6px; max-height: 150px; overflow-y: auto; font-family: monospace; font-size: 12px;"
+                                id="restoreLogContent">
+                                <div style="color: #4ec9b0;">[INFO] Initialisation de la restauration...</div>
                             </div>
                         </div>
                     </div>
-                </div>
-            </div>
-            
-            <!-- Étape 2 : Informations -->
-            <div id="restoreStep2" style="display: none; margin-top: 15px; padding: 15px; background: #f8f9fa; border-radius: 8px;">
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-                    <div>
-                        <label style="font-weight: 600; color: #495057;">Fichier :</label>
-                        <span id="restoreFileInfo" style="display: block; padding: 5px 0;">-</span>
-                    </div>
-                    <div>
-                        <label style="font-weight: 600; color: #495057;">Taille :</label>
-                        <span id="restoreSizeInfo" style="display: block; padding: 5px 0;">-</span>
-                    </div>
-                    <div>
-                        <label style="font-weight: 600; color: #495057;">Date :</label>
-                        <span id="restoreDateInfo" style="display: block; padding: 5px 0;">-</span>
-                    </div>
-                    <div>
-                        <label style="font-weight: 600; color: #495057;">Base cible :</label>
-                        <span id="restoreDbInfo" style="display: block; padding: 5px 0;">MONAPPECOLE2</span>
+                    <div class="modal-footer">
+                        <div style="display: flex; gap: 10px; width: 100%; justify-content: flex-end;">
+                            <button type="button" class="btn btn-success" id="btnRestoreExecute"
+                                onclick="executeRestore()" disabled>
+                                <i class="fas fa-play"></i> Lancer la restauration
+                            </button>
+                            <button type="button" class="btn btn-danger"
+                                onclick="closeModal('restoreModal')">Annuler</button>
+                        </div>
                     </div>
                 </div>
             </div>
-            
-            <!-- Progression -->
-            <div id="restoreProgressContainer" style="display: none; margin-top: 15px;">
-                <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
-                    <span style="font-size: 13px; font-weight: 600;">Restauration en cours...</span>
-                    <span id="restoreProgressPercent" style="font-size: 13px; font-weight: bold; color: #28a745;">0%</span>
-                </div>
-                <div style="width: 100%; height: 10px; background: #e9ecef; border-radius: 5px; overflow: hidden;">
-                    <div id="restoreProgressBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #28a745, #20c997); transition: width 0.5s;"></div>
-                </div>
-                <p id="restoreStatusMessage" style="font-size: 12px; color: #6c757d; margin-top: 8px;">Initialisation...</p>
-            </div>
-            
-            <!-- Logs -->
-            <div id="restoreLogs" style="display: none; margin-top: 15px;">
-                <label style="font-weight: 600;">Journal des opérations :</label>
-                <div style="background: #1e1e1e; color: #d4d4d4; padding: 10px; border-radius: 6px; max-height: 150px; overflow-y: auto; font-family: monospace; font-size: 12px;" id="restoreLogContent">
-                    <div style="color: #4ec9b0;">[INFO] Initialisation de la restauration...</div>
-                </div>
-            </div>
-        </div>
-        <div class="modal-footer">
-            <div style="display: flex; gap: 10px; width: 100%; justify-content: flex-end;">
-                <button type="button" class="btn btn-success" id="btnRestoreExecute" onclick="executeRestore()" disabled>
-                    <i class="fas fa-play"></i> Lancer la restauration
-                </button>
-                <button type="button" class="btn btn-secondary" onclick="closeModal('restoreModal')">Annuler</button>
-            </div>
-        </div>
-    </div>
-</div>
 
             <!-- Control Sidebar (Barre latérale droite) -->
             <aside class="control-sidebar control-sidebar-dark" id="controlSidebar"
@@ -482,18 +499,27 @@
 
                     <hr style="border-color: #4a5259;">
 
-                    <div class="mb-3" style="padding: 10px;">
-                        <button type="button" id="btnBackup" class="btn btn-danger btn-block"
-                            onclick="backupDatabase()">
-                            <i class="fas fa-database"></i> Télécharger la sauvegarde
-                        </button>
-                    </div>
-
-                    <div class="mb-3" style="padding: 10px;">
-                        <button type="button" id="btnRestore" class="btn btn-warning btn-block"
-                            onclick="openRestoreModal()">
-                            <i class="fas fa-undo-alt"></i> Restaurer la base de données
-                        </button>
+                    <div style="display: flex; flex-direction: column; gap: 10px; padding: 10px;">
+                        <div style="width: 100%;">
+                            <button type="button" id="btnCheckUpdates" class="btn btn-primary"
+                                style="width: 100%; padding: 10px 15px; text-align: center;"
+                                onclick="checkForUpdates()">
+                                <i class="fas fa-sync-alt"></i> Vérifier les MAJ
+                            </button>
+                        </div>
+                        <div style="width: 100%;">
+                            <button type="button" id="btnBackup" class="btn btn-success"
+                                style="width: 100%; padding: 10px 15px; text-align: center;" onclick="backupDatabase()">
+                                <i class="fas fa-database"></i> Sauvegarde
+                            </button>
+                        </div>
+                        <div style="width: 100%;">
+                            <button type="button" id="btnRestore" class="btn btn-warning"
+                                style="width: 100%; padding: 10px 15px; text-align: center;"
+                                onclick="openRestoreModal()">
+                                <i class="fas fa-undo-alt"></i> Restitution
+                            </button>
+                        </div>
                     </div>
 
                     <hr style="border-color: #4a5259;">

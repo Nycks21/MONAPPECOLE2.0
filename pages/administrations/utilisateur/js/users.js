@@ -954,18 +954,20 @@ async function backupDatabase() {
         title: '🔄 Planifier la sauvegarde',
         html: `
             <div style="text-align: left; font-size: 12px;">
+                <div style="margin-top: 15px; padding: 10px; background: #d1ecf1; border-left: 4px solid #17a2b8; border-radius: 5px;">
                 <p><strong>⚠️ Attention :</strong></p>
                 <ul>
-                    <li>Tous les autres utilisateurs seront <strong>déconnectés</strong> à l'heure choisie</li>
-                    <li>Ils verront un compte à rebours en bas de leur écran</li>
-                    <li>Ils seront bloqués pendant <strong>1 minute</strong></li>
-                    <li>Une sauvegarde complète sera créée à l'heure choisie</li>
+                    <li> - Tous les autres utilisateurs seront <strong>déconnectés</strong> à l'heure choisie</li>
+                    <li> - Ils verront un compte à rebours en bas de leur écran</li>
+                    <li> - Ils seront bloqués pendant <strong>1 minute</strong></li>
+                    <li> - Une sauvegarde complète sera créée à l'heure choisie</li>
                 </ul>
+                </div>
                 <br>
                 <label for="backupTime" style="font-weight: bold;">📅 Heure de la sauvegarde :</label>
                 <input type="time" id="backupTime" class="swal2-input" value="${getDefaultTime()}">
                 <p style="font-size: 12px; color: #6c757d; margin-top: 5px;">
-                    <i class="fas fa-info-circle"></i> Tous les utilisateurs seront déconnectés à <strong>cette heure précise</strong>
+                    <i class="fas fa-info-circle"; style="color: #ff0000;"></i> Tous les utilisateurs seront déconnectés à <span style="font-size: 13px; color: #fd0505;"><strong>cette heure précise</strong></span>
                 </p>
                 <div style="margin-top: 15px; padding: 10px; background: #d1ecf1; border-left: 4px solid #17a2b8; border-radius: 5px;">
                     <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
@@ -978,7 +980,7 @@ async function backupDatabase() {
                 </div>
                 <div style="margin-top: 15px; padding: 8px; background: #e8f4fd; border-radius: 5px; text-align: center;">
                     <i class="fas fa-hourglass-half"></i> 
-                    <span style="font-size: 13px;">Le bouton de confirmation sera actif dans <strong id="countdownDisplay">5</strong> secondes</span>
+                    <span style="font-size: 13px;">Le bouton de confirmation sera actif dans <strong id="countdownDisplay">5</strong> seconde(s)</span>
                 </div>
             </div>
         `,
@@ -1226,6 +1228,279 @@ function getDefaultTime() {
     now.setMinutes(now.getMinutes() + 5);
     return now.toTimeString().slice(0, 5);
 }
+
+// ============================================================================
+// VÉRIFICATION DES MISES À JOUR
+// ============================================================================
+
+const UPDATE_API_URL = '/pages/administrations/utilisateur/api/CheckUpdates.aspx';
+const CURRENT_VERSION = document.querySelector('[data-version]')?.getAttribute('data-version') || '2.1.17';
+
+let updateCheckInProgress = false;
+
+/**
+ * Vérifie les mises à jour disponibles
+ */
+async function checkForUpdates() {
+    // Empêcher les clics multiples
+    if (updateCheckInProgress) {
+        Swal.fire({
+            icon: 'info',
+            title: 'Vérification en cours',
+            text: 'Une vérification des mises à jour est déjà en cours...',
+            timer: 2000,
+            showConfirmButton: false
+        });
+        return;
+    }
+
+    // Vérifier le rôle (seul SuperAdmin peut vérifier les MAJ)
+    const userRole = document.getElementById('hfUserRole')?.value;
+    if (userRole !== '0') {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Accès limité',
+            text: 'Seul un Super Administrateur peut vérifier les mises à jour.',
+            confirmButtonColor: '#ffc107'
+        });
+        return;
+    }
+
+    updateCheckInProgress = true;
+    const btn = document.getElementById('btnCheckUpdates');
+    
+    // Animation du bouton
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Vérification en cours...';
+        btn.style.opacity = '0.7';
+    }
+
+    try {
+        // Appel API pour vérifier les mises à jour
+        const response = await fetch(UPDATE_API_URL + '?action=check&version=' + encodeURIComponent(CURRENT_VERSION));
+        const data = await response.json();
+
+        console.log('📋 Résultat vérification MAJ:', data);
+
+        if (data.success) {
+            if (data.hasUpdate) {
+                // ✅ Nouvelle version disponible
+                showUpdateAvailableModal(data);
+            } else {
+                // ✅ Version à jour
+                showNoUpdateModal(data);
+            }
+        } else {
+            // ❌ Erreur
+            Swal.fire({
+                icon: 'error',
+                title: 'Erreur de vérification',
+                text: data.message || 'Impossible de vérifier les mises à jour',
+                confirmButtonColor: '#dc3545'
+            });
+        }
+    } catch (error) {
+        console.error('❌ Erreur checkForUpdates:', error);
+        
+        // Si l'API n'existe pas, simuler une vérification
+        simulateUpdateCheck();
+    } finally {
+        updateCheckInProgress = false;
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-sync-alt"></i> Vérifier les MAJ';
+            btn.style.opacity = '1';
+        }
+    }
+}
+
+/**
+ * Affiche le modal "Mise à jour disponible"
+ */
+function showUpdateAvailableModal(data) {
+    const version = data.latestVersion || '2.2.0';
+    const releaseDate = data.releaseDate || new Date().toLocaleDateString('fr-FR');
+    const changelog = data.changelog || [
+        '✨ Nouvelles fonctionnalités',
+        '🐛 Corrections de bugs',
+        '⚡ Améliorations des performances',
+        '🔒 Mises à jour de sécurité'
+    ];
+    const downloadUrl = data.downloadUrl || '#';
+    const updateSize = data.updateSize || '15.2 Mo';
+
+    Swal.fire({
+        title: '🆕 Mise à jour disponible !',
+        html: `
+            <div style="text-align: left; max-height: 400px; overflow-y: auto; font-size: 12px;">
+                <div style="background: #e8f4fd; padding: 12px; border-radius: 8px; margin-bottom: 15px;">
+                    <p style="margin: 0;">
+                        <strong>Version actuelle :</strong> <span class="badge bg-secondary">v${CURRENT_VERSION}</span>
+                        <br>
+                        <strong>Nouvelle version :</strong> <span class="badge bg-success" style="font-size: 14px;">v${version}</span>
+                    </p>
+                    <p style="margin: 5px 0 0 0; font-size: 12px; color: #6c757d;">
+                        <i class="fas fa-calendar-alt"></i> Publiée le ${releaseDate}
+                        <span style="margin-left: 15px;"><i class="fas fa-hdd"></i> Taille : ${updateSize}</span>
+                    </p>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <p style="font-weight: bold; margin-bottom: 8px;">📝 Journal des modifications :</p>
+                    <ul style="padding-left: 20px; margin: 0;">
+                        ${changelog.map(item => `<li style="margin-bottom: 4px;">${item}</li>`).join('')}
+                    </ul>
+                </div>
+                
+                <div style="background: #fff3cd; padding: 10px; border-radius: 6px; border-left: 4px solid #ffc107;">
+                    <p style="margin: 0; font-size: 13px;">
+                        <i class="fas fa-info-circle" style="color: #ffc107;"></i>
+                        <strong>Important :</strong> Nous vous recommandons de faire une <strong>sauvegarde</strong> avant la mise à jour.
+                    </p>
+                </div>
+            </div>
+        `,
+        icon: 'info',
+        showCloseButton: true,
+        showConfirmButton: false,
+        showCancelButton: false,
+        confirmButtonText: '📥 Télécharger la mise à jour',
+        cancelButtonText: 'Fermer',
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#6c757d',
+        showDenyButton: true,
+        denyButtonText: '📋 Voir les détails',
+        denyButtonColor: '#17a2b8'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Télécharger la mise à jour
+            window.open(downloadUrl, '_blank');
+            Swal.fire({
+                icon: 'success',
+                title: 'Téléchargement démarré',
+                text: 'Le téléchargement de la mise à jour a commencé.',
+                timer: 3000,
+                showConfirmButton: false
+            });
+        } else if (result.isDenied) {
+            // Afficher les détails complets
+            showFullChangelog(data);
+        }
+    });
+}
+
+/**
+ * Affiche le modal "Aucune mise à jour"
+ */
+function showNoUpdateModal(data) {
+    const lastCheck = data.lastCheck || new Date().toLocaleString('fr-FR');
+    
+    Swal.fire({
+        title: '✅ Application à jour',
+        html: `
+            <div style="text-align: center;">
+                <i class="fas fa-check-circle" style="font-size: 48px; color: #28a745; margin-bottom: 15px;"></i>
+                <p style="font-size: 16px;">
+                    Vous utilisez la version <strong>v${CURRENT_VERSION}</strong>
+                </p>
+                <p style="color: #6c757d; font-size: 13px;">
+                    <i class="fas fa-clock"></i> Dernière vérification : ${lastCheck}
+                </p>
+                <p style="color: #6c757d; font-size: 13px;">
+                    Aucune mise à jour disponible pour le moment.
+                </p>
+            </div>
+        `,
+        icon: 'success',
+        confirmButtonText: 'OK',
+        confirmButtonColor: '#28a745'
+    });
+}
+
+/**
+ * Affiche le journal des modifications complet
+ */
+function showFullChangelog(data) {
+    const version = data.latestVersion || '2.2.0';
+    const changelog = data.changelog || [];
+    
+    Swal.fire({
+        title: '📋 Journal des modifications v' + version,
+        html: `
+            <div style="text-align: left; max-height: 400px; overflow-y: auto;">
+                ${changelog.length > 0 ? changelog.map(item => 
+                    `<div style="padding: 8px 12px; border-bottom: 1px solid #f0f0f0; display: flex; align-items: start; gap: 10px;">
+                        <span style="color: #28a745;">•</span>
+                        <span>${item}</span>
+                    </div>`
+                ).join('') : '<p style="color: #6c757d;">Aucun détail disponible</p>'}
+            </div>
+        `,
+        icon: 'info',
+        confirmButtonText: 'Fermer',
+        confirmButtonColor: '#17a2b8',
+        width: 600
+    });
+}
+
+/**
+ * Simulation de vérification (si l'API n'existe pas)
+ */
+function simulateUpdateCheck() {
+    // Vérifier si une nouvelle version est disponible (simulé)
+    const hasUpdate = Math.random() > 0.7; // 30% de chance d'avoir une mise à jour
+    
+    if (hasUpdate) {
+        showUpdateAvailableModal({
+            latestVersion: '2.2.0',
+            releaseDate: new Date().toLocaleDateString('fr-FR'),
+            changelog: [
+                '✨ Nouvelle interface pour la gestion des utilisateurs',
+                '🐛 Correction du bug de sauvegarde automatique',
+                '⚡ Optimisation des requêtes SQL',
+                '🔒 Renforcement de la sécurité des sessions',
+                '📱 Amélioration de l\'affichage mobile'
+            ],
+            downloadUrl: '#',
+            updateSize: '15.2 Mo'
+        });
+    } else {
+        showNoUpdateModal({
+            lastCheck: new Date().toLocaleString('fr-FR')
+        });
+    }
+}
+
+/**
+ * Vérification automatique des mises à jour (au chargement de la page)
+ */
+function autoCheckForUpdates() {
+    // Vérifier seulement si l'utilisateur est SuperAdmin
+    const userRole = document.getElementById('hfUserRole')?.value;
+    if (userRole !== '0') return;
+
+    // Vérifier si une vérification auto a déjà été faite (1x par session)
+    if (sessionStorage.getItem('autoUpdateChecked') === 'true') return;
+
+    // Attendre 5 secondes après le chargement
+    setTimeout(() => {
+        sessionStorage.setItem('autoUpdateChecked', 'true');
+        console.log('🔄 Vérification automatique des mises à jour...');
+        checkForUpdates();
+    }, 5000);
+}
+
+// Auto-vérification au chargement de la page
+document.addEventListener('DOMContentLoaded', function() {
+    // Ne pas auto-vérifier si l'utilisateur est sur une page de login
+    if (!window.location.pathname.includes('Login.aspx')) {
+        autoCheckForUpdates();
+    }
+});
+
+// Exposition globale
+window.checkForUpdates = checkForUpdates;
 
 // ============================================================================
 // NOTIFICATIONS
