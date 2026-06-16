@@ -1654,50 +1654,333 @@ input:checked + .slider:before {
     transform: translateX(26px);
 }
 
-/* Mode sombre pour le body */
+/* ═══════════════════════════════════════════════
+   MODE SOMBRE — DESIGN MODERNE & PROFESSIONNEL
+═══════════════════════════════════════════════ */
+
 body.dark-mode {
-    background-color: #1a1a2e;
-    color: #eee;
+    background-color: #0a0e1a;
+    color: #e8edf5;
 }
 
+/* ─── Cards ─── */
 body.dark-mode .dash-card {
-    background-color: #16213e;
-    border-color: #0f3460;
+    background: linear-gradient(145deg, #111d2e, #0d1624);
+    border-color: rgba(255, 255, 255, 0.04);
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
 }
 
 body.dark-mode .dash-card-head {
-    background-color: #0f3460;
-    border-bottom-color: #1a1a2e;
+    background: linear-gradient(135deg, #0d1a2b, #111d2e);
+    border-bottom-color: rgba(255, 255, 255, 0.05);
 }
 
+body.dark-mode .dash-card-title {
+    color: #e8edf5;
+}
+
+body.dark-mode .dash-card-title i {
+    color: #5b8def;
+}
+
+/* ─── Tableau ─── */
 body.dark-mode .dash-table th {
-    background-color: #0f3460;
-    color: #eee;
+    background: linear-gradient(135deg, #0d1a2b, #111d2e);
+    color: #a8b5c8;
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+    font-weight: 600;
+    letter-spacing: 0.5px;
 }
 
 body.dark-mode .dash-table td {
-    background-color: #16213e;
-    color: #ddd;
-    border-color: #0f3460;
+    background-color: transparent;
+    color: #d4dce8;
+    border-bottom-color: rgba(255, 255, 255, 0.04);
 }
 
+body.dark-mode .dash-table tbody tr:hover {
+    background: rgba(79, 125, 243, 0.06);
+}
+
+body.dark-mode .dash-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+/* ─── Formulaires ─── */
 body.dark-mode .form-control {
-    background-color: #0f3460;
-    color: #eee;
-    border-color: #1a1a2e;
+    background-color: #0d1a2b;
+    color: #e8edf5;
+    border-color: rgba(255, 255, 255, 0.08);
+    transition: all 0.3s ease;
 }
 
+body.dark-mode .form-control:focus {
+    border-color: #4f7df3;
+    box-shadow: 0 0 0 3px rgba(79, 125, 243, 0.15);
+    background-color: #111d2e;
+}
+
+body.dark-mode .form-control:disabled,
+body.dark-mode .form-control[readonly] {
+    background-color: #080e1a;
+    color: #5a6f8a;
+    border-color: rgba(255, 255, 255, 0.03);
+}
+
+body.dark-mode .form-group label {
+    color: #a8b5c8;
+}
+
+/* ─── Modals ─── */
 body.dark-mode .modal-content {
-    background-color: #16213e;
-    color: #eee;
+    background: linear-gradient(145deg, #111d2e, #0d1624);
+    color: #e8edf5;
+    border-color: rgba(255, 255, 255, 0.06);
+    box-shadow: 0 24px 80px rgba(0, 0, 0, 0.6);
 }
 
 body.dark-mode .modal-header {
-    border-bottom-color: #0f3460;
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+    background: linear-gradient(135deg, #0d1a2b, #111d2e);
+}
+
+body.dark-mode .modal-header h3,
+body.dark-mode .modal-header h5 {
+    color: #e8edf5;
+}
+
+body.dark-mode .modal-header .close {
+    color: #a8b5c8;
+}
+
+body.dark-mode .modal-header .close:hover {
+    color: #e8edf5;
 }
 
 body.dark-mode .modal-footer {
-    border-top-color: #0f3460;
+    border-top-color: rgba(255, 255, 255, 0.06);
+    background: linear-gradient(135deg, #0d1a2b, #111d2e);
 }
 
+/* ─── Buttons ─── */
+body.dark-mode .btn-primary {
+    background: linear-gradient(135deg, #4f7df3, #3a5fc7);
+    color: #fff;
+}
+
+body.dark-mode .btn-primary:hover {
+    box-shadow: 0 4px 20px rgba(79, 125, 243, 0.35);
+    transform: translateY(-1px);
+}
+
+body.dark-mode .btn-secondary {
+    background: #1e2d42;
+    color: #a8b5c8;
+}
+
+body.dark-mode .btn-secondary:hover {
+    background: #2a3d57;
+    color: #e8edf5;
+}
+
+body.dark-mode .btn-outline-primary {
+    color: #5b8def;
+    border-color: #5b8def;
+}
+
+body.dark-mode .btn-outline-primary:hover {
+    background: linear-gradient(135deg, #4f7df3, #3a5fc7);
+    color: #fff;
+    border-color: transparent;
+}
+
+body.dark-mode .btn-outline-success {
+    color: #34ce57;
+    border-color: #34ce57;
+}
+
+body.dark-mode .btn-outline-success:hover {
+    background: #28a745;
+    color: #fff;
+    border-color: transparent;
+}
+
+body.dark-mode .btn-outline-danger {
+    color: #e74c5e;
+    border-color: #e74c5e;
+}
+
+body.dark-mode .btn-outline-danger:hover {
+    background: #dc3545;
+    color: #fff;
+    border-color: transparent;
+}
+
+/* ─── Dropdown ─── */
+body.dark-mode .dropdown-menu {
+    background: #111d2e;
+    border-color: rgba(255, 255, 255, 0.06);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+body.dark-mode .dropdown-header {
+    color: #5a6f8a;
+}
+
+body.dark-mode .dropdown-item {
+    color: #a8b5c8;
+}
+
+body.dark-mode .dropdown-item:hover {
+    background: rgba(79, 125, 243, 0.08);
+    color: #e8edf5;
+}
+
+/* ─── Select ─── */
+body.dark-mode select.form-control {
+    background-color: #0d1a2b;
+    color: #e8edf5;
+    border-color: rgba(255, 255, 255, 0.08);
+}
+
+body.dark-mode select.form-control option {
+    background-color: #111d2e;
+    color: #e8edf5;
+}
+
+/* ─── Badges ─── */
+body.dark-mode .badge-success {
+    background: linear-gradient(135deg, #28a745, #1e7e34);
+    color: #fff;
+}
+
+body.dark-mode .badge-danger {
+    background: linear-gradient(135deg, #dc3545, #b02a37);
+    color: #fff;
+}
+
+body.dark-mode .badge-warning {
+    background: linear-gradient(135deg, #ffc107, #e0a800);
+    color: #1a1a2e;
+}
+
+body.dark-mode .badge-info {
+    background: linear-gradient(135deg, #17a2b8, #0f7a8a);
+    color: #fff;
+}
+
+/* ─── Alerts ─── */
+body.dark-mode .alert-light {
+    background: #111d2e;
+    border-color: rgba(255, 255, 255, 0.06);
+    color: #a8b5c8;
+}
+
+body.dark-mode .alert-erreur {
+    background: rgba(220, 53, 69, 0.1);
+    border-left-color: #dc3545;
+    color: #e8a8b5;
+}
+
+/* ─── Cards d'absence ─── */
+body.dark-mode .absence-stat-card {
+    background: #111d2e;
+    border-color: rgba(255, 255, 255, 0.04);
+}
+
+body.dark-mode .stat-value {
+    color: #e8edf5;
+}
+
+body.dark-mode .stat-label {
+    color: #5a6f8a;
+}
+
+/* ─── Éléments divers ─── */
+body.dark-mode .table-responsive {
+    border-color: rgba(255, 255, 255, 0.06);
+}
+
+body.dark-mode .breadcrumb {
+    color: #5a6f8a;
+}
+
+body.dark-mode .breadcrumb-item.active {
+    color: #a8b5c8;
+}
+
+body.dark-mode .breadcrumb-item a {
+    color: #5b8def;
+}
+
+body.dark-mode .breadcrumb-item + .breadcrumb-item::before {
+    color: #3a4a5f;
+}
+
+body.dark-mode .border {
+    border-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+body.dark-mode .shadow {
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3) !important;
+}
+
+body.dark-mode #appVersionBadge {
+    background: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.05);
+    color: rgba(255, 255, 255, 0.4);
+}
+
+/* ─── Container filtres ─── */
+body.dark-mode #filter-container {
+    background: linear-gradient(135deg, #0d1a2b, #111d2e) !important;
+    border-color: rgba(255, 255, 255, 0.04) !important;
+}
+
+body.dark-mode #filter-container label {
+    color: #a8b5c8 !important;
+}
+
+body.dark-mode #filter-container input,
+body.dark-mode #filter-container select {
+    background-color: #0a0e1a !important;
+    color: #e8edf5 !important;
+    border-color: rgba(255, 255, 255, 0.06) !important;
+}
+
+/* ─── Pagination ─── */
+body.dark-mode .pagination-container button {
+    background: #111d2e !important;
+    border-color: rgba(255, 255, 255, 0.06) !important;
+    color: #a8b5c8 !important;
+}
+
+body.dark-mode .pagination-container button:hover:not(:disabled) {
+    background: #1a2a42 !important;
+    color: #e8edf5 !important;
+}
+
+body.dark-mode .pagination-container button.active {
+    background: linear-gradient(135deg, #4f7df3, #3a5fc7) !important;
+    color: #fff !important;
+    border-color: transparent !important;
+}
+
+body.dark-mode .pagination-container button:disabled {
+    opacity: 0.3;
+}
+
+/* ─── Scrollbar mode sombre ─── */
+body.dark-mode ::-webkit-scrollbar-track {
+    background: #0a0e1a;
+}
+
+body.dark-mode ::-webkit-scrollbar-thumb {
+    background: #1e2d42;
+    border-radius: 4px;
+}
+
+body.dark-mode ::-webkit-scrollbar-thumb:hover {
+    background: #2a3d57;
+}
 

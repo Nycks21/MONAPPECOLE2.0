@@ -19,50 +19,7 @@
             <div class="wrapper">
 
                 <!-- ═══ TOPBAR ═══ -->
-                <nav class="main-header">
-                    <ul class="navbar-nav">
-                        <li class="nav-item">
-                            <a class="nav-link" id="menuToggle" role="button">
-                                <i class="fas fa-bars"></i>
-                            </a>
-                        </li>
-                    </ul>
-                    <ul class="navbar-nav">
-                        <!-- Notifications -->
-                        <li class="nav-item">
-                            <a class="nav-link" id="notifToggle" title="Notifications">
-                                <i class="fas fa-bell"></i>
-                                <span class="badge-notif" id="badgeNotif">3</span>
-                            </a>
-                            <div class="dropdown-menu" id="notifDropdown">
-                                <span class="dropdown-header">3 notifications</span>
-                                <div class="dropdown-divider"></div>
-                                <a href="#" class="dropdown-item">
-                                    <i class="fas fa-user-plus text-success mr-2"></i> Nouvel élève inscrit
-                                    <span style="float: right; color: #6c757d; font-size: 11px;">Il y a 23 min</span>
-                                </a>
-                                <a href="#" class="dropdown-item">
-                                    <i class="fas fa-exclamation-circle text-danger mr-2"></i> Absence signalée
-                                    <span style="float: right; color: #6c757d; font-size: 11px;">Il y a 1h</span>
-                                </a>
-                                <a href="#" class="dropdown-item">
-                                    <i class="fas fa-money-bill text-warning mr-2"></i> Paiement reçu
-                                    <span style="float: right; color: #6c757d; font-size: 11px;">Il y a 2h</span>
-                                </a>
-                            </div>
-                        </li>
-                        <li class="nav-item">
-                            <a href="../../../auth/Logout.aspx" class="nav-link" title="Se déconnecter">
-                                <i class="fas fa-sign-out-alt"></i>
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" id="fullscreenToggle" title="Plein écran">
-                                <i class="fas fa-expand-arrows-alt"></i>
-                            </a>
-                        </li>
-                    </ul>
-                </nav>
+                <%= AuthHelper.RenderTopBarHTML() %>
 
                 <!-- ═══ SIDEBAR ═══ -->
                 <aside class="main-sidebar" id="sidebar">
@@ -89,6 +46,9 @@
                         <%= AuthHelper.RenderMenuHTML() %>
                     </div>
                 </aside>
+
+                <!-- ═══ CONTROL SIDEBAR ═══ -->
+                <%= AuthHelper.RenderControlSidebarHTML() %>
 
                 <!-- ═══ CONTENT WRAPPER ═══ -->
                 <div class="content-wrapper" id="contentWrapper">
