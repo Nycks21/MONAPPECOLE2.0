@@ -22,5 +22,11 @@
         ctx.Response.AppendHeader("Cache-Control", "no-cache, no-store, must-revalidate");
         ctx.Response.AppendHeader("Expires", "0");
     }
+    protected void Application_Start(object sender, EventArgs e)
+    {
+        // Augmenter la limite de taille JSON dans le sérialiseur
+        var serializer = new System.Web.Script.Serialization.JavaScriptSerializer();
+        serializer.MaxJsonLength = int.MaxValue;
+    }
 </script>
 

@@ -1,4 +1,5 @@
 <%@ Page Language="C#" ContentType="application/json" ResponseEncoding="utf-8" %>
+<%@ Import Namespace="System" %>
 <%@ Import Namespace="System.Configuration" %>
 <%@ Import Namespace="System.Data.SqlClient" %>
 <%@ Import Namespace="System.Web.Script.Serialization" %>
@@ -11,60 +12,55 @@ protected void Page_Load(object sender, EventArgs e)
     
     try
     {
-        string action = Request.QueryString["action"];
+        // Lire le corps de la requête
+        string body = new System.IO.StreamReader(Request.InputStream).ReadToEnd();
+        var serializer = new JavaScriptSerializer();
+        var data = serializer.Deserialize<Dictionary<string, object>>(body);
         
-        if (action == "register")
+        string message = data.ContainsKey("message") ? data["message"].ToString() : "⚠️ Maintenance programmée";
+        string maintenanceTime = data.ContainsKey("maintenanceTime") ? data["maintenanceTime"].ToString() : DateTime.Now.AddMinutes(5).ToString("HH:mm");
+        
+        // Vérifier que l'utilisateur est authentifié (SuperAdmin ou Admin)
+        if (Session["authenticated"] == null || !(bool)Session["authenticated"])
         {
-            // Enregistrer que l'utilisateur a reçu la notification
-            string userId = Request.QueryString["userId"];
-            if (!string.IsNullOrEmpty(userId))
+            Response.Write("{\"success\":false,\"message\":\"Non authentifié\"}");
+            return;
+        }
+        
+        int currentRole = Session["USERROLE"] != null ? Convert.ToInt32(Session["USERROLE"]) : -1;
+        if (currentRole != 0 && currentRole != 1)
+        {
+            Response.Write("{\"success\":false,\"message\":\"Droits insuffisants\"}");
+            return;
+        }
+        
+        // Stocker la notification dans Application (visible par tous)
+        Application.Lock();
+        Application["MaintenanceMessage"] = message;
+        Application["MaintenanceTime"] = maintenanceTime;
+        Application["MaintenanceActive"] = true;
+        Application["MaintenanceStartTime"] = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+        Application.UnLock();
+        
+        // Compter les utilisateurs actifs
+        int activeUsersCount = 0;
+        string connStr = ConfigurationManager.ConnectionStrings["MaConnexion"].ConnectionString;
+        
+        using (SqlConnection conn = new SqlConnection(connStr))
+        {
+            conn.Open();
+            string sql = "SELECT COUNT(*) FROM USERS WHERE SESSION_TOKEN IS NOT NULL";
+            using (SqlCommand cmd = new SqlCommand(sql, conn))
             {
-                Session["MaintenanceNotified"] = true;
-                Session["MaintenanceTime"] = Request.QueryString["time"];
+                activeUsersCount = (int)cmd.ExecuteScalar();
             }
-            
-            var result = new { success = true, message = "Notification enregistrée" };
-            WriteJson(result);
         }
-        else if (action == "broadcast")
-        {
-            // Envoyer la notification à tous les utilisateurs connectés
-            string maintenanceTime = Request.QueryString["time"];
-            BroadcastToAllUsers(maintenanceTime);
-            
-            var result = new { success = true, message = "Notification diffusée" };
-            WriteJson(result);
-        }
-        else
-        {
-            var result = new { success = false, message = "Action non reconnue" };
-            WriteJson(result);
-        }
+        
+        Response.Write("{\"success\":true,\"message\":\"Notification envoyée à " + activeUsersCount + " utilisateur(s) actif(s)\", \"activeUsers\":" + activeUsersCount + "}");
     }
     catch (Exception ex)
     {
-        var result = new { success = false, message = ex.Message };
-        WriteJson(result);
+        Response.Write("{\"success\":false,\"message\":\"" + ex.Message.Replace("\"", "'") + "\"}");
     }
-}
-
-private void BroadcastToAllUsers(string maintenanceTime)
-{
-    // Stocker l'information de maintenance en application state (accessible à tous les utilisateurs)
-    Application.Lock();
-    Application["MaintenanceMode"] = true;
-    Application["MaintenanceTime"] = maintenanceTime;
-    Application["MaintenanceStartTime"] = DateTime.Now.ToString();
-    Application.Unlock();
-    
-    // Mettre à jour la session actuelle
-    Session["MaintenanceNotified"] = true;
-    Session["MaintenanceTime"] = maintenanceTime;
-}
-
-private void WriteJson(object obj)
-{
-    var serializer = new JavaScriptSerializer();
-    Response.Write(serializer.Serialize(obj));
 }
 </script>

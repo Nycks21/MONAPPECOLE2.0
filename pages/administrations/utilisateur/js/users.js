@@ -2,29 +2,26 @@
 // GESTION COMPLÈTE DES UTILISATEURS - AVEC PERMISSIONS EN BASE DE DONNÉES
 // ============================================================================
 
-let currentMode = null; // "ajout" ou "modification"
+let currentMode = null;
 let currentUserId = null;
 let usersData = [];
 let filteredUsers = [];
 let currentPage = 1;
 let rowsPerPage = 10;
 
-// Indicateur de dépassement de licence
 let isLicenceLimitReached = false;
 let maxUsersAllowed = 0;
 
-// Maintenance de la base de données
-let maintenanceInterval = null;
-let countdownInterval = null;
+// ============================================================================
+// PERMISSIONS
+// ============================================================================
 
-// Liste de toutes les permissions disponibles
 const PERMISSIONS_LIST = [
     'dashboard', 'eleves', 'absences', 'bulletins', 'frais',
     'niveaux', 'salles', 'classes', 'matieres', 'importation',
     'annees', 'utilisateurs', 'requetes'
 ];
 
-// Mapping des IDs de checkbox
 const CHECKBOX_ID_MAP = {
     'dashboard': 'permDashboard',
     'eleves': 'permEleves',
@@ -41,45 +38,58 @@ const CHECKBOX_ID_MAP = {
     'requetes': 'permRequetes'
 };
 
-// Fonction pour compter les utilisateurs actifs (utile pour le debug)
+const DEFAULT_ROLE_PERMISSIONS = {
+    'Administrateur': ['dashboard', 'eleves', 'absences', 'bulletins', 'frais', 'niveaux', 'salles', 'classes', 'matieres', 'importation', 'annees', 'utilisateurs'],
+    'SuperAdmin': ['dashboard', 'eleves', 'absences', 'bulletins', 'frais', 'niveaux', 'salles', 'classes', 'matieres', 'importation', 'annees', 'utilisateurs', 'requetes'],
+    'Professeur': ['dashboard', 'eleves', 'bulletins', 'absences'],
+    'Secrétaire': ['dashboard', 'eleves', 'absences'],
+    'Comptable': ['dashboard', 'frais'],
+    'CPE': ['dashboard', 'eleves', 'absences'],
+    'Parent': ['dashboard', 'bulletins']
+};
+
+function applyDefaultPermissionsByRole(role) {
+    var defaultPermissions = DEFAULT_ROLE_PERMISSIONS[role] || DEFAULT_ROLE_PERMISSIONS['Administrateur'];
+    for (var i = 0; i < PERMISSIONS_LIST.length; i++) {
+        var perm = PERMISSIONS_LIST[i];
+        var checkboxId = CHECKBOX_ID_MAP[perm];
+        var checkbox = document.getElementById(checkboxId);
+        if (checkbox) {
+            checkbox.checked = defaultPermissions.indexOf(perm) !== -1;
+        }
+    }
+}
+
 function getActiveUsersCount() {
     return usersData.filter(u => u.ACTIVE === true || u.ACTIVE === 1 || u.ACTIVE === 'true').length;
 }
 
 // ============================================================================
-// VÉRIFICATION DE LA LICENCE (NOMBRE MAX D'UTILISATEURS)
+// LICENCE
 // ============================================================================
 
 async function checkLicenceLimit() {
     try {
         const response = await fetch("api/CheckLicence.aspx");
         const data = await response.json();
-        
+
         if (data.success) {
             maxUsersAllowed = data.maxUsers || 0;
             const currentUsers = data.currentUsers || 0;
-            
             isLicenceLimitReached = currentUsers >= maxUsersAllowed;
-            
-            // Mettre à jour l'affichage dans le sidebar
+
             const maxUsersSpan = document.getElementById('maxUsersCount');
             if (maxUsersSpan) {
                 maxUsersSpan.textContent = currentUsers + ' / ' + maxUsersAllowed;
-                if (isLicenceLimitReached) {
-                    maxUsersSpan.style.color = '#ff6b6b';
-                    maxUsersSpan.style.fontWeight = 'bold';
-                } else {
-                    maxUsersSpan.style.color = '#adb5bd';
-                    maxUsersSpan.style.fontWeight = 'normal';
-                }
+                maxUsersSpan.style.color = isLicenceLimitReached ? '#ff6b6b' : '#adb5bd';
+                maxUsersSpan.style.fontWeight = isLicenceLimitReached ? 'bold' : 'normal';
             }
-            
-            // Mettre à jour le compteur dans l'en-tête
+
             const userCountInfo = document.getElementById('userCountInfo');
             if (userCountInfo) {
                 userCountInfo.textContent = currentUsers + ' / ' + maxUsersAllowed;
             }
-            
+
             return { reached: isLicenceLimitReached, current: currentUsers, max: maxUsersAllowed };
         }
     } catch (err) {
@@ -89,18 +99,15 @@ async function checkLicenceLimit() {
     return { reached: false, current: 0, max: 0 };
 }
 
-// Vérifier si on peut activer un utilisateur (changement de statut)
 async function canActivateUser() {
     const licenceInfo = await checkLicenceLimit();
     if (licenceInfo.reached) {
-        // Passer les bons paramètres à la fonction d'alerte
         showLicenceLimitAlert(licenceInfo.current, licenceInfo.max);
         return false;
     }
     return true;
 }
 
-// Afficher une alerte si la limite est atteinte
 function showLicenceLimitAlert(currentUsers, maxUsers, action = "activer") {
     const modalHtml = `
         <div style="text-align: center; padding: 10px;">
@@ -118,86 +125,20 @@ function showLicenceLimitAlert(currentUsers, maxUsers, action = "activer") {
             </div>
         </div>
     `;
-    
-    Swal.fire({
-        title: 'Licence dépassée',
-        html: modalHtml,
-        icon: 'warning',
-        confirmButtonText: 'Compris',
-        confirmButtonColor: '#dc3545'
-    });
+    Swal.fire({ title: 'Licence dépassée', html: modalHtml, icon: 'warning', confirmButtonText: 'Compris', confirmButtonColor: '#dc3545' });
 }
-
-// ============================================================================
-// PERMISSIONS PAR DÉFAUT SELON LE RÔLE
-// ============================================================================
-
-const DEFAULT_ROLE_PERMISSIONS = {
-    'Administrateur': [
-        'dashboard', 'eleves', 'absences', 'bulletins', 'frais',
-        'niveaux', 'salles', 'classes', 'matieres', 'importation',
-        'annees', 'utilisateurs'
-    ],
-    'SuperAdmin': [
-        'dashboard', 'eleves', 'absences', 'bulletins', 'frais',
-        'niveaux', 'salles', 'classes', 'matieres', 'importation',
-        'annees', 'utilisateurs', 'requetes'
-    ],
-    'Professeur': [
-        'dashboard', 'eleves', 'bulletins', 'absences'
-    ],
-    'Secrétaire': [
-        'dashboard', 'eleves', 'absences'
-    ],
-    'Comptable': [
-        'dashboard', 'frais'
-    ],
-    'CPE': [
-        'dashboard', 'eleves', 'absences'
-    ],
-    'Parent': [
-        'dashboard', 'bulletins'
-    ]
-};
-
-// Appliquer les permissions par défaut selon le rôle
-function applyDefaultPermissionsByRole(role) {
-    var defaultPermissions = DEFAULT_ROLE_PERMISSIONS[role] || DEFAULT_ROLE_PERMISSIONS['Administrateur'];
-    
-    for (var i = 0; i < PERMISSIONS_LIST.length; i++) {
-        var perm = PERMISSIONS_LIST[i];
-        var checkboxId = CHECKBOX_ID_MAP[perm];
-        var checkbox = document.getElementById(checkboxId);
-        if (checkbox) {
-            checkbox.checked = defaultPermissions.indexOf(perm) !== -1;
-        }
-    }
-}
-
-// ============================================================================
-// INITIALISATION
-// ============================================================================
-$(document).ready(() => {
-    console.log("🔵 Page chargée - Initialisation");
-    forceHideSpinner();
-    preventFormAutoSubmit();
-    ensureButtonsHaveTypeButton();
-    loadUsers();
-    attachRoleChangeListener();
-    initSidebar();
-    initDarkMode();
-    checkLicenceLimit(); // Vérifier la limite au chargement
-});
 
 // ============================================================================
 // SPINNER
 // ============================================================================
+
 function forceHideSpinner() {
     var s = document.getElementById('spinnerOverlay');
     if (!s) return;
     s.style.display = 'none';
     s.style.visibility = 'hidden';
     s.style.opacity = '0';
+    if (s.setAttribute) s.setAttribute('aria-hidden', 'true');
 }
 
 function showSpinner() {
@@ -206,9 +147,12 @@ function showSpinner() {
     s.style.opacity = '1';
     s.style.visibility = 'visible';
     s.style.display = 'flex';
+    if (s.removeAttribute) s.removeAttribute('aria-hidden');
 }
 
-function hideSpinner() { forceHideSpinner(); }
+function hideSpinner() { 
+    forceHideSpinner(); 
+}
 
 function showPreloader() {
     const preloader = document.getElementById('preloader');
@@ -231,8 +175,25 @@ function hidePreloader() {
 window.addEventListener('load', () => setTimeout(hidePreloader, 500));
 
 // ============================================================================
-// EMPÊCHER SOUMISSION AUTO
+// INITIALISATION
 // ============================================================================
+
+$(document).ready(() => {
+    console.log("🔵 Page chargée - Initialisation userJS");
+    forceHideSpinner();
+    preventFormAutoSubmit();
+    ensureButtonsHaveTypeButton();
+    loadUsers();
+    attachRoleChangeListener();
+    initSidebar();
+    initDarkMode();
+    checkLicenceLimit();
+});
+
+// ============================================================================
+// FORMULAIRE
+// ============================================================================
+
 function preventFormAutoSubmit() {
     const form = document.getElementById('form1');
     if (form) {
@@ -240,10 +201,10 @@ function preventFormAutoSubmit() {
             const submitter = e.submitter;
             if (submitter && submitter.classList &&
                 (submitter.classList.contains('btn-success') ||
-                 submitter.classList.contains('btn-primary') ||
-                 submitter.classList.contains('btn-danger') ||
-                 submitter.getAttribute('onclick')?.includes('openAddUserModal') ||
-                 submitter.getAttribute('onclick')?.includes('exportUsers'))) {
+                    submitter.classList.contains('btn-primary') ||
+                    submitter.classList.contains('btn-danger') ||
+                    submitter.getAttribute('onclick')?.includes('openAddUserModal') ||
+                    submitter.getAttribute('onclick')?.includes('exportUsers'))) {
                 e.preventDefault();
                 return false;
             }
@@ -264,6 +225,7 @@ function ensureButtonsHaveTypeButton() {
 // ============================================================================
 // FILTRES ET PAGINATION
 // ============================================================================
+
 function createFilterControls() {
     const oldContainer = document.getElementById('filter-container');
     if (oldContainer) oldContainer.remove();
@@ -462,6 +424,7 @@ function updateCounter() {
 // ============================================================================
 // CHARGEMENT DES UTILISATEURS
 // ============================================================================
+
 function loadUsers() {
     showSpinner();
     showPreloader();
@@ -477,7 +440,7 @@ function loadUsers() {
             createFilterControls();
             renderSimpleTable();
             hidePreloader();
-            checkLicenceLimit(); // Vérifier la limite après chargement
+            checkLicenceLimit();
         })
         .catch(err => {
             console.error(err);
@@ -544,8 +507,9 @@ function renderSimpleTable() {
 }
 
 // ============================================================================
-// GESTION DES PERMISSIONS (CHECKBOX)
+// PERMISSIONS (CHECKBOX)
 // ============================================================================
+
 function setPermissionsCheckboxes(permissions) {
     for (const [perm, checkboxId] of Object.entries(CHECKBOX_ID_MAP)) {
         const checkbox = document.getElementById(checkboxId);
@@ -579,16 +543,16 @@ function setPermissionsCheckboxesEnabled(enabled) {
 // ============================================================================
 // MODAL - AJOUT / MODIFICATION
 // ============================================================================
+
 async function openAddUserModal(event) {
     if (event) { event.preventDefault(); event.stopPropagation(); }
-    
-    // Vérifier la limite avant d'ouvrir le modal
+
     const licenceInfo = await checkLicenceLimit();
     if (licenceInfo.reached) {
         showLicenceLimitAlert(licenceInfo.current, licenceInfo.max);
         return false;
     }
-    
+
     currentMode = "ajout";
     currentUserId = null;
     resetModalForm();
@@ -604,11 +568,11 @@ async function openAddUserModal(event) {
         passwordField.required = true;
         passwordField.placeholder = "Mot de passe (min. 8 caractères)";
     }
-    
+
     const defaultRole = document.getElementById('userRole')?.value || 'Administrateur';
     applyDefaultPermissionsByRole(defaultRole);
     setPermissionsCheckboxesEnabled(true);
-    
+
     document.querySelector('#userModalTitle').innerHTML = '<i class="fas fa-user-plus"></i> Ajouter un utilisateur';
     showModal();
     return false;
@@ -695,8 +659,9 @@ function closeAddUserModal(event) {
 }
 
 // ============================================================================
-// ÉCOUTEUR DE CHANGEMENT DE RÔLE
+// RÔLE
 // ============================================================================
+
 function attachRoleChangeListener() {
     const roleSelect = document.getElementById('userRole');
     if (roleSelect) {
@@ -709,10 +674,10 @@ function onRoleChangeHandler(event) {
     const selectedRole = event.target.value;
     const currentPermissions = getSelectedPermissions();
     const defaultPermissions = DEFAULT_ROLE_PERMISSIONS[selectedRole] || DEFAULT_ROLE_PERMISSIONS['Administrateur'];
-    
-    const hasCustomPermissions = currentPermissions.length > 0 && 
+
+    const hasCustomPermissions = currentPermissions.length > 0 &&
         JSON.stringify(currentPermissions.sort()) !== JSON.stringify(defaultPermissions.sort());
-    
+
     if (hasCustomPermissions && currentMode === 'modification') {
         Swal.fire({
             title: 'Changer les permissions ?',
@@ -742,14 +707,14 @@ function onRoleChangeHandler(event) {
 // ============================================================================
 // CRÉATION ET MODIFICATION
 // ============================================================================
+
 async function createUserFromModal() {
-    // Vérifier à nouveau la limite avant création
     const licenceInfo = await checkLicenceLimit();
     if (licenceInfo.reached) {
         showLicenceLimitAlert(licenceInfo.current, licenceInfo.max);
         return;
     }
-    
+
     const username = document.getElementById('username')?.value.trim() || '';
     const nom = document.getElementById('Nom')?.value.trim() || '';
     const email = document.getElementById('userEmail')?.value.trim() || '';
@@ -823,19 +788,15 @@ async function updateUserFromModal() {
         return;
     }
 
-    // ============================================================
-    // VÉRIFICATION : Si on active un utilisateur et que la limite est atteinte
-    // ============================================================
     const user = findUserById(currentUserId);
     const etaitInactif = user && (user.ACTIVE !== true && user.ACTIVE !== 1 && user.ACTIVE !== 'true');
     const deviensActif = etaitInactif && statut === 'Actif';
-    
+
     if (deviensActif) {
-        // Vérifier la limite avant activation
         const licenceInfo = await checkLicenceLimit();
         if (licenceInfo.reached) {
             showLicenceLimitAlert(licenceInfo.current, licenceInfo.max);
-            return; // Bloquer la modification
+            return;
         }
     }
 
@@ -877,6 +838,7 @@ async function saveUser(event) {
 // ============================================================================
 // SUPPRESSION
 // ============================================================================
+
 async function supprimerContact(id, event) {
     if (event) { event.preventDefault(); event.stopPropagation(); }
     const result = await Swal.fire({
@@ -888,7 +850,7 @@ async function supprimerContact(id, event) {
         cancelButtonText: 'Annuler',
         confirmButtonColor: '#d33'
     });
-    
+
     if (result.isConfirmed) {
         showSpinner();
         try {
@@ -897,28 +859,18 @@ async function supprimerContact(id, event) {
                 headers: { "Content-Type": "application/x-www-form-urlencoded" },
                 body: `id=${encodeURIComponent(id)}`
             });
-            
+
             const text = await res.text();
-            
-            // Nettoyage agressif du texte
             const cleanText = text
                 .replace(/[\uFEFF\uFFFE\u200B\u200C\u200D\u2060]/g, '')
                 .replace(/ï»¿/g, '')
                 .replace(/﻿/g, '')
                 .trim();
-            
-            // Vérifier si la réponse contient "success"
+
             if (cleanText.includes('"success":true') || cleanText.includes('"status":"success"')) {
-                Swal.fire({ 
-                    icon: 'success', 
-                    title: "Supprimé", 
-                    text: "Utilisateur supprimé", 
-                    timer: 1500, 
-                    showConfirmButton: false 
-                });
+                Swal.fire({ icon: 'success', title: "Supprimé", text: "Utilisateur supprimé", timer: 1500, showConfirmButton: false });
                 setTimeout(() => loadUsers(), 1500);
             } else {
-                // Extraire le message d'erreur
                 const errorMatch = cleanText.match(/"message":"([^"]+)"/);
                 const errorMsg = errorMatch ? errorMatch[1] : "Erreur lors de la suppression";
                 Swal.fire({ icon: 'error', title: 'Erreur', text: errorMsg });
@@ -934,17 +886,22 @@ async function supprimerContact(id, event) {
 }
 
 // ============================================================================
-// FONCTIONS UTILITAIRES
+// UTILITAIRES
 // ============================================================================
+
 function getRoleId(roleName) {
-    const roles = { 'SuperAdmin': 0, 'Administrateur': 1, 'Admin': 1, 'User': 2,
-        'Professeur': 3, 'Secrétaire': 4, 'Comptable': 5, 'CPE': 6, 'Parent': 7 };
+    const roles = {
+        'SuperAdmin': 0, 'Administrateur': 1, 'Admin': 1, 'User': 2,
+        'Professeur': 3, 'Secrétaire': 4, 'Comptable': 5, 'CPE': 6, 'Parent': 7
+    };
     return roles[roleName] !== undefined ? roles[roleName] : 1;
 }
 
 function getUserRoleName(roleId) {
-    const roles = { 0: 'SuperAdmin', 1: 'Administrateur', 2: 'User', 3: 'Professeur',
-        4: 'Secrétaire', 5: 'Comptable', 6: 'CPE', 7: 'Parent' };
+    const roles = {
+        0: 'SuperAdmin', 1: 'Administrateur', 2: 'User', 3: 'Professeur',
+        4: 'Secrétaire', 5: 'Comptable', 6: 'CPE', 7: 'Parent'
+    };
     return roles[roleId] || 'Utilisateur';
 }
 
@@ -955,18 +912,14 @@ function findUserById(userId) {
 async function safeJson(res) {
     try {
         let text = await res.text();
-        
         if (!text || text.trim() === "") {
             return { success: false, message: "Réponse vide" };
         }
-        
-        // Supprimer les caractères BOM (début et fin)
         text = text.replace(/^\uFEFF/, '');
         text = text.replace(/^﻿﻿/, '');
         text = text.replace(/﻿﻿$/, '');
         text = text.replace(/[\u200B\u200C\u200D\uFEFF]/g, '');
         text = text.trim();
-        
         return JSON.parse(text);
     } catch (e) {
         console.error("Erreur parsing JSON:", e);
@@ -980,32 +933,325 @@ function escapeHtml(text) {
 }
 
 // ============================================================================
-// MODE SOMBRE (DARK MODE)
+// SAUVEGARDE BASE DE DONNÉES
 // ============================================================================
 
-function initDarkMode() {
-    const toggle = document.getElementById('toggleDarkMode');
-    if (!toggle) return;
-    
-    const savedMode = localStorage.getItem('darkMode');
-    if (savedMode === 'enabled') {
-        document.body.classList.add('dark-mode');
-        toggle.checked = true;
+async function backupDatabase() {
+    const userRole = document.getElementById('hfUserRole')?.value;
+    if (userRole !== '0') {
+        Swal.fire({
+            icon: 'error',
+            title: 'Accès refusé',
+            text: 'Seul un Super Administrateur peut effectuer une sauvegarde.',
+            confirmButtonColor: '#dc3545'
+        });
+        return;
     }
-    
-    toggle.addEventListener('change', function() {
-        if (this.checked) {
-            document.body.classList.add('dark-mode');
-            localStorage.setItem('darkMode', 'enabled');
-        } else {
-            document.body.classList.remove('dark-mode');
-            localStorage.setItem('darkMode', 'disabled');
+
+    let countdownSeconds = 5;
+
+    const result = await Swal.fire({
+        title: '🔄 Planifier la sauvegarde',
+        html: `
+            <div style="text-align: left; font-size: 12px;">
+                <p><strong>⚠️ Attention :</strong></p>
+                <ul>
+                    <li>Tous les autres utilisateurs seront <strong>déconnectés</strong> à l'heure choisie</li>
+                    <li>Ils verront un compte à rebours en bas de leur écran</li>
+                    <li>Ils seront bloqués pendant <strong>1 minute</strong></li>
+                    <li>Une sauvegarde complète sera créée à l'heure choisie</li>
+                </ul>
+                <br>
+                <label for="backupTime" style="font-weight: bold;">📅 Heure de la sauvegarde :</label>
+                <input type="time" id="backupTime" class="swal2-input" value="${getDefaultTime()}">
+                <p style="font-size: 12px; color: #6c757d; margin-top: 5px;">
+                    <i class="fas fa-info-circle"></i> Tous les utilisateurs seront déconnectés à <strong>cette heure précise</strong>
+                </p>
+                <div style="margin-top: 15px; padding: 10px; background: #d1ecf1; border-left: 4px solid #17a2b8; border-radius: 5px;">
+                    <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
+                        <input type="checkbox" id="blockUsers" checked style="width: 18px; height: 18px;">
+                        <span style="font-weight: bold;">🔒 Bloquer les connexions après la déconnexion</span>
+                    </label>
+                    <p style="font-size: 12px; color: #0c5460; margin: 5px 0 0 28px;">
+                        Les utilisateurs ne pourront pas se reconnecter pendant 1 minute après la déconnexion.
+                    </p>
+                </div>
+                <div style="margin-top: 15px; padding: 8px; background: #e8f4fd; border-radius: 5px; text-align: center;">
+                    <i class="fas fa-hourglass-half"></i> 
+                    <span style="font-size: 13px;">Le bouton de confirmation sera actif dans <strong id="countdownDisplay">5</strong> secondes</span>
+                </div>
+            </div>
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonText: '📀 Planifier la sauvegarde',
+        cancelButtonText: 'Annuler',
+        confirmButtonColor: '#28a745',
+        cancelButtonColor: '#dc3545',
+        didOpen: () => {
+            const confirmBtn = Swal.getConfirmButton();
+            confirmBtn.disabled = true;
+            confirmBtn.style.opacity = '0.6';
+            confirmBtn.style.cursor = 'not-allowed';
+
+            const countdownDisplay = document.getElementById('countdownDisplay');
+            let seconds = 5;
+            const interval = setInterval(() => {
+                seconds--;
+                if (countdownDisplay) {
+                    countdownDisplay.textContent = seconds;
+                }
+                if (confirmBtn) {
+                    confirmBtn.textContent = `📀 Planifier (${seconds}s)`;
+                }
+                if (seconds <= 0) {
+                    clearInterval(interval);
+                    if (confirmBtn) {
+                        confirmBtn.textContent = '📀 Planifier la sauvegarde';
+                        confirmBtn.disabled = false;
+                        confirmBtn.style.opacity = '1';
+                        confirmBtn.style.cursor = 'pointer';
+                    }
+                    if (countdownDisplay) {
+                        countdownDisplay.textContent = '0';
+                        countdownDisplay.style.color = '#28a745';
+                    }
+                }
+            }, 1000);
+
+            window._backupCountdownInterval = interval;
+        },
+        willClose: () => {
+            if (window._backupCountdownInterval) {
+                clearInterval(window._backupCountdownInterval);
+            }
+        },
+        preConfirm: () => {
+            const time = document.getElementById('backupTime').value;
+            const blockUsers = document.getElementById('blockUsers')?.checked || false;
+            if (!time) {
+                Swal.showValidationMessage('Veuillez sélectionner une heure');
+                return false;
+            }
+            return { time: time, blockUsers: blockUsers };
         }
     });
+
+    if (!result.isConfirmed) return;
+
+    const selectedTime = result.value.time;
+    const blockUsers = result.value.blockUsers;
+
+    showSpinner();
+
+    try {
+        console.log('📋 Planification de la maintenance à ' + selectedTime + '...');
+        await fetch(`api/BackupDatabase.aspx?action=prepare&time=${encodeURIComponent(selectedTime)}&block=${blockUsers}`);
+
+        console.log('📢 Envoi des notifications...');
+        await notifyAllUsers(
+            '⚠️ MAINTENANCE PROGRAMMÉE - Sauvegarde à ' + selectedTime,
+            selectedTime
+        );
+
+        await Swal.fire({
+            title: '✅ Sauvegarde programmée',
+            html: `
+                <div style="text-align: center;">
+                    <p>La sauvegarde est programmée à <strong>${selectedTime}</strong></p>
+                    <p class="swal2-text" style="font-size: 14px; color: #28a745;">
+                        <i class="fas fa-check-circle"></i> 
+                        Tous les utilisateurs ont été notifiés et verront un compte à rebours.
+                    </p>
+                    <div style="margin: 20px 0; background: #f8f9fa; padding: 15px; border-radius: 8px;">
+                        <div style="font-size: 14px; color: #6c757d;">⏳ Temps restant avant la déconnexion</div>
+                        <div style="font-size: 48px; font-weight: bold; font-family: monospace; color: #dc3545;" id="adminCountdownDisplay">
+                            --:--
+                        </div>
+                        <div style="height: 8px; background: #e9ecef; border-radius: 4px; margin-top: 10px; overflow: hidden;">
+                            <div id="adminProgressBar" style="width: 0%; height: 100%; background: #dc3545; transition: width 1s linear;"></div>
+                        </div>
+                    </div>
+                    <p style="font-size: 12px; color: #6c757d;">
+                        <i class="fas fa-info-circle"></i> 
+                        Les utilisateurs seront déconnectés automatiquement à <strong>${selectedTime}</strong>
+                    </p>
+                </div>
+            `,
+            icon: 'info',
+            showConfirmButton: false,
+            allowOutsideClick: false,
+            didOpen: () => {
+                startAdminCountdown(selectedTime);
+            }
+        });
+
+    } catch (err) {
+        console.error('Erreur:', err);
+        await Swal.fire({ icon: 'error', title: 'Erreur', text: err.message, confirmButtonText: 'OK' });
+    } finally {
+        hideSpinner();
+        if (window._backupCountdownInterval) {
+            clearInterval(window._backupCountdownInterval);
+        }
+    }
+}
+
+function startAdminCountdown(targetTime) {
+    if (window.adminCountdownTimer) clearInterval(window.adminCountdownTimer);
+
+    const target = new Date();
+    const [hours, minutes] = targetTime.split(':');
+    target.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+
+    if (target < new Date()) {
+        target.setDate(target.getDate() + 1);
+    }
+
+    const maxDuration = 24 * 60 * 60 * 1000;
+
+    window.adminCountdownTimer = setInterval(() => {
+        const now = new Date();
+        const diff = target - now;
+
+        if (diff <= 0) {
+            clearInterval(window.adminCountdownTimer);
+            executeScheduledBackup();
+        } else {
+            const hoursLeft = Math.floor(diff / 3600000);
+            const minutesLeft = Math.floor((diff % 3600000) / 60000);
+            const secondsLeft = Math.floor((diff % 60000) / 1000);
+            const totalSeconds = Math.floor(diff / 1000);
+            const percent = Math.min(100, (1 - (totalSeconds / maxDuration)) * 100);
+
+            const countdownEl = document.getElementById('adminCountdownDisplay');
+            const progressEl = document.getElementById('adminProgressBar');
+
+            if (countdownEl) {
+                countdownEl.textContent = `${String(hoursLeft).padStart(2, '0')}:${String(minutesLeft).padStart(2, '0')}:${String(secondsLeft).padStart(2, '0')}`;
+                if (diff < 300000) {
+                    countdownEl.style.color = '#ff6b6b';
+                }
+            }
+            if (progressEl) {
+                progressEl.style.width = `${percent}%`;
+            }
+        }
+    }, 1000);
+}
+
+async function executeScheduledBackup() {
+    console.log('⏰ Heure programmée atteinte - Exécution de la sauvegarde...');
+
+    const spinner = document.getElementById('spinnerOverlay');
+    if (spinner) spinner.style.display = 'flex';
+
+    try {
+        const response = await fetch('/pages/administrations/utilisateur/api/BackupDatabase.aspx?action=execute');
+
+        if (response.ok) {
+            const contentType = response.headers.get('content-type');
+
+            if (contentType && contentType.includes('application/octet-stream')) {
+                const contentDisposition = response.headers.get('Content-Disposition');
+                let filename = `backup_${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.bak`;
+                if (contentDisposition) {
+                    const match = contentDisposition.match(/filename=(.+)/);
+                    if (match && match[1]) filename = match[1];
+                }
+
+                const blob = await response.blob();
+                const fileSize = (blob.size / 1024 / 1024).toFixed(2);
+
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+
+                const countdownDisplay = document.getElementById('backupCountdownDisplay');
+                if (countdownDisplay) {
+                    countdownDisplay.textContent = '✅ Téléchargé!';
+                    countdownDisplay.style.color = '#28a745';
+                }
+
+                const progressBar = document.getElementById('backupProgressBar');
+                if (progressBar) {
+                    progressBar.style.width = '100%';
+                    progressBar.style.backgroundColor = '#28a745';
+                }
+
+                await Swal.fire({
+                    icon: 'success',
+                    title: '✅ Sauvegarde terminée',
+                    html: `
+                        <div style="text-align: left;">
+                            <p><strong>La base de données a été sauvegardée avec succès !</strong></p>
+                            <hr style="margin: 15px 0;">
+                            <p><i class="fas fa-database"></i> <strong>Fichier :</strong> ${filename}</p>
+                            <p><i class="fas fa-hdd"></i> <strong>Taille :</strong> ${fileSize} Mo</p>
+                            <p><i class="fas fa-folder-open"></i> <strong>Emplacement :</strong> App_Data/Backups/</p>
+                        </div>
+                    `,
+                    confirmButtonText: 'OK',
+                    confirmButtonColor: '#28a745'
+                });
+
+                await fetch('/pages/administrations/utilisateur/api/BackupDatabase.aspx?action=check');
+                location.reload();
+            } else {
+                const error = await response.json();
+                await Swal.fire({ icon: 'error', title: 'Erreur', text: error.message || 'Erreur lors de la sauvegarde', confirmButtonText: 'OK' });
+            }
+        } else {
+            const error = await response.json();
+            await Swal.fire({ icon: 'error', title: 'Erreur', text: error.message || 'Erreur serveur', confirmButtonText: 'OK' });
+        }
+    } catch (err) {
+        console.error('Erreur:', err);
+        await Swal.fire({ icon: 'error', title: 'Erreur', text: err.message, confirmButtonText: 'OK' });
+    } finally {
+        if (spinner) spinner.style.display = 'none';
+        if (window.backupCountdownTimer) {
+            clearInterval(window.backupCountdownTimer);
+        }
+    }
+}
+
+function getDefaultTime() {
+    const now = new Date();
+    now.setMinutes(now.getMinutes() + 5);
+    return now.toTimeString().slice(0, 5);
 }
 
 // ============================================================================
-// CONTROL SIDEBAR (BARRE LATÉRALE DROITE)
+// NOTIFICATIONS
+// ============================================================================
+
+async function notifyAllUsers(message, maintenanceTime) {
+    try {
+        const response = await fetch('api/NotifyMaintenance.aspx', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                message: message || '⚠️ Maintenance programmée - Déconnexion imminente',
+                maintenanceTime: maintenanceTime || new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+            })
+        });
+        const data = await response.json();
+        console.log('✅ Notification envoyée à tous les utilisateurs:', data);
+        return data;
+    } catch (e) {
+        console.error('❌ Erreur lors de l\'envoi des notifications:', e);
+        return { success: false, message: e.message };
+    }
+}
+
+// ============================================================================
+// SIDEBAR
 // ============================================================================
 
 function openSidebar() {
@@ -1036,7 +1282,7 @@ function initSidebar() {
     const toggleBtn = document.getElementById('toggleSidebarBtn');
     const closeBtn = document.getElementById('closeSidebarBtn');
     const overlay = document.getElementById('sidebarOverlay');
-    
+
     if (toggleBtn) {
         toggleBtn.addEventListener('click', openSidebar);
     }
@@ -1046,8 +1292,8 @@ function initSidebar() {
     if (overlay) {
         overlay.addEventListener('click', closeSidebar);
     }
-    
-    document.addEventListener('keydown', function(e) {
+
+    document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') {
             closeSidebar();
         }
@@ -1055,434 +1301,406 @@ function initSidebar() {
 }
 
 // ============================================================================
-// SAUVEGARDE BASE DE DONNÉES
+// RESTAURATION DE BASE DE DONNÉES - VERSION PROFESSIONNELLE
 // ============================================================================
 
-async function backupDatabase() {
-    // Vérifier si l'utilisateur est SuperAdmin
+let selectedRestoreFile = null;
+let selectedRestoreSource = null;
+let restoreLogs = [];
+
+function openRestoreModal() {
     const userRole = document.getElementById('hfUserRole')?.value;
     if (userRole !== '0') {
         Swal.fire({
             icon: 'error',
             title: 'Accès refusé',
-            text: 'Seul un Super Administrateur peut effectuer une sauvegarde.',
+            text: 'Seul un Super Administrateur peut restaurer la base de données.',
             confirmButtonColor: '#dc3545'
+        });
+        return;
+    }
+
+    document.getElementById('restoreFilePath').value = '';
+    document.getElementById('restoreFileInput').value = '';
+    document.getElementById('restoreProgressContainer').style.display = 'none';
+    document.getElementById('restoreLogs').style.display = 'none';
+    document.getElementById('restoreStep2').style.display = 'none';
+    document.getElementById('btnRestoreExecute').disabled = true;
+    selectedRestoreFile = null;
+    selectedRestoreSource = null;
+    restoreLogs = [];
+
+    document.getElementById('restoreLogContent').innerHTML = '<div style="color: #4ec9b0;">[INFO] Initialisation de la restauration...</div>';
+
+    loadBackupList();
+
+    if (typeof window.openModal === 'function') {
+        window.openModal('restoreModal');
+    } else {
+        const modal = document.getElementById('restoreModal');
+        if (modal) {
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+        }
+    }
+}
+
+function selectRestoreSource(source) {
+    selectedRestoreSource = source;
+
+    document.getElementById('btnSourceLocal').className = source === 'local' ? 'btn btn-primary' : 'btn btn-secondary';
+    document.getElementById('btnSourceBackup').className = source === 'backup' ? 'btn btn-primary' : 'btn btn-secondary';
+
+    document.getElementById('restoreSourceLocal').style.display = source === 'local' ? 'block' : 'none';
+    document.getElementById('restoreSourceBackup').style.display = source === 'backup' ? 'block' : 'none';
+    document.getElementById('restoreStep2').style.display = 'none';
+    document.getElementById('btnRestoreExecute').disabled = true;
+    selectedRestoreFile = null;
+}
+
+function loadBackupList() {
+    const container = document.getElementById('backupList');
+    container.innerHTML = '<p style="text-align: center; color: #6c757d;">Chargement des sauvegardes...</p>';
+
+    fetch('/pages/administrations/utilisateur/api/GetBackupList.aspx')
+        .then(r => r.json())
+        .then(data => {
+            if (data.success && data.backups && data.backups.length > 0) {
+                let html = '';
+                data.backups.forEach((backup, index) => {
+                    const isSelected = selectedRestoreFile === backup.path ? 'selected' : '';
+                    html += `
+                        <div class="backup-item" onclick="selectBackupFile('${backup.path}', '${backup.name}', ${backup.size}, '${backup.date}')" 
+                             style="padding: 10px; border-bottom: 1px solid #dee2e6; cursor: pointer; transition: background 0.2s; ${isSelected ? 'background: #e8f4fd;' : ''}">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <strong>${backup.name}</strong>
+                                    <div style="font-size: 11px; color: #6c757d;">${backup.date} - ${(backup.size / 1024 / 1024).toFixed(2)} Mo</div>
+                                </div>
+                                <div>
+                                    <span class="badge bg-success" style="background: #28a745; color: white; padding: 3px 10px; border-radius: 12px; font-size: 11px;">
+                                        ${backup.status || 'Disponible'}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                container.innerHTML = html;
+            } else {
+                container.innerHTML = '<p style="text-align: center; color: #6c757d; padding: 20px;">Aucune sauvegarde disponible</p>';
+            }
+        })
+        .catch(err => {
+            console.error('Erreur chargement sauvegardes:', err);
+            container.innerHTML = '<p style="text-align: center; color: #dc3545; padding: 20px;">Erreur de chargement</p>';
+        });
+}
+
+function selectBackupFile(path, name, size, date) {
+    selectedRestoreFile = { path: path, name: name, size: size, date: date };
+    selectedRestoreSource = 'backup';
+
+    document.querySelectorAll('.backup-item').forEach(el => el.style.background = '');
+    const items = document.querySelectorAll('.backup-item');
+    items.forEach(el => {
+        if (el.textContent.includes(name)) {
+            el.style.background = '#e8f4fd';
+        }
+    });
+
+    showRestoreInfo(name, size, date);
+    document.getElementById('btnRestoreExecute').disabled = false;
+}
+
+function handleRestoreFileSelect(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    if (!file.name.toLowerCase().endsWith('.bak')) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Fichier invalide',
+            text: 'Veuillez sélectionner un fichier .bak',
+            confirmButtonColor: '#dc3545'
+        });
+        document.getElementById('restoreFileInput').value = '';
+        return;
+    }
+
+    const maxSize = 100 * 1024 * 1024;
+    if (file.size > maxSize) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Fichier trop volumineux',
+            text: 'La taille maximale est de 100 Mo',
+            confirmButtonColor: '#dc3545'
+        });
+        document.getElementById('restoreFileInput').value = '';
+        return;
+    }
+
+    selectedRestoreFile = {
+        path: null,
+        name: file.name,
+        size: file.size,
+        date: new Date().toLocaleString(),
+        file: file,
+        source: 'local'
+    };
+    selectedRestoreSource = 'local';
+
+    document.getElementById('restoreFilePath').value = file.name;
+    showRestoreInfo(file.name, file.size, new Date().toLocaleString());
+    document.getElementById('btnRestoreExecute').disabled = false;
+}
+
+function showRestoreInfo(name, size, date) {
+    document.getElementById('restoreStep2').style.display = 'block';
+    document.getElementById('restoreFileInfo').textContent = name;
+    document.getElementById('restoreSizeInfo').textContent = (size / 1024 / 1024).toFixed(2) + ' Mo';
+    document.getElementById('restoreDateInfo').textContent = date || new Date().toLocaleString();
+}
+
+function addLog(message, type = 'info') {
+    const colors = {
+        info: '#4ec9b0',
+        warning: '#dcdcaa',
+        error: '#f44747',
+        success: '#4ec9b0'
+    };
+    const icons = {
+        info: 'ℹ️',
+        warning: '⚠️',
+        error: '❌',
+        success: '✅'
+    };
+
+    restoreLogs.push({ message, type, time: new Date().toLocaleTimeString() });
+
+    const logContainer = document.getElementById('restoreLogContent');
+    const logEntry = document.createElement('div');
+    logEntry.style.color = colors[type] || '#d4d4d4';
+    logEntry.textContent = `[${new Date().toLocaleTimeString()}] ${icons[type] || '•'} ${message}`;
+    logContainer.appendChild(logEntry);
+    logContainer.scrollTop = logContainer.scrollHeight;
+}
+
+async function executeRestore() {
+    if (!selectedRestoreFile) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Fichier manquant',
+            text: 'Veuillez sélectionner un fichier .bak',
+            confirmButtonColor: '#ffc107'
         });
         return;
     }
     
     const result = await Swal.fire({
-        title: '🔄 Sauvegarde de la base de données',
+        title: '⚠️ Confirmation finale',
         html: `
             <div style="text-align: left;">
-                <p><strong>⚠️ Attention :</strong></p>
-                <ul>
-                    <li>Tous les autres utilisateurs seront <strong>immédiatement déconnectés</strong></li>
-                    <li>Ils seront bloqués pendant <strong>1 minute</strong></li>
-                    <li>Une sauvegarde complète sera créée</li>
+                <p><strong>⚠️ ATTENTION : Cette action est irréversible !</strong></p>
+                <ul style="color: #6c757d;">
+                    <li>Fichier: <strong>${selectedRestoreFile.name}</strong></li>
+                    <li>Base de données: <strong>MONAPPECOLE2</strong></li>
+                    <li>Taille: <strong>${(selectedRestoreFile.size / 1024 / 1024).toFixed(2)} Mo</strong></li>
                 </ul>
-                <br>
-                <div style="padding: 10px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 5px;">
+                <p style="color: #dc3545; font-weight: bold; padding: 10px; background: #fff3cd; border-radius: 5px;">
+                    <i class="fas fa-exclamation-triangle"></i> 
+                    Tous les utilisateurs seront déconnectés et la base sera remplacée.
+                </p>
+                <p style="font-size: 12px; color: #6c757d;">
                     <i class="fas fa-info-circle"></i> 
-                    <strong>Les autres utilisateurs verront un message de maintenance et seront redirigés.</strong>
-                </div>
+                    Veuillez confirmer en tapant le nom de la base de données ci-dessous.
+                </p>
+                <input type="text" id="restoreConfirmInput" class="swal2-input" placeholder="Tapez MONAPPECOLE2 pour confirmer" style="margin-top: 10px;">
             </div>
         `,
         icon: 'warning',
         showCancelButton: true,
-        confirmButtonText: '📀 Démarrer la sauvegarde',
+        confirmButtonText: '✅ Confirmer et restaurer',
         cancelButtonText: 'Annuler',
-        confirmButtonColor: '#28a745'
+        confirmButtonColor: '#dc3545',
+        cancelButtonColor: '#6c757d',
+        preConfirm: () => {
+            const input = document.getElementById('restoreConfirmInput');
+            if (input.value !== 'MONAPPECOLE2') {
+                Swal.showValidationMessage('Veuillez taper MONAPPECOLE2 pour confirmer');
+                return false;
+            }
+            return true;
+        }
     });
     
     if (!result.isConfirmed) return;
     
+    document.getElementById('restoreProgressContainer').style.display = 'block';
+    document.getElementById('restoreLogs').style.display = 'block';
+    document.getElementById('restoreProgressBar').style.width = '0%';
+    document.getElementById('restoreProgressPercent').textContent = '0%';
+    document.getElementById('restoreStatusMessage').textContent = 'Initialisation de la restauration...';
+    document.getElementById('btnRestoreExecute').disabled = true;
+    
     showSpinner();
+    addLog('Début de la restauration', 'info');
+    addLog('Fichier sélectionné: ' + selectedRestoreFile.name, 'info');
     
     try {
-        // Étape 1 : DÉCONNECTER IMMÉDIATEMENT TOUS LES AUTRES UTILISATEURS
-        console.log('🔌 Déconnexion des autres utilisateurs...');
-        await disconnectAllOtherUsers();
+        let filePath = null;
         
-        // Étape 2 : Bloquer les connexions pendant 1 minute
-        console.log('🔒 Blocage des connexions pour 1 minute...');
-        await blockOtherUsers(1); // 1 minute
-        
-        // Étape 3 : Exécuter la sauvegarde
-        console.log('💾 Exécution de la sauvegarde...');
-        const response = await fetch('api/BackupDatabase.aspx?action=execute');
-        
-        if (response.ok) {
-            const contentType = response.headers.get('content-type');
+        if (selectedRestoreSource === 'local' && selectedRestoreFile.file) {
+            addLog('Upload du fichier en cours...', 'info');
+            document.getElementById('restoreStatusMessage').textContent = 'Upload du fichier...';
+            document.getElementById('restoreProgressBar').style.width = '20%';
+            document.getElementById('restoreProgressPercent').textContent = '20%';
             
-            if (contentType && contentType.includes('application/octet-stream')) {
-                const contentDisposition = response.headers.get('Content-Disposition');
-                let filename = `backup_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.bak`;
-                if (contentDisposition) {
-                    const match = contentDisposition.match(/filename=(.+)/);
-                    if (match && match[1]) filename = match[1];
-                }
-                
-                const blob = await response.blob();
-                const fileSize = (blob.size / 1024 / 1024).toFixed(2);
-                
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = filename;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(url);
-                
-                await Swal.fire({
-                    icon: 'success',
-                    title: '✅ Sauvegarde terminée',
-                    html: `
-                        <div style="text-align: left;">
-                            <p><strong>La base de données a été sauvegardée avec succès !</strong></p>
-                            <hr style="margin: 15px 0;">
-                            <p><i class="fas fa-database"></i> <strong>Fichier :</strong> ${filename}</p>
-                            <p><i class="fas fa-hdd"></i> <strong>Taille :</strong> ${fileSize} Mo</p>
-                            <p><i class="fas fa-users"></i> <strong>Utilisateurs déconnectés :</strong> Tous les autres utilisateurs ont été déconnectés.</p>
-                        </div>
-                    `,
-                    confirmButtonText: 'OK',
-                    confirmButtonColor: '#28a745'
-                });
-                
-                location.reload();
-            } else {
-                const error = await response.json();
-                await Swal.fire({ icon: 'error', title: 'Erreur', text: error.message || 'Erreur lors de la sauvegarde' });
+            const formData = new FormData();
+            formData.append('backupFile', selectedRestoreFile.file);
+            
+            const uploadResponse = await fetch('/pages/administrations/utilisateur/api/RestoreDatabaseForm.aspx', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const uploadData = await uploadResponse.json();
+            
+            if (!uploadData.success) {
+                addLog('Erreur upload: ' + uploadData.message, 'error');
+                throw new Error(uploadData.message);
             }
-        } else {
-            const error = await response.json();
-            await Swal.fire({ icon: 'error', title: 'Erreur', text: error.message || 'Erreur serveur' });
+            
+            filePath = uploadData.filePath;
+            addLog('Fichier uploadé avec succès: ' + filePath, 'success');
+            
+            document.getElementById('restoreProgressBar').style.width = '40%';
+            document.getElementById('restoreProgressPercent').textContent = '40%';
+            
+        } else if (selectedRestoreSource === 'backup') {
+            addLog('Utilisation de la sauvegarde: ' + selectedRestoreFile.path, 'info');
+            filePath = selectedRestoreFile.path;
         }
-    } catch (err) {
-        console.error('Erreur:', err);
-        await Swal.fire({ icon: 'error', title: 'Erreur', text: err.message });
-    } finally {
-        hideSpinner();
-    }
-}
-
-// ============================================================================
-// DÉCONNECTION IMMÉDIATE DE TOUS LES AUTRES UTILISATEURS
-// ============================================================================
-
-async function disconnectAllOtherUsers() {
-    try {
-        const response = await fetch('api/DisconnectAllUsers.aspx', {
+        
+        if (!filePath) {
+            addLog('Erreur: Aucun chemin de fichier disponible', 'error');
+            throw new Error('Aucun fichier disponible pour la restauration');
+        }
+        
+        const checkResponse = await fetch('/pages/administrations/utilisateur/api/CheckFile.aspx?path=' + encodeURIComponent(filePath));
+        const checkData = await checkResponse.json();
+        
+        if (!checkData.exists) {
+            addLog('Erreur: Le fichier n\'existe pas: ' + filePath, 'error');
+            throw new Error('Le fichier de sauvegarde n\'existe pas');
+        }
+        
+        addLog('Fichier vérifié avec succès', 'success');
+        
+        addLog('Déconnexion des utilisateurs...', 'warning');
+        document.getElementById('restoreStatusMessage').textContent = 'Déconnexion des utilisateurs...';
+        document.getElementById('restoreProgressBar').style.width = '50%';
+        document.getElementById('restoreProgressPercent').textContent = '50%';
+        
+        const requestBody = {
+            fileName: selectedRestoreFile.name,
+            filePath: filePath,
+            source: selectedRestoreSource,
+            databaseName: 'MONAPPECOLE2'
+        };
+        
+        addLog('Chemin du fichier: ' + filePath, 'info');
+        
+        const restoreResponse = await fetch('/pages/administrations/utilisateur/api/RestoreDatabase.aspx', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(requestBody)
         });
-        const data = await response.json();
-        console.log('Résultat déconnexion:', data);
         
-        if (data.count > 0) {
-            console.log(`${data.count} utilisateur(s) déconnecté(s)`);
+        const responseText = await restoreResponse.text();
+        addLog('Réponse brute: ' + responseText.substring(0, 200), 'info');
+        
+        let restoreData;
+        try {
+            restoreData = JSON.parse(responseText);
+        } catch (parseError) {
+            addLog('Erreur de parsing JSON: ' + parseError.message, 'error');
+            throw new Error('Réponse invalide du serveur: ' + responseText.substring(0, 100));
         }
-        return data;
-    } catch (err) {
-        console.error('Erreur déconnexion:', err);
-    }
-}
-
-function getDefaultTime() {
-    const now = new Date();
-    now.setMinutes(now.getMinutes() + 5);
-    return now.toTimeString().slice(0, 5);
-}
-
-function startCountdownToBackup(targetTime) {
-    const target = new Date();
-    const [hours, minutes] = targetTime.split(':');
-    target.setHours(parseInt(hours), parseInt(minutes), 0);
-    
-    countdownInterval = setInterval(() => {
-        const now = new Date();
-        const diff = target - now;
         
-        if (diff <= 0) {
-            clearInterval(countdownInterval);
-            executeBackupNow();
-        } else {
-            const minutesLeft = Math.floor(diff / 60000);
-            const secondsLeft = Math.floor((diff % 60000) / 1000);
-            const totalSeconds = Math.floor(diff / 1000);
-            const maxSeconds = 5 * 60; // 5 minutes max
-            const percent = Math.min(100, (1 - (totalSeconds / maxSeconds)) * 100);
-            
-            const progressBar = document.getElementById('countdownProgress');
-            const messageEl = document.getElementById('countdownMessage');
-            
-            if (progressBar) progressBar.style.width = `${percent}%`;
-            if (messageEl) messageEl.textContent = `⏳ Sauvegarde dans ${minutesLeft} min ${secondsLeft} sec...`;
-        }
-    }, 1000);
-}
-
-async function executeBackupNow() {
-    const spinner = document.getElementById('spinnerOverlay');
-    if (spinner) spinner.style.display = 'flex';
-    
-    try {
-        const response = await fetch('api/BackupDatabase.aspx?action=execute');
+        addLog('Restauration en cours...', 'info');
+        document.getElementById('restoreStatusMessage').textContent = 'Restauration en cours...';
+        document.getElementById('restoreProgressBar').style.width = '70%';
+        document.getElementById('restoreProgressPercent').textContent = '70%';
         
-        if (response.ok) {
-            const contentType = response.headers.get('content-type');
+        if (restoreData.success) {
+            addLog('Restauration terminée avec succès !', 'success');
+            document.getElementById('restoreProgressBar').style.width = '100%';
+            document.getElementById('restoreProgressPercent').textContent = '100%';
+            document.getElementById('restoreStatusMessage').textContent = '✅ Restauration réussie !';
             
-            if (contentType && contentType.includes('application/octet-stream')) {
-                // Récupérer le nom du fichier depuis l'en-tête Content-Disposition
-                const contentDisposition = response.headers.get('Content-Disposition');
-                let filename = `backup_${new Date().toISOString().slice(0,19).replace(/:/g, '-')}.bak`;
-                if (contentDisposition) {
-                    const match = contentDisposition.match(/filename=(.+)/);
-                    if (match && match[1]) filename = match[1];
-                }
-                
-                const blob = await response.blob();
-                const fileSize = (blob.size / 1024 / 1024).toFixed(2);
-                
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = filename;
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                window.URL.revokeObjectURL(url);
-                
-                // Afficher la confirmation avec taille du fichier
-                const result = await Swal.fire({
-                    icon: 'success',
-                    title: '✅ Sauvegarde terminée',
-                    html: `
-                        <div style="text-align: left;">
-                            <p><strong>La base de données a été sauvegardée avec succès !</strong></p>
-                            <hr style="margin: 15px 0;">
-                            <p><i class="fas fa-database"></i> <strong>Fichier :</strong> ${filename}</p>
-                            <p><i class="fas fa-hdd"></i> <strong>Taille :</strong> ${fileSize} Mo</p>
-                            <p><i class="fas fa-folder-open"></i> <strong>Emplacement :</strong> App_Data/Backups/</p>
-                        </div>
-                    `,
-                    confirmButtonText: 'OK',
-                    confirmButtonColor: '#28a745'
-                });
-                
-                if (result.isConfirmed) {
-                    location.reload();
-                }
-            } else {
-                const error = await response.json();
-                await Swal.fire({ 
-                    icon: 'error', 
-                    title: 'Erreur', 
-                    text: error.message || 'Erreur lors de la sauvegarde',
-                    confirmButtonText: 'OK'
-                });
+            if (selectedRestoreSource === 'local' && filePath) {
+                try {
+                    await fetch('/pages/administrations/utilisateur/api/DeleteFile.aspx?path=' + encodeURIComponent(filePath));
+                } catch(e) { }
             }
+            
+            await Swal.fire({
+                icon: 'success',
+                title: '✅ Restauration réussie',
+                html: `
+                    <div style="text-align: left;">
+                        <p>La base de données a été restaurée avec succès.</p>
+                        <p><strong>Fichier:</strong> ${selectedRestoreFile.name}</p>
+                        <p style="color: #dc3545; font-weight: bold;">
+                            <i class="fas fa-exclamation-triangle"></i> 
+                            Vous allez être déconnecté pour finaliser la restauration.
+                        </p>
+                        <p style="font-size: 12px; color: #6c757d;">
+                            Veuillez vous reconnecter après la redirection.
+                        </p>
+                    </div>
+                `,
+                confirmButtonText: 'OK, me reconnecter',
+                confirmButtonColor: '#28a745'
+            });
+            
+            window.location.href = '../../../auth/Login.aspx?msg=restore';
+            
         } else {
-            const error = await response.json();
-            await Swal.fire({ 
-                icon: 'error', 
-                title: 'Erreur', 
-                text: error.message || 'Erreur serveur',
-                confirmButtonText: 'OK'
+            addLog('Erreur: ' + (restoreData.message || 'Erreur inconnue'), 'error');
+            document.getElementById('restoreStatusMessage').textContent = '❌ Erreur de restauration';
+            document.getElementById('btnRestoreExecute').disabled = false;
+            
+            Swal.fire({
+                icon: 'error',
+                title: 'Erreur de restauration',
+                text: restoreData.message || 'Erreur inconnue',
+                confirmButtonColor: '#dc3545'
             });
         }
-    } catch (err) {
-        console.error('Erreur:', err);
-        await Swal.fire({ 
-            icon: 'error', 
-            title: 'Erreur', 
-            text: err.message,
-            confirmButtonText: 'OK'
+    } catch (error) {
+        console.error('Erreur:', error);
+        addLog('Erreur: ' + error.message, 'error');
+        document.getElementById('restoreStatusMessage').textContent = '❌ Erreur critique';
+        document.getElementById('btnRestoreExecute').disabled = false;
+        
+        Swal.fire({
+            icon: 'error',
+            title: 'Erreur',
+            text: error.message || 'Erreur lors de la restauration',
+            confirmButtonColor: '#dc3545'
         });
     } finally {
-        if (spinner) spinner.style.display = 'none';
-        if (backupCountdownTimer) clearInterval(backupCountdownTimer);
-    }
-}
-
-async function notifyAllUsers() {
-    // Fonction désactivée car le fichier NotifyMaintenance.aspx n'existe pas
-    console.log('Notification ignorée');
-    return;
-    
-    // Code original commenté
-    // try {
-    //     await fetch('api/NotifyMaintenance.aspx', {
-    //         method: 'POST',
-    //         headers: { 'Content-Type': 'application/json' },
-    //         body: JSON.stringify({ message: 'Sauvegarde en cours - Déconnexion imminente' })
-    //     });
-    // } catch (e) {
-    //     console.log('Notification non envoyée');
-    // }
-}
-
-// Fonction pour vérifier périodiquement si une maintenance est programmée
-function startMaintenanceChecker() {
-    setInterval(async () => {
-        try {
-            const response = await fetch('api/BackupDatabase.aspx?action=check');
-            const data = await response.json();
-            
-            if (data.isMaintenance && data.maintenanceTime) {
-                // Afficher un message d'avertissement pour les non-SuperAdmin
-                const userRole = document.getElementById('hfUserRole')?.value;
-                if (userRole !== '0') {
-                    showMaintenanceWarning(data.maintenanceTime);
-                }
-            }
-        } catch (e) {
-            // Ignorer
-        }
-    }, 30000); // Vérifier toutes les 30 secondes
-}
-
-function showMaintenanceWarning(maintenanceTime) {
-    const warningDiv = document.createElement('div');
-    warningDiv.id = 'maintenanceWarning';
-    warningDiv.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        background: #dc3545;
-        color: white;
-        padding: 15px 20px;
-        border-radius: 8px;
-        z-index: 10000;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-        animation: slideIn 0.5s ease;
-        max-width: 350px;
-    `;
-    warningDiv.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 10px;">
-            <i class="fas fa-exclamation-triangle" style="font-size: 24px;"></i>
-            <div>
-                <strong>⚠️ Maintenance programmée</strong><br>
-                Sauvegarde à <strong>${maintenanceTime}</strong><br>
-                <small>Veuillez sauvegarder votre travail</small>
-            </div>
-            <button onclick="this.parentElement.parentElement.remove()" style="background: none; border: none; color: white; cursor: pointer;">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-        <div style="margin-top: 10px;">
-            <div id="maintenanceCountdown" style="height: 4px; background: rgba(255,255,255,0.3); border-radius: 2px;">
-                <div id="maintenanceProgress" style="width: 0%; height: 100%; background: white; border-radius: 2px;"></div>
-            </div>
-        </div>
-    `;
-    
-    document.body.appendChild(warningDiv);
-    
-    // Animation de countdown
-    const target = new Date();
-    const [hours, minutes] = maintenanceTime.split(':');
-    target.setHours(parseInt(hours), parseInt(minutes), 0);
-    
-    const interval = setInterval(() => {
-        const now = new Date();
-        const diff = target - now;
-        
-        if (diff <= 0) {
-            clearInterval(interval);
-            warningDiv.style.background = '#28a745';
-            warningDiv.innerHTML = `
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <i class="fas fa-sync-alt fa-spin" style="font-size: 24px;"></i>
-                    <div>
-                        <strong>🔄 Maintenance en cours</strong><br>
-                        Vous allez être redirigé...
-                    </div>
-                </div>
-            `;
-            setTimeout(() => {
-                window.location.href = '../../../auth/Login.aspx?msg=maintenance';
-            }, 5000);
-        } else {
-            const minutesLeft = Math.floor(diff / 60000);
-            const secondsLeft = Math.floor((diff % 60000) / 1000);
-            const totalSeconds = Math.floor(diff / 1000);
-            const maxSeconds = 5 * 60;
-            const percent = (1 - (totalSeconds / maxSeconds)) * 100;
-            
-            const progress = document.getElementById('maintenanceProgress');
-            if (progress) progress.style.width = `${percent}%`;
-            
-            const countdownText = warningDiv.querySelector('small');
-            if (countdownText) countdownText.textContent = `Déconnexion dans ${minutesLeft} min ${secondsLeft} sec`;
-        }
-    }, 1000);
-}
-
-// Lancer le vérificateur de maintenance au chargement
-document.addEventListener('DOMContentLoaded', function() {
-    startMaintenanceChecker();
-});
-
-// Ajouter les styles
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideIn {
-        from { transform: translateX(100%); opacity: 0; }
-        to { transform: translateX(0); opacity: 1; }
-    }
-`;
-document.head.appendChild(style);
-
-// ============================================================================
-// DÉCONNECTION IMMÉDIATE DES AUTRES UTILISATEURS
-// ============================================================================
-
-async function disconnectOtherUsers() {
-    try {
-        const response = await fetch('api/DisconnectUsers.aspx', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                message: 'Maintenance programmée - Veuillez vous reconnecter dans 5 minutes',
-                duration: 5 // minutes
-            })
-        });
-        const data = await response.json();
-        console.log('Déconnexion des utilisateurs:', data);
-        return data;
-    } catch (err) {
-        console.error('Erreur déconnexion:', err);
-    }
-}
-
-// ============================================================================
-// BLOQUER LES AUTRES UTILISATEURS
-// ============================================================================
-
-async function blockOtherUsers(minutes = 1) {
-    try {
-        const response = await fetch('api/BlockUsers.aspx', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                duration: minutes,
-                message: 'Maintenance en cours - Veuillez patienter ' + minutes + ' minute(s)'
-            })
-        });
-        const data = await response.json();
-        console.log('Blocage des utilisateurs:', data);
-        return data;
-    } catch (err) {
-        console.error('Erreur blocage:', err);
+        hideSpinner();
+        document.getElementById('restoreFileInput').value = '';
     }
 }
 
 // ============================================================================
 // EXPORT
 // ============================================================================
+
 function exportUsers(event) {
     if (event) event.preventDefault();
     if (!filteredUsers?.length) {
@@ -1521,7 +1739,7 @@ function exportUsersToExcelOnly(event) {
         formatDate(user.CREATED_AT)
     ]);
     const exportDate = new Date().toLocaleString('fr-FR');
-    let html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Export Utilisateurs</title><style>th{background:#4CAF50;color:white;border:1px solid #ddd;padding:8px}td{border:1px solid #ddd;padding:8px}table{border-collapse:collapse;width:100%}</style></head><body><h2>Liste des Utilisateurs</h2><p>Date: ${escapeHtml(exportDate)}</p><p>Total: ${rows.length}</p></table><thead><tr>${headers.map(h => `<th>${escapeHtml(h)}</th>`).join('')}</tr></thead><tbody>${rows.map(row => `<tr>${row.map(cell => `<td>${escapeHtml(String(cell || '-'))}<td>`).join('')}</tr>`).join('')}</tbody></table></body></html>`;
+    let html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Export Utilisateurs</title><style>th{background:#4CAF50;color:white;border:1px solid #ddd;padding:8px}td{border:1px solid #ddd;padding:8px}table{border-collapse:collapse;width:100%}</style></head><body><h2>Liste des Utilisateurs</h2><p>Date: ${escapeHtml(exportDate)}</p><p>Total: ${rows.length}</p></table><thead><tr>${headers.map(h => `<th>${escapeHtml(h)}</th>`).join('')}</tr></thead><tbody>${rows.map(row => `<tr>${row.map(cell => `<td>${escapeHtml(String(cell || '-'))}</td>`).join('')}</tr>`).join('')}</tbody></table></body></html>`;
     downloadFile(html, 'utilisateurs.xls', 'application/vnd.ms-excel');
     Swal.fire({ icon: 'success', title: 'Export Excel réussi', text: `${filteredUsers.length} utilisateur(s) exporté(s)`, timer: 2000, showConfirmButton: false });
     return false;
@@ -1562,3 +1780,6 @@ window.loadUsers = loadUsers;
 window.backupDatabase = backupDatabase;
 window.openSidebar = openSidebar;
 window.closeSidebar = closeSidebar;
+window.openRestoreModal = openRestoreModal;
+window.handleRestoreFileSelect = handleRestoreFileSelect;
+window.executeRestore = executeRestore;

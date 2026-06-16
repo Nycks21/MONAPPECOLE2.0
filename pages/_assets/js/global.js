@@ -4,6 +4,27 @@
    ═══════════════════════════════════════════════════════════════
 */
 
+// ============================================================================
+// INITIALISATION - ATTENDRE QUE jQuery SOIT CHARGÉ
+// ============================================================================
+
+// ✅ Attendre que le DOM soit prêt AVANT d'utiliser jQuery
+document.addEventListener('DOMContentLoaded', function() {
+    // Vérifier que jQuery est bien chargé
+    if (typeof $ !== 'undefined') {
+        console.log("🔵 Page chargée - Initialisation GlobalJS");
+        initDarkMode();
+    } else {
+        // Fallback : réessayer après un délai
+        setTimeout(function() {
+            if (typeof $ !== 'undefined') {
+                console.log("🔵 Page chargée (retard) - Initialisation GlobalJS");
+                initDarkMode();
+            }
+        }, 500);
+    }
+});
+
 (function () {
     'use strict';
 
@@ -106,11 +127,14 @@
         }
     }
 
-    document.addEventListener('click', function (e) {
-        var target = e.target;
-        if (!target) return;
-        var isToggle = target.id === 'menuToggle' || !!target.closest('#menuToggle');
-        if (isToggle) onMenuToggleClick(e);
+    // ✅ Attendre que le DOM soit chargé pour ajouter les écouteurs
+    document.addEventListener('DOMContentLoaded', function() {
+        document.addEventListener('click', function (e) {
+            var target = e.target;
+            if (!target) return;
+            var isToggle = target.id === 'menuToggle' || !!target.closest('#menuToggle');
+            if (isToggle) onMenuToggleClick(e);
+        });
     });
 
     function bindNavLinks() {
@@ -343,27 +367,38 @@ function applyTranslations() {
 }
 
 // ─────────────────────────────────────────────
-// SPINNER
+// SPINNER - Version unifiée
 // ─────────────────────────────────────────────
-function forceHideSpinner() {
-    var s = document.getElementById('spinnerOverlay');
-    if (!s) return;
-    s.style.display = 'none';
-    s.style.visibility = 'hidden';
-    s.style.opacity = '0';
-    s.setAttribute('aria-hidden', 'true');
-}
+// ✅ Éviter la duplication
+if (!window._spinnerDefined) {
+    window._spinnerDefined = true;
+    
+    function forceHideSpinner() {
+        var s = document.getElementById('spinnerOverlay');
+        if (!s) return;
+        s.style.display = 'none';
+        s.style.visibility = 'hidden';
+        s.style.opacity = '0';
+        s.setAttribute('aria-hidden', 'true');
+    }
 
-function showSpinner() {
-    var s = document.getElementById('spinnerOverlay');
-    if (!s) return;
-    s.style.opacity = '1';
-    s.style.visibility = 'visible';
-    s.style.display = 'flex';
-    s.removeAttribute('aria-hidden');
-}
+    function showSpinner() {
+        var s = document.getElementById('spinnerOverlay');
+        if (!s) return;
+        s.style.opacity = '1';
+        s.style.visibility = 'visible';
+        s.style.display = 'flex';
+        s.removeAttribute('aria-hidden');
+    }
 
-function hideSpinner() { forceHideSpinner(); }
+    function hideSpinner() { 
+        forceHideSpinner(); 
+    }
+    
+    window.forceHideSpinner = forceHideSpinner;
+    window.showSpinner = showSpinner;
+    window.hideSpinner = hideSpinner;
+}
 
 function ajax(url, payload) {
     return fetch(url, {
@@ -433,146 +468,396 @@ function handleTreeviewClick(e) {
     }
 }
 
+// ✅ Initialiser Treeview après chargement du DOM
 document.addEventListener('DOMContentLoaded', function () {
     initTreeview();
-    initDarkMode();
+    // initDarkMode est déjà appelé plus haut
 });
 
 // ============================================================================
-// MAINTENANCE - BLOCAGE ET DÉCONNECTION (VERSION UNIFIÉE)
+// MAINTENANCE - 2 VÉRIFICATIONS UNIQUEMENT (VERSION UNIFIÉE GLOBALE)
 // ============================================================================
 
-let globalMaintenanceCheck = null;
-let globalCountdownInterval = null;
+const API_BASE = '/pages/administrations/utilisateur/api/BackupDatabase.aspx';
+let countdownTimer = null;
+let isBannerShown = false;
 
+// ─── DÉMARRAGE : 2 VÉRIFICATIONS ────────────────────────────────────
 function startMaintenanceChecker() {
-    if (globalMaintenanceCheck) clearInterval(globalMaintenanceCheck);
+    // ✅ Éviter les doublons
+    if (window._maintenanceInitialized) {
+        console.log('⚠️ Maintenance déjà initialisée, ignoré');
+        return;
+    }
+    window._maintenanceInitialized = true;
     
-    globalMaintenanceCheck = setInterval(async () => {
-        try {
-            const response = await fetch('api/CheckBlockStatus.aspx');
-            const data = await response.json();
-            
-            if (data.isBlocked && data.blockedUntil) {
-                showBlockedBanner(data.blockedUntil);
-            }
-        } catch (e) {
-            // Ignorer
-        }
-    }, 3000);
+    console.log('🔍 Vérification 1/2 - Immédiate');
+    
+    // 1ère vérification immédiate
+    checkStatus(1);
+    
+    // 2ème vérification après 5 secondes
+    setTimeout(() => {
+        console.log('🔍 Vérification 2/2 - Après 5s');
+        checkStatus(2);
+    }, 5000);
 }
 
-function showBlockedBanner(blockedUntil) {
-    if (document.getElementById('blockedBannerGlobal')) return;
+// ─── VÉRIFICATION UNIQUE ────────────────────────────────────────────
+async function checkStatus(checkNumber) {
+    try {
+        const url = `${API_BASE}?action=check&t=${Date.now()}`;
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        console.log(`📊 Résultat vérification ${checkNumber}/2:`, data);
+        
+        // Cas 1: Maintenance exécutée
+        if (data.isExecuted) {
+            console.log('✅ Maintenance déjà exécutée');
+            clearAllBanners();
+            return;
+        }
+        
+        // Cas 2: Maintenance programmée → bannière de déconnexion
+        if (data.isMaintenance && data.maintenanceTime) {
+            const userRole = document.getElementById('hfUserRole')?.value || '';
+            if (userRole !== '0' && !isBannerShown) {
+                isBannerShown = true;
+                showMaintenanceBanner(data.maintenanceTime);
+            }
+            removeBanner('blockedBanner');
+            return;
+        }
+        
+        // Cas 3: Blocage actif → bannière de blocage
+        if (data.isBlocked && data.remainingSeconds > 0) {
+            showBlockedBanner(data.remainingSeconds);
+            removeBanner('globalMaintenanceBanner');
+            return;
+        }
+        
+        // Cas 4: Rien → nettoyer
+        clearAllBanners();
+        
+    } catch (e) {
+        console.log('⚠️ Erreur vérification:', e);
+    }
+}
+
+// ─── NETTOYAGE ──────────────────────────────────────────────────────
+function clearAllBanners() {
+    removeBanner('globalMaintenanceBanner');
+    removeBanner('blockedBanner');
+    enableInteractions();
+}
+
+function removeBanner(id) {
+    const el = document.getElementById(id);
+    if (el) el.remove();
+}
+
+function enableInteractions() {
+    document.querySelectorAll('button, a, input, select, .nav-link, .btn').forEach(el => {
+        el.style.pointerEvents = '';
+        el.style.opacity = '';
+    });
+}
+
+function disableInteractions() {
+    document.querySelectorAll('button, a, input, select, .nav-link, .btn').forEach(el => {
+        el.style.pointerEvents = 'none';
+        el.style.opacity = '0.5';
+    });
+}
+
+// ─── BANNIÈRE MAINTENANCE ──────────────────────────────────────────
+function showMaintenanceBanner(maintenanceTime) {
+    if (document.getElementById('globalMaintenanceBanner')) return;
     
-    const banner = document.createElement('div');
-    banner.id = 'blockedBannerGlobal';
-    banner.style.cssText = `
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
-        color: white;
-        padding: 20px;
-        z-index: 99999;
-        font-family: 'Segoe UI', Arial, sans-serif;
-        text-align: center;
-        box-shadow: 0 2px 15px rgba(0,0,0,0.3);
-        animation: slideDownGlobal 0.5s ease;
-    `;
+    const version = document.querySelector('[data-version]')?.getAttribute('data-version') || '2.1.17';
+    const banner = createBannerElement('globalMaintenanceBanner');
     
     banner.innerHTML = `
-        <div style="display: flex; align-items: center; justify-content: center; gap: 20px; flex-wrap: wrap;">
-            <i class="fas fa-database" style="font-size: 32px;"></i>
-            <div>
-                <strong style="font-size: 18px;">🔒 MAINTENANCE EN COURS</strong><br>
-                <span style="font-size: 14px;">Sauvegarde de la base de données en cours</span>
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 14px;">
+                <i class="fas fa-database" style="font-size: 28px; color: #ffc107;"></i>
+                <div>
+                    <div style="font-weight: bold; font-size: 16px; color: #ffc107;">⚠️ MAINTENANCE PROGRAMMÉE</div>
+                    <div style="font-size: 13px; opacity: 0.9;">Sauvegarde de la base de données</div>
+                </div>
             </div>
-            <div style="background: rgba(255,255,255,0.2); padding: 10px 20px; border-radius: 50px;">
-                <span style="font-size: 14px;">Reconnexion dans</span><br>
-                <span id="globalCountdownDisplay" style="font-size: 28px; font-weight: bold; font-family: monospace;">--:--</span>
+            <div style="display: flex; align-items: center; gap: 20px;">
+                <div style="text-align: center;">
+                    <div style="font-size: 10px; opacity: 0.8;">Déconnexion à</div>
+                    <div style="font-size: 14px; font-weight: bold;">${maintenanceTime}</div>
+                </div>
+                <div style="width: 1px; height: 40px; background: rgba(255,255,255,0.3);"></div>
+                <div style="text-align: center;">
+                    <div style="font-size: 10px; opacity: 0.8;">Temps restant</div>
+                    <div id="countdownDisplay" style="font-size: 32px; font-weight: bold; font-family: monospace; color: #ffc107;">--:--:--</div>
+                </div>
+                <div style="width: 1px; height: 40px; background: rgba(255,255,255,0.3);"></div>
+                <div style="text-align: center;">
+                    <div style="font-size: 10px; opacity: 0.7;">Version</div>
+                    <div style="font-weight: bold; font-size: 14px;">v${version}</div>
+                </div>
             </div>
         </div>
-        <div style="width: 100%; height: 4px; background: rgba(255,255,255,0.3); border-radius: 4px; margin-top: 15px;">
-            <div id="globalProgressBar" style="width: 0%; height: 100%; background: #ffc107; transition: width 1s linear;"></div>
+        <div style="width: 100%; height: 4px; background: rgba(255,255,255,0.2); border-radius: 4px; margin-top: 10px; overflow: hidden;">
+            <div id="progressBar" style="width: 0%; height: 100%; background: linear-gradient(90deg, #ffc107, #28a745); transition: width 1s linear;"></div>
+        </div>
+    `;
+    
+    document.body.appendChild(banner);
+    startCountdown(maintenanceTime);
+    injectStyles();
+}
+
+// ─── BANNIÈRE BLOCAGE ──────────────────────────────────────────────
+function showBlockedBanner(remainingSeconds) {
+    const isLoginPage = window.location.pathname.includes('Login.aspx');
+    
+    let banner = document.getElementById('blockedBanner');
+    if (banner) {
+        updateBlockBanner(remainingSeconds);
+        return;
+    }
+    
+    banner = createBannerElement('blockedBanner', '#dc3545');
+    banner.innerHTML = `
+        <div style="display: flex; align-items: center; justify-content: center; gap: 20px; flex-wrap: wrap;">
+            <i class="fas fa-lock" style="font-size: 28px;"></i>
+            <div>
+                <strong style="font-size: 16px;">🔒 COMPTE TEMPORAIREMENT BLOQUÉ</strong><br>
+                <span style="font-size: 13px;">Maintenance en cours. Réessayez dans</span>
+            </div>
+            <div style="background: rgba(255,255,255,0.2); padding: 8px 20px; border-radius: 50px;">
+                <span id="blockCountdown" style="font-size: 32px; font-weight: bold; font-family: monospace;">${remainingSeconds}s</span>
+            </div>
+        </div>
+        <div style="width: 100%; height: 4px; background: rgba(255,255,255,0.3); border-radius: 4px; margin-top: 10px;">
+            <div id="blockProgress" style="width: ${(1 - remainingSeconds / 60) * 100}%; height: 100%; background: #ffc107; transition: width 1s linear;"></div>
         </div>
     `;
     
     document.body.appendChild(banner);
     
-    // Désactiver l'interface
-    document.querySelectorAll('button, a, input, select, .nav-link, .btn').forEach(el => {
-        el.style.pointerEvents = 'none';
-        el.style.opacity = '0.5';
-    });
+    if (!isLoginPage) {
+        disableInteractions();
+    }
     
-    startGlobalCountdown(blockedUntil);
+    startBlockCountdown(remainingSeconds);
+    injectStyles();
 }
 
-function startGlobalCountdown(targetTime) {
-    if (globalCountdownInterval) clearInterval(globalCountdownInterval);
+// ─── UTILITAIRES ────────────────────────────────────────────────────
+function createBannerElement(id, bgColor = 'linear-gradient(135deg, #dc3545 0%, #c82333 100%)') {
+    const banner = document.createElement('div');
+    banner.id = id;
+    banner.style.cssText = `
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: ${bgColor};
+        color: white;
+        padding: 14px 20px;
+        z-index: 99999;
+        font-family: 'Segoe UI', Arial, sans-serif;
+        box-shadow: 0 -4px 20px rgba(0,0,0,0.3);
+        animation: slideUp 0.5s ease;
+        border-top: 3px solid #ffc107;
+    `;
+    return banner;
+}
+
+function injectStyles() {
+    if (document.getElementById('maintenanceStyles')) return;
+    const style = document.createElement('style');
+    style.id = 'maintenanceStyles';
+    style.textContent = `
+        @keyframes slideUp {
+            from { transform: translateY(100%); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes pulseAlert {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+    `;
+    document.head.appendChild(style);
+}
+
+// ─── COMPTEURS ──────────────────────────────────────────────────────
+function startCountdown(targetTime) {
+    if (countdownTimer) clearInterval(countdownTimer);
     
-    const target = new Date(targetTime);
-    const maxDuration = 60 * 1000; // 1 MINUTE (60 secondes)
+    const target = new Date();
+    const [hours, minutes] = targetTime.split(':');
+    target.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+    if (target < new Date()) target.setDate(target.getDate() + 1);
     
-    globalCountdownInterval = setInterval(() => {
-        const now = new Date();
-        const diff = target - now;
+    countdownTimer = setInterval(() => {
+        const diff = target - new Date();
         
         if (diff <= 0) {
-            clearInterval(globalCountdownInterval);
-            window.location.reload();
+            clearInterval(countdownTimer);
+            handleDisconnect();
         } else {
-            const secondsLeft = Math.floor(diff / 1000);
-            const minutesLeft = Math.floor(secondsLeft / 60);
-            const secsLeft = secondsLeft % 60;
+            const h = Math.floor(diff / 3600000);
+            const m = Math.floor((diff % 3600000) / 60000);
+            const s = Math.floor((diff % 60000) / 1000);
             
-            const countdownEl = document.getElementById('globalCountdownDisplay');
-            const progressEl = document.getElementById('globalProgressBar');
+            const el = document.getElementById('countdownDisplay');
+            const progress = document.getElementById('progressBar');
             
-            if (countdownEl) {
-                countdownEl.textContent = `${minutesLeft}:${secsLeft.toString().padStart(2, '0')}`;
+            if (el) {
+                el.textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+                if (diff < 60000) {
+                    el.style.animation = 'pulseAlert 0.5s infinite';
+                    el.style.color = '#ff6b6b';
+                }
             }
-            if (progressEl) {
-                const percent = (1 - (diff / maxDuration)) * 100;
-                progressEl.style.width = `${Math.min(100, percent)}%`;
+            if (progress) {
+                const totalSec = Math.floor(diff / 1000);
+                progress.style.width = `${Math.min(100, (1 - totalSec / 86400) * 100)}%`;
             }
         }
     }, 1000);
 }
 
-// Ajouter les styles UNIQUEMENT si non existants
-if (!document.getElementById('globalAnimationStyles')) {
-    const styleSheet = document.createElement('style');
-    styleSheet.id = 'globalAnimationStyles';
-    styleSheet.textContent = `
-        @keyframes slideDownGlobal {
-            from { transform: translateY(-100%); opacity: 0; }
-            to { transform: translateY(0); opacity: 1; }
+function startBlockCountdown(seconds) {
+    if (countdownTimer) clearInterval(countdownTimer);
+    
+    let remaining = seconds;
+    const MAX = 60;
+    
+    countdownTimer = setInterval(() => {
+        remaining--;
+        const el = document.getElementById('blockCountdown');
+        const progress = document.getElementById('blockProgress');
+        
+        if (el) el.textContent = remaining + 's';
+        if (progress) {
+            progress.style.width = `${Math.min(100, ((MAX - remaining) / MAX) * 100)}%`;
         }
-    `;
-    document.head.appendChild(styleSheet);
+        
+        if (remaining <= 0) {
+            clearInterval(countdownTimer);
+            removeBanner('blockedBanner');
+            enableInteractions();
+            if (window.location.pathname.includes('Login.aspx')) {
+                window.location.reload();
+            }
+        }
+    }, 1000);
 }
 
-// Démarrer la vérification
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function() {
+function updateBlockBanner(remaining) {
+    const el = document.getElementById('blockCountdown');
+    const progress = document.getElementById('blockProgress');
+    if (el) el.textContent = remaining + 's';
+    if (progress) {
+        progress.style.width = `${Math.min(100, ((60 - remaining) / 60) * 100)}%`;
+    }
+}
+
+// ─── DÉCONNEXION ──────────────────────────────────────────────────
+function handleDisconnect() {
+    const banner = document.getElementById('globalMaintenanceBanner');
+    if (banner) {
+        banner.style.background = '#28a745';
+        banner.innerHTML = `
+            <div style="display: flex; align-items: center; justify-content: center; gap: 20px; padding: 10px;">
+                <i class="fas fa-sync-alt fa-spin" style="font-size: 32px;"></i>
+                <div style="text-align: center;">
+                    <strong style="font-size: 18px;">🔄 MAINTENANCE EN COURS</strong><br>
+                    <span style="font-size: 14px;">Sauvegarde de la base de données en cours...</span>
+                    <div style="font-size: 13px; margin-top: 5px; opacity: 0.9;">⏳ Redirection...</div>
+                </div>
+            </div>
+        `;
+    }
+    
+    clearAllBanners();
+    setTimeout(() => {
+        window.location.href = '../../../auth/Login.aspx?msg=maintenance';
+    }, 5000);
+}
+
+// ─── EXPOSITION GLOBALE ────────────────────────────────────────────
+window.startMaintenanceChecker = startMaintenanceChecker;
+
+// ─── DÉMARRAGE AUTOMATIQUE DE LA MAINTENANCE ──────────────────────
+// ✅ Version robuste qui fonctionne sur TOUTES les pages SANS jQuery
+
+function initMaintenance() {
+    if (window._maintenanceInitialized) {
+        return;
+    }
+    
+    // Attendre que le DOM soit prêt
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+        setTimeout(startMaintenanceChecker, 300);
+    } else {
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(startMaintenanceChecker, 300);
+        });
+    }
+}
+
+// Démarrer la maintenance
+initMaintenance();
+
+// Fallback après 3 secondes si pas démarré
+setTimeout(function() {
+    if (!window._maintenanceInitialized) {
+        console.log('🔵 Forçage maintenance (fallback)');
         startMaintenanceChecker();
-    });
-} else {
-    if (typeof window._globalMaintenanceStarted === 'undefined') {
-        window._globalMaintenanceStarted = true;
-        startMaintenanceChecker();
+    }
+}, 3000);
+
+// ============================================================================
+// GESTION DES MODALS
+// ============================================================================
+
+function openModal(id) {
+    const modal = document.getElementById(id);
+    if (modal) {
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        if (id === 'editHistoriqueModal') {
+            modal.style.zIndex = '999999';
+        } else {
+            modal.style.zIndex = '9999';
+        }
+        const modalContent = modal.querySelector('.modal-content');
+        if (modalContent) {
+            modalContent.style.zIndex = modal.style.zIndex;
+        }
+    }
+}
+
+function closeModal(id) {
+    const modal = document.getElementById(id);
+    if (modal) {
+        modal.style.display = 'none';
+        const anyOpen = ['paymentModal', 'editHistoriqueModal', 'tarifModal', 'restoreModal'].some(function(mid) {
+            const m = document.getElementById(mid);
+            return m && m.style.display === 'flex';
+        });
+        if (!anyOpen) {
+            document.body.style.overflow = '';
+        }
     }
 }
 
 // ============================================================================
 // EXPOSITION GLOBALE
 // ============================================================================
-window.forceHideSpinner = forceHideSpinner;
-window.showSpinner = showSpinner;
-window.hideSpinner = hideSpinner;
 window.ajax = ajax;
 window.loadLang = loadLang;
 window.initDarkMode = initDarkMode;
+window.openModal = openModal;
+window.closeModal = closeModal;

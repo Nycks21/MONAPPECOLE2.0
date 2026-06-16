@@ -13,6 +13,7 @@ public partial class index : Page
     {
         // Cet appel unique exécute TOUTE la logique contenue dans le helper
         AuthHelper.VerifySession(this);
+        // Initialiser le rôle utilisateur
 
         string action = Request.QueryString["action"];
         if (!string.IsNullOrEmpty(action))

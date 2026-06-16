@@ -16,6 +16,7 @@
 
 <body class="hold-transition" data-version="<%=AuthHelper.Version %>">
     <form id="form1" runat="server">
+        <asp:HiddenField ID="hfUserRole" runat="server" />
         <div class="wrapper">
 
             <!-- ═══ TOPBAR ═══ -->
