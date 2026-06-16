@@ -150,8 +150,8 @@ function showSpinner() {
     if (s.removeAttribute) s.removeAttribute('aria-hidden');
 }
 
-function hideSpinner() { 
-    forceHideSpinner(); 
+function hideSpinner() {
+    forceHideSpinner();
 }
 
 function showPreloader() {
@@ -1365,21 +1365,27 @@ function loadBackupList() {
     fetch('/pages/administrations/utilisateur/api/GetBackupList.aspx')
         .then(r => r.json())
         .then(data => {
+            console.log('📋 Sauvegardes reçues:', data); // ✅ Debug
+
             if (data.success && data.backups && data.backups.length > 0) {
                 let html = '';
                 data.backups.forEach((backup, index) => {
-                    const isSelected = selectedRestoreFile === backup.path ? 'selected' : '';
+                    const isSelected = selectedRestoreFile && selectedRestoreFile.path === backup.path ? 'selected' : '';
+                    const sizeMB = (backup.size / 1024 / 1024).toFixed(2);
+
                     html += `
-                        <div class="backup-item" onclick="selectBackupFile('${backup.path}', '${backup.name}', ${backup.size}, '${backup.date}')" 
-                             style="padding: 10px; border-bottom: 1px solid #dee2e6; cursor: pointer; transition: background 0.2s; ${isSelected ? 'background: #e8f4fd;' : ''}">
+                        <div class="backup-item" onclick="selectBackupFile('${escapeHtml(backup.path)}', '${escapeHtml(backup.name)}', ${backup.size}, '${escapeHtml(backup.date)}')" 
+                             style="padding: 10px; border-bottom: 1px solid #dee2e6; cursor: pointer; transition: background 0.2s; ${isSelected ? 'background: #e8f4fd;' : ''}"
+                             onmouseover="this.style.background='#f0f7ff'" 
+                             onmouseout="this.style.background='${isSelected ? '#e8f4fd' : ''}'">
                             <div style="display: flex; justify-content: space-between; align-items: center;">
                                 <div>
-                                    <strong>${backup.name}</strong>
-                                    <div style="font-size: 11px; color: #6c757d;">${backup.date} - ${(backup.size / 1024 / 1024).toFixed(2)} Mo</div>
+                                    <strong>${escapeHtml(backup.name)}</strong>
+                                    <div style="font-size: 11px; color: #6c757d;">${escapeHtml(backup.date)} - ${sizeMB} Mo</div>
                                 </div>
                                 <div>
                                     <span class="badge bg-success" style="background: #28a745; color: white; padding: 3px 10px; border-radius: 12px; font-size: 11px;">
-                                        ${backup.status || 'Disponible'}
+                                        ${escapeHtml(backup.status || 'Disponible')}
                                     </span>
                                 </div>
                             </div>
@@ -1387,13 +1393,33 @@ function loadBackupList() {
                     `;
                 });
                 container.innerHTML = html;
+
+                // Ajouter un compteur
+                const countInfo = document.createElement('div');
+                countInfo.style.cssText = 'padding: 8px 10px; font-size: 12px; color: #6c757d; border-top: 1px solid #dee2e6; margin-top: 5px;';
+                countInfo.innerHTML = `<i class="fas fa-database"></i> ${data.backups.length} sauvegarde(s) disponible(s)`;
+                container.appendChild(countInfo);
+
             } else {
-                container.innerHTML = '<p style="text-align: center; color: #6c757d; padding: 20px;">Aucune sauvegarde disponible</p>';
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 30px 20px; color: #6c757d;">
+                        <i class="fas fa-folder-open" style="font-size: 48px; color: #dee2e6; display: block; margin-bottom: 15px;"></i>
+                        <p>Aucune sauvegarde disponible</p>
+                        <p style="font-size: 12px;">Les fichiers .bak doivent être placés dans le dossier <strong>App_Data/Backups/</strong></p>
+                        <p style="font-size: 12px; color: #adb5bd;">${data.message || ''}</p>
+                    </div>
+                `;
             }
         })
         .catch(err => {
             console.error('Erreur chargement sauvegardes:', err);
-            container.innerHTML = '<p style="text-align: center; color: #dc3545; padding: 20px;">Erreur de chargement</p>';
+            container.innerHTML = `
+                <div style="text-align: center; padding: 30px 20px; color: #dc3545;">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 48px; display: block; margin-bottom: 15px;"></i>
+                    <p>Erreur de chargement</p>
+                    <p style="font-size: 12px;">${err.message}</p>
+                </div>
+            `;
         });
 }
 
@@ -1496,7 +1522,7 @@ async function executeRestore() {
         });
         return;
     }
-    
+
     const result = await Swal.fire({
         title: '⚠️ Confirmation finale',
         html: `
@@ -1533,93 +1559,97 @@ async function executeRestore() {
             return true;
         }
     });
-    
+
     if (!result.isConfirmed) return;
-    
+
     document.getElementById('restoreProgressContainer').style.display = 'block';
     document.getElementById('restoreLogs').style.display = 'block';
     document.getElementById('restoreProgressBar').style.width = '0%';
     document.getElementById('restoreProgressPercent').textContent = '0%';
     document.getElementById('restoreStatusMessage').textContent = 'Initialisation de la restauration...';
     document.getElementById('btnRestoreExecute').disabled = true;
-    
+
     showSpinner();
     addLog('Début de la restauration', 'info');
     addLog('Fichier sélectionné: ' + selectedRestoreFile.name, 'info');
-    
+
     try {
         let filePath = null;
-        
+
         if (selectedRestoreSource === 'local' && selectedRestoreFile.file) {
             addLog('Upload du fichier en cours...', 'info');
             document.getElementById('restoreStatusMessage').textContent = 'Upload du fichier...';
             document.getElementById('restoreProgressBar').style.width = '20%';
             document.getElementById('restoreProgressPercent').textContent = '20%';
-            
+
             const formData = new FormData();
             formData.append('backupFile', selectedRestoreFile.file);
-            
+
             const uploadResponse = await fetch('/pages/administrations/utilisateur/api/RestoreDatabaseForm.aspx', {
                 method: 'POST',
                 body: formData
             });
-            
+
             const uploadData = await uploadResponse.json();
-            
+
             if (!uploadData.success) {
                 addLog('Erreur upload: ' + uploadData.message, 'error');
                 throw new Error(uploadData.message);
             }
-            
+
             filePath = uploadData.filePath;
             addLog('Fichier uploadé avec succès: ' + filePath, 'success');
-            
+
             document.getElementById('restoreProgressBar').style.width = '40%';
             document.getElementById('restoreProgressPercent').textContent = '40%';
-            
+
         } else if (selectedRestoreSource === 'backup') {
-            addLog('Utilisation de la sauvegarde: ' + selectedRestoreFile.path, 'info');
-            filePath = selectedRestoreFile.path;
+            filePath = selectedRestoreFile.path.replace(/\\/g, '/');
+            addLog('Utilisation de la sauvegarde: ' + filePath, 'info');
         }
-        
+
+        if (filePath) {
+            filePath = filePath.replace(/\\/g, '/');
+        }
+
         if (!filePath) {
             addLog('Erreur: Aucun chemin de fichier disponible', 'error');
             throw new Error('Aucun fichier disponible pour la restauration');
         }
-        
+
         const checkResponse = await fetch('/pages/administrations/utilisateur/api/CheckFile.aspx?path=' + encodeURIComponent(filePath));
         const checkData = await checkResponse.json();
-        
+
         if (!checkData.exists) {
             addLog('Erreur: Le fichier n\'existe pas: ' + filePath, 'error');
             throw new Error('Le fichier de sauvegarde n\'existe pas');
         }
-        
+
         addLog('Fichier vérifié avec succès', 'success');
-        
+
         addLog('Déconnexion des utilisateurs...', 'warning');
         document.getElementById('restoreStatusMessage').textContent = 'Déconnexion des utilisateurs...';
         document.getElementById('restoreProgressBar').style.width = '50%';
         document.getElementById('restoreProgressPercent').textContent = '50%';
-        
+
         const requestBody = {
             fileName: selectedRestoreFile.name,
             filePath: filePath,
             source: selectedRestoreSource,
             databaseName: 'MONAPPECOLE2'
         };
-        
+
         addLog('Chemin du fichier: ' + filePath, 'info');
-        
+
         const restoreResponse = await fetch('/pages/administrations/utilisateur/api/RestoreDatabase.aspx', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(requestBody)
         });
-        
+
         const responseText = await restoreResponse.text();
         addLog('Réponse brute: ' + responseText.substring(0, 200), 'info');
-        
+
         let restoreData;
         try {
             restoreData = JSON.parse(responseText);
@@ -1627,24 +1657,24 @@ async function executeRestore() {
             addLog('Erreur de parsing JSON: ' + parseError.message, 'error');
             throw new Error('Réponse invalide du serveur: ' + responseText.substring(0, 100));
         }
-        
+
         addLog('Restauration en cours...', 'info');
         document.getElementById('restoreStatusMessage').textContent = 'Restauration en cours...';
         document.getElementById('restoreProgressBar').style.width = '70%';
         document.getElementById('restoreProgressPercent').textContent = '70%';
-        
+
         if (restoreData.success) {
             addLog('Restauration terminée avec succès !', 'success');
             document.getElementById('restoreProgressBar').style.width = '100%';
             document.getElementById('restoreProgressPercent').textContent = '100%';
             document.getElementById('restoreStatusMessage').textContent = '✅ Restauration réussie !';
-            
+
             if (selectedRestoreSource === 'local' && filePath) {
                 try {
                     await fetch('/pages/administrations/utilisateur/api/DeleteFile.aspx?path=' + encodeURIComponent(filePath));
-                } catch(e) { }
+                } catch (e) { }
             }
-            
+
             await Swal.fire({
                 icon: 'success',
                 title: '✅ Restauration réussie',
@@ -1664,14 +1694,14 @@ async function executeRestore() {
                 confirmButtonText: 'OK, me reconnecter',
                 confirmButtonColor: '#28a745'
             });
-            
+
             window.location.href = '../../../auth/Login.aspx?msg=restore';
-            
+
         } else {
             addLog('Erreur: ' + (restoreData.message || 'Erreur inconnue'), 'error');
             document.getElementById('restoreStatusMessage').textContent = '❌ Erreur de restauration';
             document.getElementById('btnRestoreExecute').disabled = false;
-            
+
             Swal.fire({
                 icon: 'error',
                 title: 'Erreur de restauration',
@@ -1684,7 +1714,7 @@ async function executeRestore() {
         addLog('Erreur: ' + error.message, 'error');
         document.getElementById('restoreStatusMessage').textContent = '❌ Erreur critique';
         document.getElementById('btnRestoreExecute').disabled = false;
-        
+
         Swal.fire({
             icon: 'error',
             title: 'Erreur',

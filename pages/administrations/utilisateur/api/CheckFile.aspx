@@ -19,9 +19,13 @@ protected void Page_Load(object sender, EventArgs e)
             return;
         }
         
-        bool exists = File.Exists(path);
+        // ✅ Remplacer les / par des \ pour Windows
+        string windowsPath = path.Replace("/", "\\");
         
-        Response.Write("{\"exists\":" + exists.ToString().ToLower() + ",\"path\":\"" + path.Replace("\\", "\\\\") + "\"}");
+        bool exists = File.Exists(windowsPath);
+        
+        string json = "{\"exists\":" + exists.ToString().ToLower() + ",\"path\":\"" + windowsPath.Replace("\\", "\\\\") + "\"}";
+        Response.Write(json);
     }
     catch (Exception ex)
     {

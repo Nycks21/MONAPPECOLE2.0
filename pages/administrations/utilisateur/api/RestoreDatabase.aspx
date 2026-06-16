@@ -1,7 +1,8 @@
 <%@ Page Language="C#" %>
 <%@ Import Namespace="System" %>
+<%@ Import Namespace="System.Data" %>
+<%@ Import Namespace="System.Data.SqlClient" %>
 <%@ Import Namespace="System.IO" %>
-<%@ Import Namespace="System.Web.Script.Serialization" %>
 
 <script runat="server">
 protected void Page_Load(object sender, EventArgs e)
@@ -12,59 +13,98 @@ protected void Page_Load(object sender, EventArgs e)
     
     try
     {
-        if (Session["authenticated"] == null || !(bool)Session["authenticated"])
+        // Lire le corps de la requête
+        string jsonBody = "";
+        using (var reader = new StreamReader(Request.InputStream))
         {
-            Response.Write("{\"success\":false,\"message\":\"Non authentifié\"}");
+            jsonBody = reader.ReadToEnd();
+        }
+        
+        // Analyser le JSON
+        var serializer = new System.Web.Script.Serialization.JavaScriptSerializer();
+        var data = serializer.Deserialize<Dictionary<string, object>>(jsonBody);
+        
+        string filePath = data.ContainsKey("filePath") ? data["filePath"].ToString() : "";
+        string databaseName = data.ContainsKey("databaseName") ? data["databaseName"].ToString() : "MONAPPECOLE2";
+        
+        if (string.IsNullOrEmpty(filePath))
+        {
+            Response.Write("{\"success\":false,\"message\":\"Chemin du fichier manquant\"}");
             return;
         }
         
-        int userRole = Session["USERROLE"] != null ? Convert.ToInt32(Session["USERROLE"]) : -1;
-        if (userRole != 0)
+        // Remplacer les / par des \ pour Windows
+        string windowsPath = filePath.Replace("/", "\\");
+        
+        if (!File.Exists(windowsPath))
         {
-            Response.Write("{\"success\":false,\"message\":\"Droits insuffisants\"}");
+            Response.Write("{\"success\":false,\"message\":\"Le fichier n'existe pas: " + windowsPath + "\"}");
             return;
         }
         
-        if (Request.Files.Count == 0)
-        {
-            Response.Write("{\"success\":false,\"message\":\"Aucun fichier reçu\"}");
-            return;
-        }
+        // ✅ CHAÎNE DE CONNEXION HARDCODÉE - Remplacez par vos identifiants
+        string connectionString = "Data Source=MAHEFA_DESKTOP\\SQLECOLE;Initial Catalog=master;User ID=sa;Password=admin123;";
         
-        HttpPostedFile file = Request.Files[0];
-        string fileName = Path.GetFileName(file.FileName);
-        
-        if (!fileName.ToLower().EndsWith(".bak"))
+        using (SqlConnection conn = new SqlConnection(connectionString))
         {
-            Response.Write("{\"success\":false,\"message\":\"Le fichier doit être au format .bak\"}");
-            return;
-        }
-        
-        // Vérifier la taille (max 100 Mo)
-        if (file.ContentLength > 100 * 1024 * 1024)
-        {
-            Response.Write("{\"success\":false,\"message\":\"Le fichier dépasse la taille maximale de 100 Mo\"}");
-            return;
-        }
-        
-        string tempFolder = Server.MapPath("~/App_Data/Backups");
-        if (!Directory.Exists(tempFolder))
-        {
-            Directory.CreateDirectory(tempFolder);
-        }
-        
-        string tempFilePath = Path.Combine(tempFolder, "restore_" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".bak");
-        file.SaveAs(tempFilePath);
-        
-        // Vérifier que le fichier a bien été sauvegardé
-        if (File.Exists(tempFilePath))
-        {
-            FileInfo info = new FileInfo(tempFilePath);
-            Response.Write("{\"success\":true,\"filePath\":\"" + tempFilePath.Replace("\\", "\\\\") + "\",\"message\":\"Fichier uploadé avec succès\",\"size\":" + info.Length + "}");
-        }
-        else
-        {
-            Response.Write("{\"success\":false,\"message\":\"Erreur lors de la sauvegarde du fichier\"}");
+            conn.Open();
+            
+            // ÉTAPE 1: Forcer la déconnexion de tous les utilisateurs
+            string killUsersSql = @"
+                DECLARE @kill varchar(8000) = '';
+                SELECT @kill = @kill + 'KILL ' + CONVERT(varchar(5), spid) + ';'
+                FROM master..sysprocesses
+                WHERE dbid = DB_ID('" + databaseName + @"')
+                AND spid > 50
+                AND spid != @@SPID;
+                
+                IF @kill != ''
+                BEGIN
+                    EXEC(@kill);
+                END
+            ";
+            
+            using (SqlCommand cmd = new SqlCommand(killUsersSql, conn))
+            {
+                cmd.ExecuteNonQuery();
+            }
+            
+            // ÉTAPE 2: Mettre la base en mode SINGLE_USER
+            string setSingleUserSql = @"
+                ALTER DATABASE [" + databaseName + @"]
+                SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+            ";
+            
+            using (SqlCommand cmd = new SqlCommand(setSingleUserSql, conn))
+            {
+                cmd.ExecuteNonQuery();
+            }
+            
+            // ÉTAPE 3: Restaurer la base
+            string restoreSql = @"
+                RESTORE DATABASE [" + databaseName + @"]
+                FROM DISK = N'" + windowsPath.Replace("'", "''") + @"'
+                WITH REPLACE, STATS = 10;
+            ";
+            
+            using (SqlCommand cmd = new SqlCommand(restoreSql, conn))
+            {
+                cmd.CommandTimeout = 3600;
+                cmd.ExecuteNonQuery();
+            }
+            
+            // ÉTAPE 4: Remettre la base en mode MULTI_USER
+            string setMultiUserSql = @"
+                ALTER DATABASE [" + databaseName + @"]
+                SET MULTI_USER;
+            ";
+            
+            using (SqlCommand cmd = new SqlCommand(setMultiUserSql, conn))
+            {
+                cmd.ExecuteNonQuery();
+            }
+            
+            Response.Write("{\"success\":true,\"message\":\"Restauration r\u00e9ussie\"}");
         }
     }
     catch (Exception ex)
