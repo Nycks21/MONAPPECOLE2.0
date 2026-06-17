@@ -70,7 +70,7 @@ function getActiveUsersCount() {
 
 async function checkLicenceLimit() {
     try {
-        const response = await fetch("api/CheckLicence.aspx");
+        const response = await fetch(apiUrl("api/CheckLicence.aspx"));
         const data = await response.json();
 
         if (data.success) {
@@ -428,7 +428,7 @@ function updateCounter() {
 function loadUsers() {
     showSpinner();
     showPreloader();
-    fetch("api/ListUser.aspx")
+    fetch(apiUrl("api/ListUser.aspx"))
         .then(safeJson)
         .then(data => {
             if (!Array.isArray(data)) {
@@ -746,7 +746,7 @@ async function createUserFromModal() {
     };
 
     try {
-        const res = await fetch("api/users.aspx", {
+        const res = await fetch(apiUrl("api/users.aspx"), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(body)
@@ -812,7 +812,7 @@ async function updateUserFromModal() {
     if (password) params.append('password', password);
 
     try {
-        const res = await fetch(`api/updateUser.aspx?${params.toString()}`, { method: 'POST' });
+        const res = await fetch(apiUrl(`api/updateUser.aspx?${params.toString()}`), { method: 'POST' });
         const result = await safeJson(res);
         if (result.success || result.status === "success") {
             Swal.fire({ icon: 'success', title: "Succès", text: "Utilisateur modifié !", timer: 1500, showConfirmButton: false });
@@ -854,7 +854,7 @@ async function supprimerContact(id, event) {
     if (result.isConfirmed) {
         showSpinner();
         try {
-            const res = await fetch("api/DeleteUser.aspx", {
+            const res = await fetch(apiUrl("api/DeleteUser.aspx"), {
                 method: "POST",
                 headers: { "Content-Type": "application/x-www-form-urlencoded" },
                 body: `id=${encodeURIComponent(id)}`
@@ -1048,7 +1048,7 @@ async function backupDatabase() {
 
     try {
         console.log('📋 Planification de la maintenance à ' + selectedTime + '...');
-        await fetch(`api/BackupDatabase.aspx?action=prepare&time=${encodeURIComponent(selectedTime)}&block=${blockUsers}`);
+        await fetch(apiUrl(`api/BackupDatabase.aspx?action=prepare&time=${encodeURIComponent(selectedTime)}&block=${blockUsers}`));
 
         console.log('📢 Envoi des notifications...');
         await notifyAllUsers(
@@ -1149,7 +1149,7 @@ async function executeScheduledBackup() {
     if (spinner) spinner.style.display = 'flex';
 
     try {
-        const response = await fetch('/pages/administrations/utilisateur/api/BackupDatabase.aspx?action=execute');
+        const response = await fetch(apiUrl('/pages/administrations/utilisateur/api/BackupDatabase.aspx?action=execute'));
 
         if (response.ok) {
             const contentType = response.headers.get('content-type');
@@ -1202,7 +1202,7 @@ async function executeScheduledBackup() {
                     confirmButtonColor: '#28a745'
                 });
 
-                await fetch('/pages/administrations/utilisateur/api/BackupDatabase.aspx?action=check');
+                await fetch(apiUrl('/pages/administrations/utilisateur/api/BackupDatabase.aspx?action=check'));
                 location.reload();
             } else {
                 const error = await response.json();
@@ -1278,7 +1278,7 @@ async function checkForUpdates() {
 
     try {
         // Appel API pour vérifier les mises à jour
-        const response = await fetch(UPDATE_API_URL + '?action=check&version=' + encodeURIComponent(CURRENT_VERSION));
+        const response = await fetch(apiUrl(UPDATE_API_URL + '?action=check&version=' + encodeURIComponent(CURRENT_VERSION)));
         const data = await response.json();
 
         console.log('📋 Résultat vérification MAJ:', data);
@@ -1508,7 +1508,7 @@ window.checkForUpdates = checkForUpdates;
 
 async function notifyAllUsers(message, maintenanceTime) {
     try {
-        const response = await fetch('api/NotifyMaintenance.aspx', {
+        const response = await fetch(apiUrl('api/NotifyMaintenance.aspx'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1637,7 +1637,7 @@ function loadBackupList() {
     const container = document.getElementById('backupList');
     container.innerHTML = '<p style="text-align: center; color: #6c757d;">Chargement des sauvegardes...</p>';
 
-    fetch('/pages/administrations/utilisateur/api/GetBackupList.aspx')
+    fetch(apiUrl('/pages/administrations/utilisateur/api/GetBackupList.aspx'))
         .then(r => r.json())
         .then(data => {
             console.log('📋 Sauvegardes reçues:', data); // ✅ Debug
@@ -1860,7 +1860,7 @@ async function executeRestore() {
             const formData = new FormData();
             formData.append('backupFile', selectedRestoreFile.file);
 
-            const uploadResponse = await fetch('/pages/administrations/utilisateur/api/RestoreDatabaseForm.aspx', {
+            const uploadResponse = await fetch(apiUrl('/pages/administrations/utilisateur/api/RestoreDatabaseForm.aspx'), {
                 method: 'POST',
                 body: formData
             });
@@ -1892,7 +1892,7 @@ async function executeRestore() {
             throw new Error('Aucun fichier disponible pour la restauration');
         }
 
-        const checkResponse = await fetch('/pages/administrations/utilisateur/api/CheckFile.aspx?path=' + encodeURIComponent(filePath));
+        const checkResponse = await fetch(apiUrl('/pages/administrations/utilisateur/api/CheckFile.aspx?path=' + encodeURIComponent(filePath)));
         const checkData = await checkResponse.json();
 
         if (!checkData.exists) {
@@ -1916,7 +1916,7 @@ async function executeRestore() {
 
         addLog('Chemin du fichier: ' + filePath, 'info');
 
-        const restoreResponse = await fetch('/pages/administrations/utilisateur/api/RestoreDatabase.aspx', {
+        const restoreResponse = await fetch(apiUrl('/pages/administrations/utilisateur/api/RestoreDatabase.aspx'), {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(requestBody)
@@ -1946,7 +1946,7 @@ async function executeRestore() {
 
             if (selectedRestoreSource === 'local' && filePath) {
                 try {
-                    await fetch('/pages/administrations/utilisateur/api/DeleteFile.aspx?path=' + encodeURIComponent(filePath));
+                    await fetch(apiUrl('/pages/administrations/utilisateur/api/DeleteFile.aspx?path=' + encodeURIComponent(filePath)));
                 } catch (e) { }
             }
 

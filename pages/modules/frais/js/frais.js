@@ -826,7 +826,7 @@ function numberToWords(amount) {
             }
         }
 
-        return result + ' MGA';
+        return result + ' ';
     }
 
     var integerPart = Math.floor(amount);
@@ -893,7 +893,7 @@ async function printStudentReceipt(matricule, nom, classe, total, paye, reste, s
                 var borderStyle = i < history.length - 1 ? 'border-bottom:1px solid #e9ecef;' : '';
                 paiementsHtml += '<div style="padding:5px 0; ' + borderStyle + '">';
                 paiementsHtml += '<div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center;">';
-                paiementsHtml += '<div style="min-width:110px;"><strong>Date:</strong><br>' + formatDateTime(h.DATE_PAIEMENT) + '</div>';
+                paiementsHtml += '<div style="min-width:110px;"><strong>Date de paiement:</strong><br>' + formatDateTime(h.DATE_PAIEMENT) + '</div>';
                 paiementsHtml += '<div style="min-width:70px;"><strong>Mois:</strong><br>' + escapeHtml(h.MOIS || '-') + '</div>';
                 paiementsHtml += '<div style="min-width:65px;"><strong>Année:</strong><br>' + escapeHtml(h.ANNEE || '-') + '</div>';
                 paiementsHtml += '<div style="min-width:100px; text-align:right;"><strong>Montant:</strong><br><span style="color:#28a745; font-weight:bold;">' + formatMoney(h.MONTANT) + '</span></div>';

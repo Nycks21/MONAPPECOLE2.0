@@ -344,7 +344,7 @@ var i18n = {};
 
 function loadLang(lang) {
     lang = lang || localStorage.getItem('appLang') || 'fr';
-    fetch('/_assets/lang/' + lang + '.json')
+    fetch(apiUrl('/_assets/lang/' + lang + '.json'))
         .then(function (r) { return r.json(); })
         .then(function (data) {
             i18n = data;
@@ -401,7 +401,7 @@ if (!window._spinnerDefined) {
 }
 
 function ajax(url, payload) {
-    return fetch(url, {
+    return fetch(apiUrl(url), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json; charset=utf-8' },
         body: JSON.stringify(payload)
@@ -410,6 +410,57 @@ function ajax(url, payload) {
         return r.json();
     });
 }
+
+// ============================================================================
+// CONSTRUCTION D'URL SÉCURISÉE (ANTI MIXED-CONTENT)
+// ============================================================================
+// ✅ BUG CORRIGÉ : derrière un tunnel ngrok (ngrok http PORT), le serveur
+// IIS local tourne en HTTP et ne sait pas qu'il est exposé en HTTPS.
+// Toute URL absolue construite côté serveur (redirections, en-têtes Location,
+// liens générés) ou résolue dans certains contextes navigateur peut donc
+// hériter du scheme "http://" alors que la page est chargée en "https://",
+// ce qui déclenche un blocage "Mixed Content".
+//
+// apiUrl() reconstruit systématiquement l'URL avec le PROTOCOLE ET L'HÔTE
+// RÉELS de la page actuelle (window.location), quel que soit le scheme
+// d'origine du chemin fourni. Cela neutralise le problème à la source,
+// peu importe d'où vient l'incohérence (cache, proxy, réponse serveur...).
+function apiUrl(path) {
+    if (!path) return path;
+    try {
+        // Construit l'URL absolue (gère aussi bien les chemins relatifs
+        // "api/x.aspx" que les chemins absolus "/pages/.../x.aspx").
+        var resolved = new URL(path, window.location.origin + window.location.pathname);
+        resolved.protocol = window.location.protocol; // force https si la page est en https
+        resolved.host = window.location.host;          // force le bon host
+        return resolved.toString();
+    } catch (e) {
+        // Si l'URL ne peut pas être analysée, on renvoie le chemin original
+        return path;
+    }
+}
+window.apiUrl = apiUrl;
+
+// ✅ Garde-fou supplémentaire : intercepter fetch() pour réécrire
+// automatiquement toute requête http:// vers https:// quand la page est
+// elle-même chargée en https://. Cela protège même les appels qui auraient
+// été oubliés lors d'une mise à jour future du code, sans rien casser
+// pour les requêtes déjà correctes.
+(function patchFetchForMixedContent() {
+    if (window._fetchPatchedForHttps) return;
+    window._fetchPatchedForHttps = true;
+
+    var originalFetch = window.fetch;
+    window.fetch = function (input, init) {
+        try {
+            if (window.location.protocol === 'https:' && typeof input === 'string' && input.indexOf('http://') === 0) {
+                console.warn('⚠️ Requête http:// interceptée et corrigée en https:// →', input);
+                input = 'https://' + input.substring('http://'.length);
+            }
+        } catch (e) { /* ignorer et laisser fetch gérer l'erreur normalement */ }
+        return originalFetch.call(this, input, init);
+    };
+})();
 
 // ============================================================================
 // MODE SOMBRE (DARK MODE)
@@ -506,7 +557,7 @@ function startMaintenanceChecker() {
 // ─── VÉRIFICATION UNIQUE ────────────────────────────────────────────
 async function checkStatus(checkNumber) {
     try {
-        const url = `${API_BASE}?action=check&t=${Date.now()}`;
+        const url = apiUrl(`${API_BASE}?action=check&t=${Date.now()}`);
         const response = await fetch(url);
         const data = await response.json();
         

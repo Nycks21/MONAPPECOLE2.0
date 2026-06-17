@@ -22,10 +22,12 @@
         <link rel="stylesheet" href="css/styles.css" />
     </head>
 
-    <body class="hold-transition login-page">
+    <body class="hold-transition login-page" style="background: url('../img/bg.png') no-repeat center center fixed; background-size: cover;">
         <div class="login-box">
             <div class="card card-outline card-primary">
                 <div class="card-header text-center">
+                    <img src="../img/logo1.png" alt="Logo" class="img-circle" style="width: 100px; height: 100px; position: relative;" />
+                    <hr />
                     <a class="h2"><b>Gestion Scolaire</b></a>
                 </div>
                 <div class="card-body">

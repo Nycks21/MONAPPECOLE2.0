@@ -12,34 +12,87 @@ public class SupprimerHistoriquePaiement : IHttpHandler, IRequiresSessionState
 {
     public void ProcessRequest(HttpContext ctx)
     {
-        ctx.Response.ContentType = "application/json";
-        ctx.Response.Charset = "utf-8";
-
-        if (ctx.Session["authenticated"] == null || !(bool)ctx.Session["authenticated"])
-        {
-            ctx.Response.StatusCode = 401;
-            ctx.Response.Write("{\"success\":false,\"message\":\"Non authentifié\"}");
-            return;
-        }
-
         try
         {
-            string body;
-            using (var reader = new StreamReader(ctx.Request.InputStream))
-                body = reader.ReadToEnd();
+            ctx.Response.ContentType = "application/json";
+            ctx.Response.Charset = "utf-8";
+            ctx.Response.Headers.Add("Access-Control-Allow-Origin", "*");
 
-            var ser = new JavaScriptSerializer();
-            var data = ser.Deserialize<Dictionary<string, object>>(body);
-
-            if (data == null || !data.ContainsKey("id"))
+            // Vérifier l'authentification
+            if (ctx.Session == null || ctx.Session["authenticated"] == null || !(bool)ctx.Session["authenticated"])
             {
-                ctx.Response.Write("{\"success\":false,\"message\":\"Données invalides\"}");
+                ctx.Response.StatusCode = 401;
+                ctx.Response.Write("{\"success\":false,\"message\":\"Non authentifié\"}");
                 return;
             }
 
-            Guid id = Guid.Parse(data["id"].ToString());
+            // Lire le corps de la requête
+            string body = "";
+            using (var reader = new StreamReader(ctx.Request.InputStream))
+                body = reader.ReadToEnd();
 
-            string connStr = ConfigurationManager.ConnectionStrings["MaConnexion"].ConnectionString;
+            // Si le body est vide, essayer de lire depuis QueryString
+            if (string.IsNullOrEmpty(body))
+            {
+                string idParam = ctx.Request.QueryString["id"];
+                if (!string.IsNullOrEmpty(idParam))
+                {
+                    body = "{\"id\":\"" + idParam + "\"}";
+                }
+                else
+                {
+                    ctx.Response.Write("{\"success\":false,\"message\":\"Aucune donnée reçue\"}");
+                    return;
+                }
+            }
+
+            var ser = new JavaScriptSerializer();
+            Dictionary<string, object> data = null;
+
+            try
+            {
+                data = ser.Deserialize<Dictionary<string, object>>(body);
+            }
+            catch (Exception ex)
+            {
+                ctx.Response.Write("{\"success\":false,\"message\":\"Erreur de parsing JSON: " + ex.Message.Replace("\"", "\\\"") + "\"}");
+                return;
+            }
+
+            if (data == null || !data.ContainsKey("id"))
+            {
+                ctx.Response.Write("{\"success\":false,\"message\":\"Données invalides. Champ 'id' manquant.\"}");
+                return;
+            }
+
+            string idString = data["id"].ToString();
+
+            if (string.IsNullOrEmpty(idString))
+            {
+                ctx.Response.Write("{\"success\":false,\"message\":\"ID invalide ou vide\"}");
+                return;
+            }
+
+            Guid id = Guid.Empty;
+            if (!Guid.TryParse(idString, out id))
+            {
+                ctx.Response.Write("{\"success\":false,\"message\":\"ID invalide. Format GUID attendu.\"}");
+                return;
+            }
+
+            // Récupérer la chaîne de connexion
+            string connStr = "";
+            if (ConfigurationManager.ConnectionStrings["MaConnexion"] != null)
+            {
+                connStr = ConfigurationManager.ConnectionStrings["MaConnexion"].ConnectionString;
+            }
+
+            if (string.IsNullOrEmpty(connStr))
+            {
+                ctx.Response.StatusCode = 500;
+                ctx.Response.Write("{\"success\":false,\"message\":\"Chaîne de connexion non trouvée dans Web.config\"}");
+                return;
+            }
 
             using (var conn = new SqlConnection(connStr))
             {
@@ -52,9 +105,9 @@ public class SupprimerHistoriquePaiement : IHttpHandler, IRequiresSessionState
                         decimal montant = 0;
                         Guid fraisId = Guid.Empty;
 
-                        using (var cmd = new SqlCommand(
-                            "SELECT MONTANT, FRAIS_ID FROM HISTORIQUE_PAIEMENTS WHERE ID = @id",
-                            conn, transaction))
+                        string selectSql = "SELECT MONTANT, FRAIS_ID FROM HISTORIQUE_PAIEMENTS WHERE ID = @id";
+
+                        using (var cmd = new SqlCommand(selectSql, conn, transaction))
                         {
                             cmd.Parameters.AddWithValue("@id", id);
                             using (var rdr = cmd.ExecuteReader())
@@ -71,46 +124,61 @@ public class SupprimerHistoriquePaiement : IHttpHandler, IRequiresSessionState
                         }
 
                         // 2. Supprimer l'historique
-                        using (var cmd = new SqlCommand(
-                            "DELETE FROM HISTORIQUE_PAIEMENTS WHERE ID = @id",
-                            conn, transaction))
+                        string deleteSql = "DELETE FROM HISTORIQUE_PAIEMENTS WHERE ID = @id";
+
+                        using (var cmd = new SqlCommand(deleteSql, conn, transaction))
                         {
                             cmd.Parameters.AddWithValue("@id", id);
-                            cmd.ExecuteNonQuery();
+                            int rowsAffected = cmd.ExecuteNonQuery();
+
+                            if (rowsAffected == 0)
+                            {
+                                transaction.Rollback();
+                                ctx.Response.Write("{\"success\":false,\"message\":\"Aucune ligne supprimée\"}");
+                                return;
+                            }
                         }
 
-                        // 3. Recalculer FRAIS (soustraire le montant supprimé)
+                        // ✅ 3. Recalculer FRAIS - UNIQUEMENT METTRE À JOUR PAYE
+                        // Les colonnes RESTE, PROGRESSION et STATUT sont calculées automatiquement
                         string updateSql = @"
                             UPDATE FRAIS
-                            SET PAYE        = CASE WHEN PAYE - @montant < 0 THEN 0 ELSE PAYE - @montant END,
-                                RESTE       = CASE WHEN TOTAL - (PAYE - @montant) < 0 THEN 0
-                                                   WHEN PAYE - @montant < 0 THEN TOTAL
-                                                   ELSE TOTAL - (PAYE - @montant) END,
-                                PROGRESSION = CASE WHEN TOTAL > 0 AND PAYE - @montant > 0
-                                                   THEN ROUND(((PAYE - @montant) / TOTAL) * 100, 2)
-                                                   ELSE 0 END,
-                                STATUT      = CASE
-                                                WHEN TOTAL <= (PAYE - @montant) AND (PAYE - @montant) > 0 THEN N'Terminé'
-                                                WHEN (PAYE - @montant) > 0                               THEN N'En cours'
-                                                ELSE N'Non payé'
-                                              END,
-                                UPDATED_AT  = GETDATE()
+                            SET PAYE = CASE 
+                                        WHEN PAYE - @montant < 0 THEN 0 
+                                        ELSE PAYE - @montant 
+                                      END,
+                                UPDATED_AT = GETDATE()
                             WHERE ID = @fraisId";
 
                         using (var cmd = new SqlCommand(updateSql, conn, transaction))
                         {
                             cmd.Parameters.AddWithValue("@montant", montant);
                             cmd.Parameters.AddWithValue("@fraisId", fraisId);
-                            cmd.ExecuteNonQuery();
+                            int rowsUpdated = cmd.ExecuteNonQuery();
+
+                            if (rowsUpdated == 0)
+                            {
+                                transaction.Rollback();
+                                ctx.Response.Write("{\"success\":false,\"message\":\"Aucun frais trouvé avec l'ID: " + fraisId.ToString() + "\"}");
+                                return;
+                            }
                         }
 
                         transaction.Commit();
-                        ctx.Response.Write("{\"success\":true,\"message\":\"Paiement supprimé avec succès\"}");
+
+                        ctx.Response.Write("{\"success\":true,\"message\":\"Paiement supprimé avec succès\", \"fraisId\":\"" + fraisId.ToString() + "\", \"montant\":\"" + montant.ToString() + "\"}");
                     }
-                    catch
+                    catch (SqlException sqlEx)
                     {
                         transaction.Rollback();
-                        throw;
+                        ctx.Response.StatusCode = 500;
+                        ctx.Response.Write("{\"success\":false,\"message\":\"Erreur SQL: " + sqlEx.Message.Replace("\"", "\\\"") + "\", \"errorCode\":\"" + sqlEx.Number.ToString() + "\"}");
+                    }
+                    catch (Exception ex)
+                    {
+                        transaction.Rollback();
+                        ctx.Response.StatusCode = 500;
+                        ctx.Response.Write("{\"success\":false,\"message\":\"Erreur: " + ex.Message.Replace("\"", "\\\"") + "\"}");
                     }
                 }
             }
@@ -118,7 +186,7 @@ public class SupprimerHistoriquePaiement : IHttpHandler, IRequiresSessionState
         catch (Exception ex)
         {
             ctx.Response.StatusCode = 500;
-            ctx.Response.Write("{\"success\":false,\"message\":\"" + ex.Message.Replace("\"", "\\\"") + "\"}");
+            ctx.Response.Write("{\"success\":false,\"message\":\"Erreur serveur: " + ex.Message.Replace("\"", "\\\"") + "\"}");
         }
     }
 
