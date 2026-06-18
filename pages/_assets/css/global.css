@@ -322,8 +322,9 @@ body.sidebar-collapsed .main-header {
     min-height: calc(100vh - var(--topbar-h));
     width: calc(100% - var(--sidebar-w));
     padding-top: 10px;
-    padding-left: 20px;
-    padding-right: 20px;
+    padding-left: 10px;
+    padding-right: 10px;
+    padding-bottom: 0px;
     overflow-x: hidden;
     transition: margin-left var(--transition), width var(--transition);
 }
@@ -1183,8 +1184,8 @@ select.form-control { appearance: auto; }
 @media (min-width: 1400px) {
     .container-fluid {
         max-width: 100%;
-        padding-left: 24px;
-        padding-right: 24px;
+        padding-left: 0px;
+        padding-right: 0px;
     }
 }
 

@@ -278,6 +278,7 @@ function createFilterControls() {
                 <option value="20">20 lignes</option>
                 <option value="50">50 lignes</option>
                 <option value="100">100 lignes</option>
+                <option value="-1">Tous</option>
             </select>
         </div>
         <div>

@@ -1,4 +1,4 @@
-﻿<%@ Page Language="C#" AutoEventWireup="true" CodeFile="absences.cs" Inherits="absences" %>
+﻿﻿<%@ Page Language="C#" AutoEventWireup="true" CodeFile="absences.cs" Inherits="absences" %>
 <!DOCTYPE html>
 <html lang="fr">
 
@@ -168,6 +168,57 @@
             word-break: break-word;
         }
         
+        /* Filtres */
+        .filter-container {
+            margin: 0 0 20px;
+            padding: 14px 18px;
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border-radius: 10px;
+            display: flex;
+            gap: 14px;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            box-shadow: 0 2px 8px rgba(0,0,0,.08);
+            border: 1px solid #dee2e6;
+        }
+        .filter-container label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
+            color: #495057;
+            font-size: 13px;
+        }
+        .filter-container input,
+        .filter-container select {
+            width: 100%;
+            padding: 9px 12px;
+            border: 1px solid #ced4da;
+            border-radius: 6px;
+            font-size: 13px;
+        }
+        .filter-container .filter-group {
+            flex: 2;
+            min-width: 200px;
+        }
+        .filter-container .filter-select {
+            min-width: 150px;
+        }
+        .filter-container .filter-rows {
+            min-width: 130px;
+        }
+        .filter-container .filter-btn {
+            padding: 9px 20px;
+            background: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .filter-container .filter-btn:hover {
+            background: #5a6268;
+        }
+        
         /* Pour mobile */
         @media (max-width: 768px) {
             .dash-table th, .dash-table td {
@@ -181,6 +232,16 @@
             .btn-action-edit, .btn-action-delete, .btn-action-justify {
                 padding: 3px 6px;
                 font-size: 10px;
+            }
+            .filter-container {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .filter-container .filter-group,
+            .filter-container .filter-select,
+            .filter-container .filter-rows {
+                flex: auto;
+                min-width: 100%;
             }
         }
     </style>
@@ -212,7 +273,7 @@
             </aside>
 
             <!-- ═══ CONTROL SIDEBAR ═══ -->
-                <%= AuthHelper.RenderControlSidebarHTML() %>
+            <%= AuthHelper.RenderControlSidebarHTML() %>
 
             <!-- CONTENT WRAPPER -->
             <div class="content-wrapper" id="contentWrapper">
@@ -248,6 +309,7 @@
                                     <button type="button" class="btn btn-success btn-sm" onclick="openAbsenceModal()"><i class="fas fa-plus"></i> Signaler une absence</button>
                                 </div>
                                 <div class="dash-card-body">
+                                    <!-- Statistiques Absences -->
                                     <div class="absence-stats" id="absenceStatsContainer">
                                         <div class="absence-card">
                                             <div class="stat-icon"><i class="fas fa-calendar-times" style="color:#dc3545;"></i></div>
@@ -266,7 +328,10 @@
                                         </div>
                                     </div>
                                     
-                                    <!-- Table Absences responsive -->
+                                    <!-- ✅ FILTRES ABSENCES -->
+                                    <div id="abs-filter-container"></div>
+                                    
+                                    <!-- Table Absences -->
                                     <div class="table-responsive">
                                         <table class="dash-table">
                                             <thead>
@@ -284,7 +349,12 @@
                                             <tbody id="absencesTableBody"></tbody>
                                         </table>
                                     </div>
+                                    
+                                    <!-- ✅ PAGINATION ABSENCES -->
                                     <div id="abs-pagination" style="margin-top: 20px;"></div>
+                                    
+                                    <!-- ✅ COMPTEUR ABSENCES -->
+                                    <div id="abs-record-counter"></div>
                                 </div>
                             </div>
                         </div>
@@ -297,6 +367,7 @@
                                     <button type="button" class="btn btn-success btn-sm" onclick="openRetardModal()"><i class="fas fa-plus"></i> Signaler un retard</button>
                                 </div>
                                 <div class="dash-card-body">
+                                    <!-- Statistiques Retards -->
                                     <div class="absence-stats" id="retardStatsContainer">
                                         <div class="absence-card">
                                             <div class="stat-icon"><i class="fas fa-clock" style="color:#ffc107;"></i></div>
@@ -315,7 +386,10 @@
                                         </div>
                                     </div>
                                     
-                                    <!-- Table Retards responsive -->
+                                    <!-- ✅ FILTRES RETARDS -->
+                                    <div id="ret-filter-container"></div>
+                                    
+                                    <!-- Table Retards -->
                                     <div class="table-responsive">
                                         <table class="dash-table">
                                             <thead>
@@ -334,7 +408,12 @@
                                             <tbody id="retardsTableBody"></tbody>
                                         </table>
                                     </div>
+                                    
+                                    <!-- ✅ PAGINATION RETARDS -->
                                     <div id="retard-pagination" style="margin-top: 20px;"></div>
+                                    
+                                    <!-- ✅ COMPTEUR RETARDS -->
+                                    <div id="ret-record-counter"></div>
                                 </div>
                             </div>
                         </div>
@@ -342,6 +421,7 @@
                 </section>
             </div>
 
+            <!-- SPINNER -->
             <div id="spinnerOverlay">
                 <div class="spinner"></div>
             </div>
@@ -418,6 +498,7 @@
             </div>
         </div>
 
+        <!-- SCRIPTS -->
         <script src="../../_assets/js/jquery-3.6.0.min.js?v=<%=AuthHelper.Version %>"></script>
         <script src="../../_assets/js/sweetalert2@11.js?v=<%=AuthHelper.Version %>"></script>
         <script src="../../_assets/js/global.js?v=<%=AuthHelper.Version %>"></script>

@@ -1,5 +1,5 @@
 // ============================================================================
-// GESTION DES ABSENCES ET RETARDS - VERSION CORRIGÉE
+// GESTION DES ABSENCES ET RETARDS - VERSION CORRIGÉE AVEC FILTRES
 // ============================================================================
 
 // API URLs
@@ -30,6 +30,10 @@ var currentTab = 'absences';
 var absPage = 1, retPage = 1;
 var absRows = 10, retRows = 10;
 var elevesLookup = {};
+var baseAbsencesData = [];
+var baseRetardsData = [];
+var filteredAbsences = [];
+var filteredRetards = [];
 
 // ============================================================================
 // UTILITAIRES
@@ -151,6 +155,9 @@ async function loadAbsences() {
         var result = await res.json();
         if (result.success) {
             absencesData = result.data || [];
+            baseAbsencesData = [...absencesData];
+            filteredAbsences = [...absencesData];
+            createAbsenceFilterControls();
             updateAbsenceStats();
             renderAbsencesTable();
         } else {
@@ -163,11 +170,100 @@ async function loadAbsences() {
     }
 }
 
+// ============================================================================
+// BARRE DE FILTRES ABSENCES
+// ============================================================================
+function createAbsenceFilterControls() {
+    var oldFilter = document.getElementById('abs-filter-container');
+    if (oldFilter) oldFilter.remove();
+
+    var fc = document.createElement('div');
+    fc.id = 'abs-filter-container';
+    fc.className = 'filter-container';
+    fc.innerHTML = `
+        <div class="filter-group">
+            <label><i class="fas fa-search"></i> Recherche</label>
+            <input type="text" id="abs-search-filter" placeholder="Nom...">
+        </div>
+        <div class="filter-select">
+            <label><i class="fas fa-filter"></i> Statut</label>
+            <select id="abs-status-filter">
+                <option value="">Tous</option>
+                <option value="justifie">Justifiée</option>
+                <option value="non_justifie">Non justifiée</option>
+            </select>
+        </div>
+        <div class="filter-rows">
+            <label><i class="fas fa-list"></i> Afficher</label>
+            <select id="abs-rows-per-page">
+                <option value="5">5 lignes</option>
+                <option value="10" selected>10 lignes</option>
+                <option value="20">20 lignes</option>
+                <option value="50">50 lignes</option>
+                <option value="100">100 lignes</option>
+                <option value="-1">Tous</option>
+            </select>
+        </div>
+        <button class="filter-btn" id="abs-reset-filters" type="button">
+            <i class="fas fa-undo"></i> Réinitialiser
+        </button>`;
+
+    var container = document.querySelector('#tab-absences .dash-card-body') || document.body;
+    var statsContainer = document.getElementById('absenceStatsContainer');
+    if (statsContainer && statsContainer.nextSibling) {
+        container.insertBefore(fc, statsContainer.nextSibling);
+    } else {
+        container.prepend(fc);
+    }
+
+    document.getElementById('abs-search-filter').addEventListener('input', applyAbsenceFilters);
+    document.getElementById('abs-status-filter').addEventListener('change', applyAbsenceFilters);
+    document.getElementById('abs-rows-per-page').addEventListener('change', function(e) {
+        absRows = parseInt(e.target.value);
+        absPage = 1;
+        renderAbsencesTable();
+    });
+    document.getElementById('abs-reset-filters').addEventListener('click', resetAbsenceFilters);
+}
+
+function applyAbsenceFilters() {
+    var search = (document.getElementById('abs-search-filter')?.value || '').toLowerCase().trim();
+    var status = document.getElementById('abs-status-filter')?.value || '';
+
+    filteredAbsences = baseAbsencesData.filter(function(abs) {
+        var matchSearch = !search || (
+            abs.NOM?.toLowerCase().includes(search) ||
+            abs.MATRICULE?.toLowerCase().includes(search)
+        );
+        var matchStatus = !status || (
+            status === 'justifie' ? abs.JUSTIFIE === true : abs.JUSTIFIE === false
+        );
+        return matchSearch && matchStatus;
+    });
+
+    absPage = 1;
+    renderAbsencesTable();
+}
+
+function resetAbsenceFilters() {
+    var sf = document.getElementById('abs-search-filter');
+    var stf = document.getElementById('abs-status-filter');
+    var rp = document.getElementById('abs-rows-per-page');
+    if (sf) sf.value = '';
+    if (stf) stf.value = '';
+    if (rp) rp.value = '10';
+    absRows = 10;
+    applyAbsenceFilters();
+}
+
+// ============================================================================
+// Statistiques ABSENCES
+// ============================================================================
 function updateAbsenceStats() {
-    var total = absencesData.length;
+    var total = filteredAbsences.length;
     var nonJustifiees = 0;
-    for (var i = 0; i < absencesData.length; i++) {
-        if (!absencesData[i].JUSTIFIE) nonJustifiees++;
+    for (var i = 0; i < filteredAbsences.length; i++) {
+        if (!filteredAbsences[i].JUSTIFIE) nonJustifiees++;
     }
     var justifiees = total - nonJustifiees;
     
@@ -179,18 +275,21 @@ function updateAbsenceStats() {
     if (justEl) justEl.textContent = justifiees;
 }
 
+// ============================================================================
+// TABLEAU ABSENCES
+// ============================================================================
 function renderAbsencesTable() {
     var tbody = document.getElementById('absencesTableBody');
     if (!tbody) return;
     
     var start = (absPage - 1) * absRows;
     var end = start + absRows;
-    var pageData = absencesData.slice(start, end);
-    var totalPages = Math.ceil(absencesData.length / absRows);
+    var pageData = filteredAbsences.slice(start, end);
+    var totalPages = Math.ceil(filteredAbsences.length / absRows);
     
     tbody.innerHTML = '';
     if (pageData.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;">Aucune absence enregistrée</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;">Aucune absence trouvée</td></tr>';
         updateAbsencePagination(totalPages);
         return;
     }
@@ -200,7 +299,6 @@ function renderAbsencesTable() {
         var justifiedBadge = a.JUSTIFIE ? '<span class="badge-justified">✓ Justifiée</span>' : '<span class="badge-not-justified">✗ Non justifiée</span>';
         var justifyBtn = !a.JUSTIFIE ? '<button type="button" class="btn-action-justify" onclick="justifyAbsence(\'' + a.ID + '\')" title="Justifier"><i class="fas fa-check"></i></button>' : '';
         
-        // Utiliser le motif (qui contient maintenant la justification)
         var motifText = a.MOTIF || '-';
         if (motifText.length > 50) motifText = motifText.substring(0, 47) + '...';
         
@@ -221,24 +319,75 @@ function renderAbsencesTable() {
     }
     
     updateAbsencePagination(totalPages);
+    updateAbsenceCounter();
 }
 
+// ============================================================================
+// COMPTEUR ABSENCES
+// ============================================================================
+function updateAbsenceCounter() {
+    let counter = document.getElementById('abs-record-counter');
+    if (!counter) {
+        counter = document.createElement('div');
+        counter.id = 'abs-record-counter';
+        counter.style.cssText = 'margin:15px 0 0; padding:10px 15px; text-align:center; font-size:14px; background:#f8f9fa; border-radius:6px; border:1px solid #e9ecef;';
+        const pagination = document.getElementById('abs-pagination');
+        if (pagination?.parentNode) {
+            pagination.parentNode.insertBefore(counter, pagination);
+        } else {
+            const table = document.querySelector('#tab-absences .dash-table');
+            if (table?.parentNode) {
+                table.parentNode.insertBefore(counter, table.nextSibling);
+            }
+        }
+    }
+    
+    const start = filteredAbsences.length === 0 ? 0 : (absPage - 1) * absRows + 1;
+    const end = Math.min(absPage * absRows, filteredAbsences.length);
+    counter.innerHTML = `<i class="fas fa-chart-bar"></i> <strong>Affichage :</strong> ${filteredAbsences.length === 0 ? '0' : start} à ${end} sur <strong>${filteredAbsences.length}</strong> enregistrement${filteredAbsences.length > 1 ? 's' : ''}`;
+}
+
+// ============================================================================
+// PAGINATION ABSENCES
+// ============================================================================
 function updateAbsencePagination(totalPages) {
     var container = document.getElementById('abs-pagination');
     if (!container) return;
     
-    if (totalPages <= 1) {
-        container.innerHTML = '';
-        return;
+    container.innerHTML = '';
+    if (totalPages <= 1) return;
+
+    var pc = document.createElement('div');
+    pc.style.cssText = 'margin:20px 0; display:flex; justify-content:center; gap:5px; flex-wrap:wrap;';
+
+    pc.appendChild(createAbsencePageBtn('«', function() { goToAbsencePage(1); }, absPage === 1));
+    pc.appendChild(createAbsencePageBtn('‹', function() { if (absPage > 1) goToAbsencePage(absPage - 1); }, absPage === 1));
+
+    var maxVisible = 5;
+    var start = Math.max(1, absPage - Math.floor(maxVisible / 2));
+    var end = Math.min(totalPages, start + maxVisible - 1);
+    if (end - start + 1 < maxVisible) start = Math.max(1, end - maxVisible + 1);
+
+    if (start > 1) {
+        pc.appendChild(createAbsencePageBtn('1', function() { goToAbsencePage(1); }));
+        if (start > 2) pc.appendChild(createAbsenceDots());
     }
-    
-    var html = '<div style="display:flex;justify-content:center;gap:5px;margin-top:15px;">';
-    for (var i = 1; i <= totalPages; i++) {
-        var activeClass = (i === absPage) ? 'btn-primary' : 'btn-outline-secondary';
-        html += '<button type="button" class="btn btn-sm ' + activeClass + '" onclick="goToAbsencePage(' + i + ')">' + i + '</button>';
+    for (var i = start; i <= end; i++) {
+        (function(page) {
+            pc.appendChild(createAbsencePageBtn(page, function() { goToAbsencePage(page); }, page === absPage));
+        })(i);
     }
-    html += '</div>';
-    container.innerHTML = html;
+    if (end < totalPages) {
+        if (end < totalPages - 1) pc.appendChild(createAbsenceDots());
+        (function(tp) {
+            pc.appendChild(createAbsencePageBtn(tp, function() { goToAbsencePage(tp); }));
+        })(totalPages);
+    }
+
+    pc.appendChild(createAbsencePageBtn('›', function() { if (absPage < totalPages) goToAbsencePage(absPage + 1); }, absPage === totalPages));
+    pc.appendChild(createAbsencePageBtn('»', function() { goToAbsencePage(totalPages); }, absPage === totalPages));
+
+    container.appendChild(pc);
 }
 
 function goToAbsencePage(page) {
@@ -246,6 +395,34 @@ function goToAbsencePage(page) {
     renderAbsencesTable();
 }
 
+function createAbsencePageBtn(text, onClick, isDisabled) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = text;
+    var isActive = (text == absPage && !isNaN(text));
+    btn.style.cssText = 'padding:7px 13px;border:1px solid ' + (isActive || !isDisabled ? '#007bff' : '#dee2e6') + ';' +
+        'background:' + (isActive ? '#007bff' : isDisabled ? '#e9ecef' : 'white') + ';' +
+        'color:' + (isActive ? 'white' : isDisabled ? '#6c757d' : '#007bff') + ';' +
+        'cursor:' + (isDisabled || isActive ? 'default' : 'pointer') + ';border-radius:6px;font-weight:' + (isActive ? '700' : '500') + ';min-width:38px;transition:all .15s;';
+    if (onClick && !isDisabled && !isActive) {
+        btn.addEventListener('click', onClick);
+        btn.addEventListener('mouseover', function() { btn.style.background = '#007bff'; btn.style.color = 'white'; });
+        btn.addEventListener('mouseout', function() { btn.style.background = 'white'; btn.style.color = '#007bff'; });
+    }
+    if (isDisabled) btn.disabled = true;
+    return btn;
+}
+
+function createAbsenceDots() {
+    var s = document.createElement('span');
+    s.textContent = '…';
+    s.style.cssText = 'padding:7px 4px;color:#6c757d;';
+    return s;
+}
+
+// ============================================================================
+// MODAL — OUVRIR ABSENCES
+// ============================================================================
 function openAbsenceModal(event) {
     if (event) {
         event.preventDefault();
@@ -262,6 +439,9 @@ function openAbsenceModal(event) {
     return false;
 }
 
+// ============================================================================
+// MODAL — FERMER ABSENCES
+// ============================================================================
 function closeAbsenceModal() {
     document.getElementById('absenceModal').style.display = 'none';
 }
@@ -327,6 +507,9 @@ async function saveAbsence() {
     }
 }
 
+// ============================================================================
+// MODAL — MODIFIER ABSENCES
+// ============================================================================
 function editAbsence(id) {
     var absence = null;
     for (var i = 0; i < absencesData.length; i++) {
@@ -347,6 +530,9 @@ function editAbsence(id) {
     document.getElementById('absenceModal').style.display = 'flex';
 }
 
+// ============================================================================
+// SUPPRIMER ABSENCES
+// ============================================================================
 async function deleteAbsence(id) {
     var result = await Swal.fire({
         title: 'Confirmation',
@@ -380,6 +566,9 @@ async function deleteAbsence(id) {
     }
 }
 
+// ============================================================================
+// JUSTIFIER ABSENCES
+// ============================================================================
 async function justifyAbsence(id) {
     var result = await Swal.fire({
         title: 'Justifier l\'absence',
@@ -418,7 +607,6 @@ async function justifyAbsence(id) {
                 timer: 1500, 
                 showConfirmButton: false 
             });
-            // Recharger complètement les données
             await loadAbsences();
         } else {
             Swal.fire('Erreur', data.message, 'error');
@@ -441,6 +629,9 @@ async function loadRetards() {
         var result = await res.json();
         if (result.success) {
             retardsData = result.data || [];
+            baseRetardsData = [...retardsData];
+            filteredRetards = [...retardsData];
+            createRetardFilterControls();
             updateRetardStats();
             renderRetardsTable();
         } else {
@@ -453,15 +644,104 @@ async function loadRetards() {
     }
 }
 
+// ============================================================================
+// BARRE DE FILTRES RETARDS
+// ============================================================================
+function createRetardFilterControls() {
+    var oldFilter = document.getElementById('ret-filter-container');
+    if (oldFilter) oldFilter.remove();
+
+    var fc = document.createElement('div');
+    fc.id = 'ret-filter-container';
+    fc.className = 'filter-container';
+    fc.innerHTML = `
+        <div class="filter-group">
+            <label><i class="fas fa-search"></i> Recherche</label>
+            <input type="text" id="ret-search-filter" placeholder="Nom...">
+        </div>
+        <div class="filter-select">
+            <label><i class="fas fa-filter"></i> Statut</label>
+            <select id="ret-status-filter">
+                <option value="">Tous</option>
+                <option value="justifie">Justifié</option>
+                <option value="non_justifie">Non justifié</option>
+            </select>
+        </div>
+        <div class="filter-rows">
+            <label><i class="fas fa-list"></i> Afficher</label>
+            <select id="ret-rows-per-page">
+                <option value="5">5 lignes</option>
+                <option value="10" selected>10 lignes</option>
+                <option value="20">20 lignes</option>
+                <option value="50">50 lignes</option>
+                <option value="100">100 lignes</option>
+                <option value="-1">Tous</option>
+            </select>
+        </div>
+        <button class="filter-btn" id="ret-reset-filters" type="button">
+            <i class="fas fa-undo"></i> Réinitialiser
+        </button>`;
+
+    var container = document.querySelector('#tab-retards .dash-card-body') || document.body;
+    var statsContainer = document.getElementById('retardStatsContainer');
+    if (statsContainer && statsContainer.nextSibling) {
+        container.insertBefore(fc, statsContainer.nextSibling);
+    } else {
+        container.prepend(fc);
+    }
+
+    document.getElementById('ret-search-filter').addEventListener('input', applyRetardFilters);
+    document.getElementById('ret-status-filter').addEventListener('change', applyRetardFilters);
+    document.getElementById('ret-rows-per-page').addEventListener('change', function(e) {
+        retRows = parseInt(e.target.value);
+        retPage = 1;
+        renderRetardsTable();
+    });
+    document.getElementById('ret-reset-filters').addEventListener('click', resetRetardFilters);
+}
+
+function applyRetardFilters() {
+    var search = (document.getElementById('ret-search-filter')?.value || '').toLowerCase().trim();
+    var status = document.getElementById('ret-status-filter')?.value || '';
+
+    filteredRetards = baseRetardsData.filter(function(ret) {
+        var matchSearch = !search || (
+            ret.NOM?.toLowerCase().includes(search) ||
+            ret.MATRICULE?.toLowerCase().includes(search)
+        );
+        var matchStatus = !status || (
+            status === 'justifie' ? ret.JUSTIFIE === true : ret.JUSTIFIE === false
+        );
+        return matchSearch && matchStatus;
+    });
+
+    retPage = 1;
+    renderRetardsTable();
+}
+
+function resetRetardFilters() {
+    var sf = document.getElementById('ret-search-filter');
+    var stf = document.getElementById('ret-status-filter');
+    var rp = document.getElementById('ret-rows-per-page');
+    if (sf) sf.value = '';
+    if (stf) stf.value = '';
+    if (rp) rp.value = '10';
+    retRows = 10;
+    applyRetardFilters();
+}
+
+// ============================================================================
+// Statistiques RETARDS
+// ============================================================================
 function updateRetardStats() {
-    var total = retardsData.length;
+    var total = filteredRetards.length;
     var justifies = 0;
     var totalDuree = 0;
-    for (var i = 0; i < retardsData.length; i++) {
-        if (retardsData[i].JUSTIFIE) justifies++;
-        totalDuree += parseInt(retardsData[i].DUREE) || 0;
+    for (var i = 0; i < filteredRetards.length; i++) {
+        if (filteredRetards[i].JUSTIFIE) justifies++;
+        totalDuree += parseInt(filteredRetards[i].DUREE) || 0;
     }
-    var moyenne = retardsData.length > 0 ? Math.round(totalDuree / retardsData.length) : 0;
+    var moyenne = filteredRetards.length > 0 ? Math.round(totalDuree / filteredRetards.length) : 0;
     
     var totalEl = document.getElementById('totalRetardsVal');
     var justEl = document.getElementById('retardsJustifiesVal');
@@ -471,18 +751,21 @@ function updateRetardStats() {
     if (moyEl) moyEl.textContent = moyenne;
 }
 
+// ============================================================================
+// Tableau RETARDS
+// ============================================================================
 function renderRetardsTable() {
     var tbody = document.getElementById('retardsTableBody');
     if (!tbody) return;
     
     var start = (retPage - 1) * retRows;
     var end = start + retRows;
-    var pageData = retardsData.slice(start, end);
-    var totalPages = Math.ceil(retardsData.length / retRows);
+    var pageData = filteredRetards.slice(start, end);
+    var totalPages = Math.ceil(filteredRetards.length / retRows);
     
     tbody.innerHTML = '';
     if (pageData.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:40px;">Aucun retard enregistré</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:40px;">Aucun retard trouvé</td></tr>';
         updateRetardPagination(totalPages);
         return;
     }
@@ -492,7 +775,6 @@ function renderRetardsTable() {
         var justifiedBadge = r.JUSTIFIE ? '<span class="badge-justified">✓ Justifié</span>' : '<span class="badge-not-justified">✗ Non justifié</span>';
         var justifyBtn = !r.JUSTIFIE ? '<button type="button" class="btn-action-justify" onclick="justifyRetard(\'' + r.ID + '\')" title="Justifier"><i class="fas fa-check"></i></button>' : '';
         
-        // Utiliser le motif (qui contient maintenant la justification)
         var motifText = r.MOTIF || '-';
         if (motifText.length > 50) motifText = motifText.substring(0, 47) + '...';
         
@@ -514,24 +796,75 @@ function renderRetardsTable() {
     }
     
     updateRetardPagination(totalPages);
+    updateRetardCounter();
 }
 
+// ============================================================================
+// COMPTEUR RETARDS
+// ============================================================================
+function updateRetardCounter() {
+    let counter = document.getElementById('ret-record-counter');
+    if (!counter) {
+        counter = document.createElement('div');
+        counter.id = 'ret-record-counter';
+        counter.style.cssText = 'margin:15px 0 0; padding:10px 15px; text-align:center; font-size:14px; background:#f8f9fa; border-radius:6px; border:1px solid #e9ecef;';
+        const pagination = document.getElementById('retard-pagination');
+        if (pagination?.parentNode) {
+            pagination.parentNode.insertBefore(counter, pagination);
+        } else {
+            const table = document.querySelector('#tab-retards .dash-table');
+            if (table?.parentNode) {
+                table.parentNode.insertBefore(counter, table.nextSibling);
+            }
+        }
+    }
+    
+    const start = filteredRetards.length === 0 ? 0 : (retPage - 1) * retRows + 1;
+    const end = Math.min(retPage * retRows, filteredRetards.length);
+    counter.innerHTML = `<i class="fas fa-chart-bar"></i> <strong>Affichage :</strong> ${filteredRetards.length === 0 ? '0' : start} à ${end} sur <strong>${filteredRetards.length}</strong> enregistrement${filteredRetards.length > 1 ? 's' : ''}`;
+}
+
+// ============================================================================
+// PAGINATION RETARDS
+// ============================================================================
 function updateRetardPagination(totalPages) {
     var container = document.getElementById('retard-pagination');
     if (!container) return;
     
-    if (totalPages <= 1) {
-        container.innerHTML = '';
-        return;
+    container.innerHTML = '';
+    if (totalPages <= 1) return;
+
+    var pc = document.createElement('div');
+    pc.style.cssText = 'margin:20px 0; display:flex; justify-content:center; gap:5px; flex-wrap:wrap;';
+
+    pc.appendChild(createRetardPageBtn('«', function() { goToRetardPage(1); }, retPage === 1));
+    pc.appendChild(createRetardPageBtn('‹', function() { if (retPage > 1) goToRetardPage(retPage - 1); }, retPage === 1));
+
+    var maxVisible = 5;
+    var start = Math.max(1, retPage - Math.floor(maxVisible / 2));
+    var end = Math.min(totalPages, start + maxVisible - 1);
+    if (end - start + 1 < maxVisible) start = Math.max(1, end - maxVisible + 1);
+
+    if (start > 1) {
+        pc.appendChild(createRetardPageBtn('1', function() { goToRetardPage(1); }));
+        if (start > 2) pc.appendChild(createRetardDots());
     }
-    
-    var html = '<div style="display:flex;justify-content:center;gap:5px;margin-top:15px;">';
-    for (var i = 1; i <= totalPages; i++) {
-        var activeClass = (i === retPage) ? 'btn-primary' : 'btn-outline-secondary';
-        html += '<button type="button" class="btn btn-sm ' + activeClass + '" onclick="goToRetardPage(' + i + ')">' + i + '</button>';
+    for (var i = start; i <= end; i++) {
+        (function(page) {
+            pc.appendChild(createRetardPageBtn(page, function() { goToRetardPage(page); }, page === retPage));
+        })(i);
     }
-    html += '</div>';
-    container.innerHTML = html;
+    if (end < totalPages) {
+        if (end < totalPages - 1) pc.appendChild(createRetardDots());
+        (function(tp) {
+            pc.appendChild(createRetardPageBtn(tp, function() { goToRetardPage(tp); }));
+        })(totalPages);
+    }
+
+    pc.appendChild(createRetardPageBtn('›', function() { if (retPage < totalPages) goToRetardPage(retPage + 1); }, retPage === totalPages));
+    pc.appendChild(createRetardPageBtn('»', function() { goToRetardPage(totalPages); }, retPage === totalPages));
+
+    container.appendChild(pc);
 }
 
 function goToRetardPage(page) {
@@ -539,6 +872,34 @@ function goToRetardPage(page) {
     renderRetardsTable();
 }
 
+function createRetardPageBtn(text, onClick, isDisabled) {
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.textContent = text;
+    var isActive = (text == retPage && !isNaN(text));
+    btn.style.cssText = 'padding:7px 13px;border:1px solid ' + (isActive || !isDisabled ? '#007bff' : '#dee2e6') + ';' +
+        'background:' + (isActive ? '#007bff' : isDisabled ? '#e9ecef' : 'white') + ';' +
+        'color:' + (isActive ? 'white' : isDisabled ? '#6c757d' : '#007bff') + ';' +
+        'cursor:' + (isDisabled || isActive ? 'default' : 'pointer') + ';border-radius:6px;font-weight:' + (isActive ? '700' : '500') + ';min-width:38px;transition:all .15s;';
+    if (onClick && !isDisabled && !isActive) {
+        btn.addEventListener('click', onClick);
+        btn.addEventListener('mouseover', function() { btn.style.background = '#007bff'; btn.style.color = 'white'; });
+        btn.addEventListener('mouseout', function() { btn.style.background = 'white'; btn.style.color = '#007bff'; });
+    }
+    if (isDisabled) btn.disabled = true;
+    return btn;
+}
+
+function createRetardDots() {
+    var s = document.createElement('span');
+    s.textContent = '…';
+    s.style.cssText = 'padding:7px 4px;color:#6c757d;';
+    return s;
+}
+
+// ============================================================================
+// MODAL — OUVRIR RETARDS
+// ============================================================================
 function openRetardModal(event) {
     if (event) {
         event.preventDefault();
@@ -556,6 +917,9 @@ function openRetardModal(event) {
     return false;
 }
 
+// ============================================================================
+// MODAL - FERMER RETARDS
+// ============================================================================
 function closeRetardModal() {
     document.getElementById('retardModal').style.display = 'none';
 }
@@ -636,6 +1000,9 @@ async function saveRetard() {
     }
 }
 
+// ============================================================================
+// MODAL — MODIFIER RETARDS
+// ============================================================================
 function editRetard(id) {
     var retard = null;
     for (var i = 0; i < retardsData.length; i++) {
@@ -657,6 +1024,9 @@ function editRetard(id) {
     document.getElementById('retardModal').style.display = 'flex';
 }
 
+// ============================================================================
+// SUPPRIMER RETARDS
+// ============================================================================
 async function deleteRetard(id) {
     var result = await Swal.fire({
         title: 'Confirmation',
@@ -690,6 +1060,9 @@ async function deleteRetard(id) {
     }
 }
 
+// ============================================================================
+// JUSTIFIER RETARDS
+// ============================================================================
 async function justifyRetard(id) {
     var result = await Swal.fire({
         title: 'Justifier le retard',
@@ -728,7 +1101,6 @@ async function justifyRetard(id) {
                 timer: 1500, 
                 showConfirmButton: false 
             });
-            // Recharger complètement les données
             await loadRetards();
         } else {
             Swal.fire('Erreur', data.message, 'error');
@@ -775,7 +1147,9 @@ if (document.readyState === 'loading') {
     init();
 }
 
-// Expositions globales
+// ============================================================================
+// EXPOSITIONS GLOBALES
+// ============================================================================
 window.switchTab = switchTab;
 window.openAbsenceModal = openAbsenceModal;
 window.closeAbsenceModal = closeAbsenceModal;

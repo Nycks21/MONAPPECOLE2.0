@@ -14,139 +14,207 @@ public partial class Login : Page
 {
     enum LicenceStatus { Valide, Manquante, Expiree, Invalide }
 
-    string connStr = ConfigurationManager.ConnectionStrings["MaConnexion"].ConnectionString;
+    string connStr = "";
 
-    // ── Constantes de verrouillage ──────────────────────────────────────────
     const int MAX_ATTEMPTS = 5;
     const int LOCKOUT_SECONDS = 60;
     const string SK_ATTEMPTS = "login_attempts";
     const string SK_LOCKOUT_END = "login_lockout_end";
-    // ────────────────────────────────────────────────────────────────────────
 
     protected void Page_Load(object sender, EventArgs e)
     {
+        connStr = GetConnectionString();
+
         if (!IsPostBack)
         {
             HideMessages();
 
-            // Gérer les messages toast pour la déconnexion
-            string msg = Request.QueryString["msg"];
-            
-            if (msg == "maintenance")
+            if (!TestDatabaseConnection())
             {
-                ShowToast("🔒 Maintenance en cours", "Vous avez été déconnecté pour cause de maintenance. Veuillez patienter.", "warning");
-            }
-            else if (msg == "disconnected")
-            {
-                ShowToast("🔌 Déconnexion", "Vous avez été déconnecté par l'administrateur. Veuillez vous reconnecter.", "info");
-            }
-            else if (msg == "session_expired")
-            {
-                ShowToast("⏰ Session expirée", "Votre session a expiré. Veuillez vous reconnecter.", "warning");
-            }
-            else if (msg == "blocked")
-            {
-                ShowToast("🔒 Compte bloqué", "Compte temporairement bloqué. Maintenance en cours. Veuillez réessayer dans 1 minute.", "error");
-            }
-            else if (msg == "other_pc")
-            {
-                ShowToast("⚠️ Connexion ailleurs", "Vous avez été déconnecté car une autre session a été ouverte.", "warning");
-            }
-
-            DateTime expirationDate;
-            int maxUsers;
-
-            LicenceStatus status = CheckLicence(out expirationDate, out maxUsers);
-
-            if (status != LicenceStatus.Valide)
-            {
-                lblLicenceInfo.Text =
-                    status == LicenceStatus.Expiree ? "❌ Licence expirée."
-                  : status == LicenceStatus.Manquante ? "❌ Clé de licence manquante."
-                  : "❌ Licence invalide.";
-
-                lblLicenceInfo.ForeColor = Color.Red;
-                lblLicenceInfo.Font.Bold = true;
-                lblLicenceInfo.Visible = true;
+                lblMessage.Text = "Connexion à la base de données impossible. Veuillez contacter l'administrateur.";
+                lblMessage.ForeColor = Color.Red;
+                lblMessage.Font.Bold = true;
+                lblMessage.Visible = true;
                 return;
             }
 
-            int daysLeft = (expirationDate.Date - DateTime.Now.Date).Days;
-            int[] alertDays = { 45, 15, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 };
+            string msg = Request.QueryString["msg"];
 
-            if (alertDays.Contains(daysLeft))
+            if (msg == "maintenance")
             {
-                if (daysLeft == 0)
-                    lblLicenceInfo.Text = "⚠️ La licence expire aujourd'hui.";
-                else if (daysLeft == 1)
-                    lblLicenceInfo.Text = "⚠️ La licence expire demain.";
-                else
-                    lblLicenceInfo.Text = "⚠️ La licence expirera dans " + daysLeft + " jours.";
-
-                lblLicenceInfo.ForeColor = Color.OrangeRed;
-                lblLicenceInfo.Visible = true;
+                ShowNotification("Vous avez été déconnecté pour cause de maintenance. Veuillez patienter.", "warning");
+            }
+            else if (msg == "disconnected")
+            {
+                ShowNotification("Vous avez été déconnecté par l'administrateur. Veuillez vous reconnecter.", "info");
+            }
+            else if (msg == "session_expired")
+            {
+                ShowNotification("Votre session a expiré. Veuillez vous reconnecter.", "warning");
+            }
+            else if (msg == "blocked")
+            {
+                ShowNotification("Compte temporairement bloqué. Maintenance en cours. Veuillez réessayer dans 1 minute.", "error");
+            }
+            else if (msg == "other_pc")
+            {
+                ShowNotification("Vous avez été déconnecté car une autre session a été ouverte.", "warning");
             }
 
-            if (IsMaxUsersReached(maxUsers))
+            try
             {
-                lblUserLimitInfo.Text = "❌ Nombre maximum d'utilisateurs atteint (" + maxUsers + ").";
-                lblUserLimitInfo.ForeColor = Color.Red;
-                lblUserLimitInfo.Font.Bold = true;
-                lblUserLimitInfo.Visible = true;
+                DateTime expirationDate;
+                int maxUsers;
+
+                LicenceStatus status = CheckLicence(out expirationDate, out maxUsers);
+
+                if (status != LicenceStatus.Valide)
+                {
+                    lblLicenceInfo.Text =
+                        status == LicenceStatus.Expiree ? "❌ Licence expirée."
+                      : status == LicenceStatus.Manquante ? "❌ Clé de licence manquante."
+                      : "❌ Licence invalide.";
+
+                    lblLicenceInfo.ForeColor = Color.Red;
+                    lblLicenceInfo.Font.Bold = true;
+                    lblLicenceInfo.Visible = true;
+                    return;
+                }
+
+                int daysLeft = (expirationDate.Date - DateTime.Now.Date).Days;
+                int[] alertDays = { 45, 15, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0 };
+
+                if (alertDays.Contains(daysLeft))
+                {
+                    if (daysLeft == 0)
+                        lblLicenceInfo.Text = "⚠️ La licence expire aujourd'hui.";
+                    else if (daysLeft == 1)
+                        lblLicenceInfo.Text = "⚠️ La licence expire demain.";
+                    else
+                        lblLicenceInfo.Text = "⚠️ La licence expirera dans " + daysLeft + " jours.";
+
+                    lblLicenceInfo.ForeColor = Color.OrangeRed;
+                    lblLicenceInfo.Visible = true;
+                }
+
+                if (IsMaxUsersReached(maxUsers))
+                {
+                    lblUserLimitInfo.Text = "❌ Nombre maximum d'utilisateurs atteint (" + maxUsers + ").";
+                    lblUserLimitInfo.ForeColor = Color.Red;
+                    lblUserLimitInfo.Font.Bold = true;
+                    lblUserLimitInfo.Visible = true;
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("❌ Erreur Page_Load: " + ex.Message);
+                lblLicenceInfo.Text = "❌ Erreur lors du chargement: " + ex.Message;
+                lblLicenceInfo.ForeColor = Color.Red;
+                lblLicenceInfo.Visible = true;
             }
         }
     }
 
+    private string GetConnectionString()
+    {
+        try
+        {
+            if (ConfigurationManager.ConnectionStrings["MaConnexion"] != null)
+            {
+                return ConfigurationManager.ConnectionStrings["MaConnexion"].ConnectionString;
+            }
+            return "";
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine("❌ Erreur GetConnectionString: " + ex.Message);
+            return "";
+        }
+    }
+
+    private bool TestDatabaseConnection()
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(connStr))
+            {
+                System.Diagnostics.Debug.WriteLine("❌ Chaîne de connexion vide");
+                return false;
+            }
+
+            using (SqlConnection conn = new SqlConnection(connStr))
+            {
+                conn.Open();
+                System.Diagnostics.Debug.WriteLine("✅ Connexion à la base de données réussie");
+                conn.Close();
+                return true;
+            }
+        }
+        catch (SqlException sqlEx)
+        {
+            System.Diagnostics.Debug.WriteLine("❌ Erreur SQL: " + sqlEx.Message);
+            System.Diagnostics.Debug.WriteLine("❌ Numéro d'erreur: " + sqlEx.Number);
+
+            if (sqlEx.Number == 53)
+            {
+                lblMessage.Text = "❌ Le serveur SQL est introuvable. Vérifiez qu'il est démarré.";
+            }
+            else if (sqlEx.Number == 18456)
+            {
+                lblMessage.Text = "❌ Identifiants de connexion invalides.";
+            }
+            else if (sqlEx.Number == 4060)
+            {
+                lblMessage.Text = "❌ La base de données n'existe pas ou est inaccessible.";
+            }
+            else
+            {
+                lblMessage.Text = "❌ Erreur de connexion: " + sqlEx.Message;
+            }
+            lblMessage.ForeColor = Color.Red;
+            lblMessage.Visible = true;
+            return false;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine("❌ Erreur TestDatabaseConnection: " + ex.Message);
+            lblMessage.Text = "❌ Erreur de connexion: " + ex.Message;
+            lblMessage.ForeColor = Color.Red;
+            lblMessage.Visible = true;
+            return false;
+        }
+    }
+
     // ============================================================
-    // AFFICHER UN TOAST (notification)
+    // ✅ NOTIFICATIONS — TOASTR EXCLUSIVEMENT (aucun alert() natif)
     // ============================================================
 
-    private void ShowToast(string title, string message, string type = "info")
+    private void ShowNotification(string message, string type = "info")
     {
-        string icon = "";
-        string bgColor = "";
-        
-        switch (type)
-        {
-            case "success":
-                icon = "✅";
-                bgColor = "#28a745";
-                break;
-            case "error":
-                icon = "❌";
-                bgColor = "#dc3545";
-                break;
-            case "warning":
-                icon = "⚠️";
-                bgColor = "#ffc107";
-                break;
-            default:
-                icon = "ℹ️";
-                bgColor = "#17a2b8";
-                break;
-        }
-        
-        string script = @"
-            Swal.fire({
-                toast: true,
-                position: 'top-end',
-                icon: '" + type + @"',
-                title: '" + title.Replace("'", "\\'") + @"',
-                text: '" + message.Replace("'", "\\'") + @"',
-                showConfirmButton: false,
-                timer: 5000,
-                timerProgressBar: true,
-                didOpen: (toast) => {
-                    toast.addEventListener('mouseenter', Swal.stopTimer);
-                    toast.addEventListener('mouseleave', Swal.resumeTimer);
-                }
-            });";
-        
+        string script = "showNotification('" + EscapeForJs(message) + "', '" + type + "');";
         ScriptManager.RegisterStartupScript(this, GetType(), "toast_" + Guid.NewGuid().ToString(), script, true);
+    }
+
+    private void ShowSuccessNotification(string message)
+    {
+        string script = "showLoginSuccessNotification('" + EscapeForJs(message) + "');";
+        ScriptManager.RegisterStartupScript(this, GetType(), "successToast_" + Guid.NewGuid().ToString(), script, true);
+    }
+
+    private string EscapeForJs(string text)
+    {
+        if (string.IsNullOrEmpty(text)) return "";
+        return text.Replace("\\", "\\\\").Replace("'", "\\'").Replace("\r", "").Replace("\n", " ");
     }
 
     protected void btnLogin_Click(object sender, EventArgs e)
     {
+        if (!TestDatabaseConnection())
+        {
+            ShowError("Connexion à la base de données impossible. Veuillez contacter l'administrateur.");
+            return;
+        }
+
         DateTime lockoutEnd = Session[SK_LOCKOUT_END] as DateTime? ?? DateTime.MinValue;
 
         if (DateTime.Now < lockoutEnd)
@@ -169,15 +237,31 @@ public partial class Login : Page
         DateTime expirationDate;
         int maxUsers;
 
-        if (CheckLicence(out expirationDate, out maxUsers) != LicenceStatus.Valide)
+        try
         {
-            ShowError("Licence non valide.");
+            if (CheckLicence(out expirationDate, out maxUsers) != LicenceStatus.Valide)
+            {
+                ShowError("Licence non valide.");
+                return;
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowError("❌ Erreur de licence: " + ex.Message);
             return;
         }
 
-        if (IsMaxUsersReached(maxUsers))
+        try
         {
-            ShowError("Nombre maximum d'utilisateurs atteint (" + maxUsers + ").");
+            if (IsMaxUsersReached(maxUsers))
+            {
+                ShowError("Nombre maximum d'utilisateurs atteint (" + maxUsers + ").");
+                return;
+            }
+        }
+        catch (Exception ex)
+        {
+            ShowError("❌ Erreur de vérification des utilisateurs: " + ex.Message);
             return;
         }
 
@@ -204,7 +288,6 @@ public partial class Login : Page
             }
             else
             {
-                // Si c'est un blocage maintenance, afficher le message spécifique
                 if (errorMessage.Contains("bloqué") && minutesLeft > 0)
                 {
                     ShowError("⚠️ Compte temporairement bloqué. Maintenance en cours. Veuillez réessayer dans " + minutesLeft + " minute(s).");
@@ -218,27 +301,39 @@ public partial class Login : Page
             return;
         }
 
+        // ✅ Toast de succès avec le style "Login - Utilisateur authentifié"
+        ShowSuccessNotification("Bienvenue " + nomComplet + " !");
+
         Session.Remove(SK_ATTEMPTS);
         Session.Remove(SK_LOCKOUT_END);
 
         string newToken = Guid.NewGuid().ToString();
         string currentPC = Environment.MachineName;
 
-        using (SqlConnection conn = new SqlConnection(connStr))
+        try
         {
-            SqlCommand cmd = new SqlCommand(@"
-                UPDATE USERS
-                SET SESSION_TOKEN = @token,
-                    LAST_LOGIN    = GETDATE(),
-                    LAST_PC       = @pc
-                WHERE IDUSER = @id", conn);
+            using (SqlConnection conn = new SqlConnection(connStr))
+            {
+                SqlCommand cmd = new SqlCommand(@"
+                    UPDATE USERS
+                    SET SESSION_TOKEN = @token,
+                        LAST_LOGIN    = GETDATE(),
+                        LAST_PC       = @pc
+                    WHERE IDUSER = @id", conn);
 
-            cmd.Parameters.AddWithValue("@token", newToken);
-            cmd.Parameters.AddWithValue("@pc", currentPC);
-            cmd.Parameters.AddWithValue("@id", idUser);
+                cmd.Parameters.AddWithValue("@token", newToken);
+                cmd.Parameters.AddWithValue("@pc", currentPC);
+                cmd.Parameters.AddWithValue("@id", idUser);
 
-            conn.Open();
-            cmd.ExecuteNonQuery();
+                conn.Open();
+                cmd.ExecuteNonQuery();
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine("❌ Erreur update token: " + ex.Message);
+            ShowError("❌ Erreur lors de la connexion: " + ex.Message);
+            return;
         }
 
         Session.Clear();
@@ -265,8 +360,21 @@ public partial class Login : Page
             Session["MatieresAutorisees"] = "[]";
         }
 
-        Response.Redirect("~/pages/accueil/dashboards/index.aspx", false);
-        Context.ApplicationInstance.CompleteRequest();
+        // ✅ Stocker le message dans sessionStorage avant la redirection
+        string redirectScript = @"
+        // Stocker le message
+        sessionStorage.setItem('loginToast', 'success|Authentification réussie - Bienvenue !');
+        
+        setTimeout(function() {
+            if (typeof redirectTo === 'function') {
+                redirectTo('/pages/accueil/dashboards/index.aspx');
+            } else {
+                window.isRedirecting = true;
+                window.location.href = '/pages/accueil/dashboards/index.aspx';
+            }
+        }, 3000);";
+
+        ScriptManager.RegisterStartupScript(this, GetType(), "redirectAfterLogin", redirectScript, true);
     }
 
     // ============================================================
@@ -295,16 +403,12 @@ public partial class Login : Page
                         btn.style.opacity = '1';
                         btn.style.cursor = 'pointer';
                         btn.style.backgroundColor = '#28a745';
+                        btn.style.animation = 'pulse-green 1.5s infinite';
                         btn.value = originalText;
                         
-                        Swal.fire({
-                            toast: true,
-                            position: 'top-end',
-                            icon: 'success',
-                            title: '✅ Vous pouvez maintenant vous connecter',
-                            showConfirmButton: false,
-                            timer: 3000
-                        });
+                        if (typeof showNotification === 'function') {
+                            showNotification('Vous pouvez maintenant vous connecter', 'success', 3000);
+                        }
                     } else {
                         var minutes = Math.floor(remaining / 60);
                         var secs = remaining % 60;
@@ -316,8 +420,37 @@ public partial class Login : Page
                     }
                 }, 1000);
             })();";
-        
+
         ScriptManager.RegisterStartupScript(this, GetType(), "loginCountdown", script, true);
+    }
+
+    private void StartCountdownScript(int secondsLeft)
+    {
+        string script = @"
+            (function() {
+                var btn = document.getElementById('" + btnLogin.ClientID + @"');
+                if (!btn) return;
+                btn.disabled = true;
+                btn.style.opacity = '0.6';
+                btn.style.cursor = 'not-allowed';
+                var remaining = " + secondsLeft + @";
+                var orig = btn.value;
+                btn.value = '⏳ Patienter ' + remaining + 's';
+                var iv = setInterval(function() {
+                    remaining--;
+                    if (remaining <= 0) {
+                        clearInterval(iv);
+                        btn.disabled = false;
+                        btn.style.opacity = '1';
+                        btn.style.cursor = 'pointer';
+                        btn.value = orig;
+                    } else {
+                        btn.value = '⏳ Patienter ' + remaining + 's';
+                    }
+                }, 1000);
+            })();";
+
+        ScriptManager.RegisterStartupScript(this, GetType(), "lockoutCountdown", script, true);
     }
 
     // ============================================================
@@ -327,25 +460,32 @@ public partial class Login : Page
     private List<object> GetClassesForProfessor(int professeurId)
     {
         var classes = new List<object>();
-        using (SqlConnection conn = new SqlConnection(connStr))
+        try
         {
-            string sql = @"SELECT DISTINCT c.ID, c.NOM 
-                        FROM CLASSES c
-                        INNER JOIN MATIERES m ON m.CLASSE_ID = c.ID
-                        WHERE m.ENSEIGNANT = @professeurId
-                        ORDER BY c.NOM";
-            SqlCommand cmd = new SqlCommand(sql, conn);
-            cmd.Parameters.AddWithValue("@professeurId", professeurId);
-            conn.Open();
-            SqlDataReader reader = cmd.ExecuteReader();
-            while (reader.Read())
+            using (SqlConnection conn = new SqlConnection(connStr))
             {
-                classes.Add(new
+                string sql = @"SELECT DISTINCT c.ID, c.NOM 
+                            FROM CLASSES c
+                            INNER JOIN MATIERES m ON m.CLASSE_ID = c.ID
+                            WHERE m.ENSEIGNANT = @professeurId
+                            ORDER BY c.NOM";
+                SqlCommand cmd = new SqlCommand(sql, conn);
+                cmd.Parameters.AddWithValue("@professeurId", professeurId);
+                conn.Open();
+                SqlDataReader reader = cmd.ExecuteReader();
+                while (reader.Read())
                 {
-                    ID = reader["ID"].ToString(),
-                    NOM = reader["NOM"].ToString()
-                });
+                    classes.Add(new
+                    {
+                        ID = reader["ID"].ToString(),
+                        NOM = reader["NOM"].ToString()
+                    });
+                }
             }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine("❌ Erreur GetClassesForProfessor: " + ex.Message);
         }
         return classes;
     }
@@ -353,34 +493,39 @@ public partial class Login : Page
     private List<object> GetMatieresForProfessor(int professeurId)
     {
         var matieres = new List<object>();
-        using (SqlConnection conn = new SqlConnection(connStr))
+        try
         {
-            string sql = @"SELECT m.ID, m.NOM, m.COEFFICIENT, m.CLASSE_ID, c.NOM AS CLASSE_NOM
-                        FROM MATIERES m
-                        INNER JOIN CLASSES c ON m.CLASSE_ID = c.ID
-                        WHERE m.ENSEIGNANT = @professeurId
-                        ORDER BY c.NOM, m.NOM";
-            SqlCommand cmd = new SqlCommand(sql, conn);
-            cmd.Parameters.AddWithValue("@professeurId", professeurId);
-            conn.Open();
-            SqlDataReader reader = cmd.ExecuteReader();
-            while (reader.Read())
+            using (SqlConnection conn = new SqlConnection(connStr))
             {
-                var matiere = new
+                string sql = @"SELECT m.ID, m.NOM, m.COEFFICIENT, m.CLASSE_ID, c.NOM AS CLASSE_NOM
+                            FROM MATIERES m
+                            INNER JOIN CLASSES c ON m.CLASSE_ID = c.ID
+                            WHERE m.ENSEIGNANT = @professeurId
+                            ORDER BY c.NOM, m.NOM";
+                SqlCommand cmd = new SqlCommand(sql, conn);
+                cmd.Parameters.AddWithValue("@professeurId", professeurId);
+                conn.Open();
+                SqlDataReader reader = cmd.ExecuteReader();
+                while (reader.Read())
                 {
-                    ID = reader["ID"].ToString(),
-                    NOM = reader["NOM"].ToString(),
-                    COEFFICIENT = reader["COEFFICIENT"] != DBNull.Value ? Convert.ToDecimal(reader["COEFFICIENT"]) : 1,
-                    CLASSE_ID = reader["CLASSE_ID"] != DBNull.Value ? Convert.ToInt32(reader["CLASSE_ID"]) : 0,
-                    CLASSE_NOM = reader["CLASSE_NOM"] != DBNull.Value ? reader["CLASSE_NOM"].ToString() : ""
-                };
-                matieres.Add(matiere);
+                    var matiere = new
+                    {
+                        ID = reader["ID"].ToString(),
+                        NOM = reader["NOM"].ToString(),
+                        COEFFICIENT = reader["COEFFICIENT"] != DBNull.Value ? Convert.ToDecimal(reader["COEFFICIENT"]) : 1,
+                        CLASSE_ID = reader["CLASSE_ID"] != DBNull.Value ? Convert.ToInt32(reader["CLASSE_ID"]) : 0,
+                        CLASSE_NOM = reader["CLASSE_NOM"] != DBNull.Value ? reader["CLASSE_NOM"].ToString() : ""
+                    };
+                    matieres.Add(matiere);
+                }
             }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine("❌ Erreur GetMatieresForProfessor: " + ex.Message);
         }
         return matieres;
     }
-
-    // ============================================================
 
     private bool AuthenticateUser(string username, string password, out int idUser, out int roleId, out string nomComplet, out string errorMessage, out int minutesLeft)
     {
@@ -390,70 +535,111 @@ public partial class Login : Page
         errorMessage = "";
         minutesLeft = 0;
 
-        using (SqlConnection conn = new SqlConnection(connStr))
+        try
         {
-            bool hasBlockedUntilColumn = false;
-            string checkColumnSql = @"
-                SELECT COUNT(*) 
-                FROM INFORMATION_SCHEMA.COLUMNS 
-                WHERE TABLE_NAME = 'USERS' AND COLUMN_NAME = 'BLOCKED_UNTIL'";
-            
-            using (SqlCommand checkCmd = new SqlCommand(checkColumnSql, conn))
+            using (SqlConnection conn = new SqlConnection(connStr))
             {
-                conn.Open();
-                hasBlockedUntilColumn = (int)checkCmd.ExecuteScalar() > 0;
-                conn.Close();
-            }
-            
-            string sql = @"
-                SELECT IDUSER, ROLEID, ACTIVE, NOM";
-            
-            if (hasBlockedUntilColumn)
-            {
-                sql += ", BLOCKED_UNTIL";
-            }
-            
-            sql += " FROM USERS WHERE USERNAME = @u AND PWD = @p";
-            
-            SqlCommand cmd = new SqlCommand(sql, conn);
-            cmd.Parameters.AddWithValue("@u", username);
-            cmd.Parameters.AddWithValue("@p", password);
+                bool hasBlockedUntilColumn = false;
+                string checkColumnSql = @"
+                    SELECT COUNT(*) 
+                    FROM INFORMATION_SCHEMA.COLUMNS 
+                    WHERE TABLE_NAME = 'USERS' AND COLUMN_NAME = 'BLOCKED_UNTIL'";
 
-            conn.Open();
-            using (SqlDataReader rd = cmd.ExecuteReader())
-            {
-                if (rd.Read())
+                try
                 {
-                    bool isActive = Convert.ToInt32(rd["ACTIVE"]) == 1;
-
-                    if (!isActive)
+                    using (SqlCommand checkCmd = new SqlCommand(checkColumnSql, conn))
                     {
-                        errorMessage = "Compte inactif";
-                        return false;
+                        conn.Open();
+                        hasBlockedUntilColumn = (int)checkCmd.ExecuteScalar() > 0;
+                        conn.Close();
                     }
+                }
+                catch (SqlException sqlEx)
+                {
+                    System.Diagnostics.Debug.WriteLine("❌ Erreur vérification colonne: " + sqlEx.Message);
+                    errorMessage = "❌ Erreur base de données: " + sqlEx.Message;
+                    return false;
+                }
 
-                    idUser = Convert.ToInt32(rd["IDUSER"]);
-                    roleId = Convert.ToInt32(rd["ROLEID"]);
-                    nomComplet = rd["NOM"].ToString();
+                string sql = @"
+                    SELECT IDUSER, ROLEID, ACTIVE, NOM";
 
-                    if (roleId != 0 && hasBlockedUntilColumn)
+                if (hasBlockedUntilColumn)
+                {
+                    sql += ", BLOCKED_UNTIL";
+                }
+
+                sql += " FROM USERS WHERE USERNAME = @u AND PWD = @p";
+
+                SqlCommand cmd = new SqlCommand(sql, conn);
+                cmd.Parameters.AddWithValue("@u", username);
+                cmd.Parameters.AddWithValue("@p", password);
+
+                conn.Open();
+                using (SqlDataReader rd = cmd.ExecuteReader())
+                {
+                    if (rd.Read())
                     {
-                        if (rd["BLOCKED_UNTIL"] != DBNull.Value)
+                        bool isActive = Convert.ToInt32(rd["ACTIVE"]) == 1;
+
+                        if (!isActive)
                         {
-                            DateTime blockedUntil = Convert.ToDateTime(rd["BLOCKED_UNTIL"]);
-                            if (blockedUntil > DateTime.Now)
+                            errorMessage = "Compte inactif";
+                            return false;
+                        }
+
+                        idUser = Convert.ToInt32(rd["IDUSER"]);
+                        roleId = Convert.ToInt32(rd["ROLEID"]);
+                        nomComplet = rd["NOM"].ToString();
+
+                        if (roleId != 0 && hasBlockedUntilColumn)
+                        {
+                            if (rd["BLOCKED_UNTIL"] != DBNull.Value)
                             {
-                                TimeSpan remaining = blockedUntil - DateTime.Now;
-                                minutesLeft = (int)Math.Ceiling(remaining.TotalMinutes);
-                                errorMessage = string.Format("⚠️ Compte temporairement bloqué. Maintenance en cours. Veuillez réessayer dans {0} minute(s).", minutesLeft);
-                                return false;
+                                DateTime blockedUntil = Convert.ToDateTime(rd["BLOCKED_UNTIL"]);
+                                if (blockedUntil > DateTime.Now)
+                                {
+                                    TimeSpan remaining = blockedUntil - DateTime.Now;
+                                    minutesLeft = (int)Math.Ceiling(remaining.TotalMinutes);
+                                    errorMessage = string.Format("⚠️ Compte temporairement bloqué. Maintenance en cours. Veuillez réessayer dans {0} minute(s).", minutesLeft);
+                                    return false;
+                                }
                             }
                         }
-                    }
 
-                    return true;
+                        return true;
+                    }
                 }
             }
+        }
+        catch (SqlException sqlEx)
+        {
+            System.Diagnostics.Debug.WriteLine("❌ SQL Exception: " + sqlEx.Message);
+            System.Diagnostics.Debug.WriteLine("❌ Number: " + sqlEx.Number);
+
+            if (sqlEx.Number == 53 || sqlEx.Number == 2)
+            {
+                errorMessage = "❌ Le serveur SQL est introuvable. Vérifiez qu'il est démarré.";
+            }
+            else if (sqlEx.Number == 18456)
+            {
+                errorMessage = "❌ Identifiants de connexion invalides.";
+            }
+            else if (sqlEx.Number == 4060)
+            {
+                errorMessage = "❌ La base de données n'existe pas ou est inaccessible.";
+            }
+            else
+            {
+                errorMessage = "❌ Erreur SQL: " + sqlEx.Message;
+            }
+            return false;
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine("❌ Exception: " + ex.Message);
+            errorMessage = "❌ Erreur: " + ex.Message;
+            return false;
         }
 
         errorMessage = "Nom d'utilisateur ou mot de passe incorrect";
@@ -477,7 +663,7 @@ public partial class Login : Page
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Trace.WriteLine(ex.ToString());
+            System.Diagnostics.Trace.WriteLine("❌ IsMaxUsersReached: " + ex.ToString());
             return false;
         }
     }
@@ -531,8 +717,9 @@ public partial class Login : Page
 
             return LicenceStatus.Valide;
         }
-        catch
+        catch (Exception ex)
         {
+            System.Diagnostics.Debug.WriteLine("❌ CheckLicence: " + ex.Message);
             return LicenceStatus.Invalide;
         }
     }
@@ -570,33 +757,5 @@ public partial class Login : Page
         lblMessage.Text = msg;
         lblMessage.ForeColor = Color.Red;
         lblMessage.Visible = true;
-    }
-
-    private void StartCountdownScript(int secondsLeft)
-    {
-        string script = @"
-            (function() {
-                var btn = document.getElementById('" + btnLogin.ClientID + @"');
-                if (!btn) return;
-                btn.disabled = true;
-                btn.style.opacity = '0.6';
-                btn.style.cursor = 'not-allowed';
-                var remaining = " + secondsLeft + @";
-                var orig = btn.value;
-                btn.value = '⏳ Patienter ' + remaining + 's';
-                var iv = setInterval(function() {
-                    remaining--;
-                    if (remaining <= 0) {
-                        clearInterval(iv);
-                        btn.disabled = false;
-                        btn.style.opacity = '1';
-                        btn.style.cursor = 'pointer';
-                        btn.value = orig;
-                    } else {
-                        btn.value = '⏳ Patienter ' + remaining + 's';
-                    }
-                }, 1000);
-            })();";
-        ScriptManager.RegisterStartupScript(this, GetType(), "lockoutCountdown", script, true);
     }
 }

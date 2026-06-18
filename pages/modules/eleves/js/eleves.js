@@ -307,6 +307,7 @@ function createFilterControls() {
                 <option value="20">20 lignes</option>
                 <option value="50">50 lignes</option>
                 <option value="100">100 lignes</option>
+                <option value="-1">Tous</option>
             </select>
         </div>
         <button id="btn-reset-filters" type="button"
@@ -354,6 +355,79 @@ function resetFilters() {
     if (rp) rp.value = '10';
     rowsPerPage = 10;
     applyFilters();
+}
+
+function goToPage(page) {
+    currentPage = page;
+    renderSimpleTable();
+}
+
+function createPaginationControls(totalPages) {
+    const oldPagination = document.getElementById('pagination-container');
+    if (oldPagination) oldPagination.remove();
+    if (totalPages <= 1) return;
+
+    const container = document.createElement('div');
+    container.id = 'pagination-container';
+    container.style.cssText = 'margin:20px 0; display:flex; justify-content:center; gap:5px; flex-wrap:wrap;';
+
+    const createBtn = (text, onClick, disabled = false, isDots = false) => {
+        const btn = document.createElement('button');
+        btn.textContent = text;
+        if (isDots) {
+            btn.style.cssText = 'padding:8px 12px; border:none; background:transparent; color:#6c757d; cursor:default;';
+            return btn;
+        }
+        const isActive = (text == currentPage && !isNaN(text));
+        btn.style.cssText = `padding:8px 14px; border:1px solid ${isActive ? '#007bff' : '#dee2e6'}; background:${isActive ? '#007bff' : (disabled ? '#e9ecef' : 'white')}; color:${isActive ? 'white' : (disabled ? '#6c757d' : '#007bff')}; cursor:${disabled || isActive ? 'default' : 'pointer'}; border-radius:6px; font-weight:${isActive ? '700' : '500'}; min-width:40px;`;
+        if (onClick && !disabled && !isActive) btn.onclick = onClick;
+        if (disabled) btn.disabled = true;
+        return btn;
+    };
+
+    container.appendChild(createBtn('«', () => goToPage(1), currentPage === 1));
+    container.appendChild(createBtn('‹', () => { if (currentPage > 1) { currentPage--; renderSimpleTable(); } }, currentPage === 1));
+
+    const maxVisible = 5;
+    let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+    let end = Math.min(totalPages, start + maxVisible - 1);
+    if (end - start + 1 < maxVisible) start = Math.max(1, end - maxVisible + 1);
+
+    if (start > 1) {
+        container.appendChild(createBtn('1', () => goToPage(1)));
+        if (start > 2) container.appendChild(createBtn('...', null, true, true));
+    }
+    for (let i = start; i <= end; i++) {
+        container.appendChild(createBtn(i, () => goToPage(i), false));
+    }
+    if (end < totalPages) {
+        if (end < totalPages - 1) container.appendChild(createBtn('...', null, true, true));
+        container.appendChild(createBtn(totalPages, () => goToPage(totalPages)));
+    }
+    container.appendChild(createBtn('›', () => { if (currentPage < totalPages) { currentPage++; renderSimpleTable(); } }, currentPage === totalPages));
+    container.appendChild(createBtn('»', () => goToPage(totalPages), currentPage === totalPages));
+
+    const table = document.querySelector('.dash-table');
+    if (table?.parentNode) table.parentNode.insertBefore(container, table.nextSibling);
+}
+
+function updateCounter() {
+    let counter = document.getElementById('record-counter');
+    if (!counter) {
+        counter = document.createElement('div');
+        counter.id = 'record-counter';
+        counter.style.cssText = 'margin:15px 0 0; padding:10px 15px; text-align:center; font-size:14px; background:#f8f9fa; border-radius:6px; border:1px solid #e9ecef;';
+        const pagination = document.getElementById('pagination-container');
+        if (pagination?.parentNode) pagination.parentNode.insertBefore(counter, pagination);
+        else {
+            const table = document.querySelector('.dash-table');
+            if (table?.parentNode) table.parentNode.insertBefore(counter, table.nextSibling);
+        }
+    }
+    
+    const start = filteredEleves.length === 0 ? 0 : (currentPage - 1) * rowsPerPage + 1;
+    const end = Math.min(currentPage * rowsPerPage, filteredEleves.length);
+    counter.innerHTML = `<i class="fas fa-chart-bar"></i> <strong>Affichage :</strong> ${filteredEleves.length === 0 ? '0' : start} à ${end} sur <strong>${filteredEleves.length}</strong> enregistrement${filteredEleves.length > 1 ? 's' : ''}`;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -439,89 +513,6 @@ function getClasseBadge(classeNom) {
     return '<span style="background:#fff;color:#007bff;padding:4px 12px;border-radius:20px;font-size:11px;font-weight:700;border:1px solid #007bff;white-space:nowrap;">' +
         '<i class="fas fa-folder" style="margin-right:5px;font-size:10px;"></i>' + escHtml(classeNom) +
         '</span>';
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// COMPTEUR
-// ─────────────────────────────────────────────────────────────────────────────
-function updateCounter() {
-    var counter = document.getElementById('record-counter');
-    if (!counter) {
-        counter = document.createElement('div');
-        counter.id = 'record-counter';
-        counter.className = 'text-muted small mt-2 text-center';
-        var table = document.querySelector('.dash-table');
-        if (table) table.after(counter);
-    }
-    var count = filteredEleves.length;
-    counter.innerHTML = 'Affichage de <b>' + count + '</b> élève(s)' + (count !== elevesData.length ? ' (filtrés sur ' + elevesData.length + ')' : '');
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// PAGINATION
-// ─────────────────────────────────────────────────────────────────────────────
-function createPaginationControls(totalPages) {
-    var old = document.getElementById('pagination-container');
-    if (old) old.remove();
-    if (totalPages <= 1) return;
-
-    var pc = document.createElement('div');
-    pc.id = 'pagination-container';
-    pc.style.cssText = 'margin:16px 0;display:flex;justify-content:center;align-items:center;gap:5px;flex-wrap:wrap;';
-
-    pc.appendChild(mkPageBtn('«', function () { goToPage(1); }, currentPage === 1));
-    pc.appendChild(mkPageBtn('‹', function () { if (currentPage > 1) goToPage(currentPage - 1); }, currentPage === 1));
-
-    var maxV = 5, startP = Math.max(1, currentPage - 2), endP = Math.min(totalPages, startP + maxV - 1);
-    if (endP - startP + 1 < maxV) startP = Math.max(1, endP - maxV + 1);
-
-    if (startP > 1) {
-        pc.appendChild(mkPageBtn('1', function () { goToPage(1); }));
-        if (startP > 2) pc.appendChild(mkDots());
-    }
-    for (var i = startP; i <= endP; i++) {
-        (function (page) { pc.appendChild(mkPageBtn(page, function () { goToPage(page); }, page === currentPage)); })(i);
-    }
-    if (endP < totalPages) {
-        if (endP < totalPages - 1) pc.appendChild(mkDots());
-        (function (tp) { pc.appendChild(mkPageBtn(tp, function () { goToPage(tp); })); })(totalPages);
-    }
-
-    pc.appendChild(mkPageBtn('›', function () { if (currentPage < totalPages) goToPage(currentPage + 1); }, currentPage === totalPages));
-    pc.appendChild(mkPageBtn('»', function () { goToPage(totalPages); }, currentPage === totalPages));
-
-    var table = document.querySelector('.dash-table');
-    if (table) table.after(pc);
-}
-
-function mkPageBtn(text, onClick, isDisabled) {
-    var btn = document.createElement('button');
-    btn.type = 'button';
-    btn.textContent = text;
-    var isActive = (text == currentPage && !isNaN(text));
-    btn.style.cssText = 'padding:7px 13px;border:1px solid ' + (isActive || !isDisabled ? '#007bff' : '#dee2e6') + ';' +
-        'background:' + (isActive ? '#007bff' : isDisabled ? '#e9ecef' : 'white') + ';' +
-        'color:' + (isActive ? 'white' : isDisabled ? '#6c757d' : '#007bff') + ';' +
-        'cursor:' + (isDisabled || isActive ? 'default' : 'pointer') + ';border-radius:6px;font-weight:' + (isActive ? '700' : '500') + ';min-width:38px;transition:all .15s;';
-    if (onClick && !isDisabled && !isActive) {
-        btn.addEventListener('click', onClick);
-        btn.addEventListener('mouseover', function () { btn.style.background = '#007bff'; btn.style.color = 'white'; });
-        btn.addEventListener('mouseout', function () { btn.style.background = 'white'; btn.style.color = '#007bff'; });
-    }
-    if (isDisabled) btn.disabled = true;
-    return btn;
-}
-
-function mkDots() {
-    var s = document.createElement('span');
-    s.textContent = '…';
-    s.style.cssText = 'padding:7px 4px;color:#6c757d;';
-    return s;
-}
-
-function goToPage(page) {
-    currentPage = page;
-    renderSimpleTable();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
