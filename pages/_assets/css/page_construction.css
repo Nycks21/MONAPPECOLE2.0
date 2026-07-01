@@ -1,0 +1,150 @@
+/* ============================================
+   PAGE EN CONSTRUCTION - STYLE PROFESSIONNEL
+   ============================================ */
+
+.construction-banner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 500px;
+    width: 100%;
+    padding: 40px 20px;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    border-radius: 12px;
+}
+
+.construction-content {
+    max-width: 600px;
+    width: 100%;
+    padding: 50px 40px;
+    text-align: center;
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(0, 0, 0, 0.05);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.construction-content:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+}
+
+.construction-icon {
+    width: 120px;
+    height: auto;
+    margin-bottom: 24px;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    animation: construction-pulse 2s ease-in-out infinite;
+}
+
+@keyframes construction-pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+.construction-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1e3a2f;
+    margin-bottom: 12px;
+    letter-spacing: -0.5px;
+}
+
+.construction-title .emoji {
+    font-size: 32px;
+}
+
+.construction-text {
+    font-size: 16px;
+    color: #6c757d;
+    line-height: 1.7;
+    margin-bottom: 24px;
+}
+
+.construction-progress {
+    margin: 30px 0 20px;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: #e9ecef;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #c20101, #ff6666);
+    border-radius: 10px;
+    transition: width 1s ease;
+    width: 0%;
+}
+
+.progress-label {
+    font-size: 13px;
+    color: #6c757d;
+    font-weight: 500;
+}
+
+.construction-estimate {
+    margin-top: 20px;
+    padding: 12px 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #495057;
+}
+
+.construction-estimate i {
+    color: #1e3a2f;
+    margin-right: 8px;
+}
+
+.construction-estimate strong {
+    color: #1e3a2f;
+}
+
+.gradient-text {
+    background: linear-gradient(90deg, #c20101, #ff6666);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+/* Version responsive */
+@media (max-width: 768px) {
+    .construction-content {
+        padding: 30px 20px;
+    }
+    
+    .construction-title {
+        font-size: 22px;
+    }
+    
+    .construction-icon {
+        width: 80px;
+    }
+    
+    .construction-text {
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 480px) {
+    .construction-content {
+        padding: 20px 16px;
+    }
+    
+    .construction-title {
+        font-size: 18px;
+    }
+    
+    .construction-icon {
+        width: 60px;
+    }
+}

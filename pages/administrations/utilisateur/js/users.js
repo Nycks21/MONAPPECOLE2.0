@@ -17,7 +17,7 @@ let maxUsersAllowed = 0;
 // ============================================================================
 
 const PERMISSIONS_LIST = [
-    'dashboard', 'eleves', 'absences', 'bulletins', 'frais',
+    'dashboard', 'eleves', 'absences', 'bulletins', 'agenda', 'emplois', 'frais',
     'niveaux', 'salles', 'classes', 'matieres', 'importation',
     'annees', 'utilisateurs', 'requetes'
 ];
@@ -27,6 +27,8 @@ const CHECKBOX_ID_MAP = {
     'eleves': 'permEleves',
     'absences': 'permAbsences',
     'bulletins': 'permBulletins',
+    'agenda': 'permAgenda',
+    'emplois': 'permEmplois',
     'frais': 'permFrais',
     'niveaux': 'permNiveaux',
     'salles': 'permSalles',
@@ -39,10 +41,10 @@ const CHECKBOX_ID_MAP = {
 };
 
 const DEFAULT_ROLE_PERMISSIONS = {
-    'Administrateur': ['dashboard', 'eleves', 'absences', 'bulletins', 'frais', 'niveaux', 'salles', 'classes', 'matieres', 'importation', 'annees', 'utilisateurs'],
-    'SuperAdmin': ['dashboard', 'eleves', 'absences', 'bulletins', 'frais', 'niveaux', 'salles', 'classes', 'matieres', 'importation', 'annees', 'utilisateurs', 'requetes'],
-    'Professeur': ['dashboard', 'eleves', 'bulletins', 'absences'],
-    'Secrétaire': ['dashboard', 'eleves', 'absences'],
+    'Administrateur': ['dashboard', 'eleves', 'absences', 'bulletins', 'agenda', 'emplois', 'frais', 'niveaux', 'salles', 'classes', 'matieres', 'importation', 'annees', 'utilisateurs'],
+    'SuperAdmin': ['dashboard', 'eleves', 'absences', 'bulletins', 'agenda', 'emplois', 'frais', 'niveaux', 'salles', 'classes', 'matieres', 'importation', 'annees', 'utilisateurs', 'requetes'],
+    'Professeur': ['dashboard', 'eleves', 'bulletins', 'emplois', 'absences'],
+    'Secrétaire': ['dashboard', 'eleves', 'absences', 'agenda', 'emplois'],
     'Comptable': ['dashboard', 'frais'],
     'CPE': ['dashboard', 'eleves', 'absences'],
     'Parent': ['dashboard', 'bulletins']

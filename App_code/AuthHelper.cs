@@ -38,15 +38,17 @@ public static class AuthHelper
         new MenuItem { Code = "eleves", Text = "Liste des élèves", Url = "../../modules/eleves/eleves.aspx", Icon = "fas fa-users", Section = "Modules", Order = 2 },
         new MenuItem { Code = "absences", Text = "Retards & Absences", Url = "../../modules/absences/absences.aspx", Icon = "fas fa-calendar-times", Section = "Modules", Order = 3 },
         new MenuItem { Code = "bulletins", Text = "Bulletins", Url = "../../modules/bulletins/bulletins.aspx", Icon = "fas fa-file-alt", Section = "Modules", Order = 4 },
-        new MenuItem { Code = "frais", Text = "Frais scolaires", Url = "../../modules/frais/frais.aspx", Icon = "fas fa-money-bill-wave", Section = "Ecolage", Order = 5 },
-        new MenuItem { Code = "niveaux", Text = "Niveau", Url = "../../parametres/niveaux/niveaux.aspx", Icon = "fas fa-layer-group", Section = "Paramètres", Order = 6 },
-        new MenuItem { Code = "salles", Text = "Salle", Url = "../../parametres/salles/salles.aspx", Icon = "fas fa-door-open", Section = "Paramètres", Order = 7 },
-        new MenuItem { Code = "classes", Text = "Classes", Url = "../../parametres/classes/classes.aspx", Icon = "fas fa-folder", Section = "Paramètres", Order = 8 },
-        new MenuItem { Code = "matieres", Text = "Matières", Url = "../../parametres/matieres/matieres.aspx", Icon = "fas fa-book", Section = "Paramètres", Order = 9 },
-        new MenuItem { Code = "importation", Text = "Importation élèves", Url = "../../administrations/utilitaires/utilitaires.aspx", Icon = "fas fa-cogs", Section = "Utilitaires", Order = 10 },
-        new MenuItem { Code = "annees", Text = "Années", Url = "../../administrations/annee/annee.aspx", Icon = "fas fa-calendar-alt", Section = "Administrations", Order = 11 },
-        new MenuItem { Code = "utilisateurs", Text = "Utilisateur", Url = "../../administrations/utilisateur/utilisateur.aspx", Icon = "fas fa-user", Section = "Administrations", Order = 12 },
-        new MenuItem { Code = "requetes", Text = "Requêtes SQL", Url = "../../administrations/requete/requetes.aspx", Icon = "fas fa-database", Section = "Administrations", Order = 13 }
+        new MenuItem { Code = "agenda", Text = "Agenda", Url = "../../modules/agenda/agenda.aspx", Icon = "fas fa-calendar-alt", Section = "Modules", Order = 5 },
+        new MenuItem { Code = "emplois", Text = "Emplois du temps", Url = "../../modules/emplois/emplois.aspx", Icon = "fas fa-clock", Section = "Modules", Order = 6 },
+        new MenuItem { Code = "frais", Text = "Frais scolaires", Url = "../../modules/frais/frais.aspx", Icon = "fas fa-money-bill-wave", Section = "Ecolage", Order = 7 },
+        new MenuItem { Code = "niveaux", Text = "Niveau", Url = "../../parametres/niveaux/niveaux.aspx", Icon = "fas fa-layer-group", Section = "Paramètres", Order = 8 },
+        new MenuItem { Code = "salles", Text = "Salle", Url = "../../parametres/salles/salles.aspx", Icon = "fas fa-door-open", Section = "Paramètres", Order = 9 },
+        new MenuItem { Code = "classes", Text = "Classes", Url = "../../parametres/classes/classes.aspx", Icon = "fas fa-folder", Section = "Paramètres", Order = 10 },
+        new MenuItem { Code = "matieres", Text = "Matières", Url = "../../parametres/matieres/matieres.aspx", Icon = "fas fa-book", Section = "Paramètres", Order = 11 },
+        new MenuItem { Code = "importation", Text = "Importation élèves", Url = "../../administrations/utilitaires/utilitaires.aspx", Icon = "fas fa-cogs", Section = "Utilitaires", Order = 12 },
+        new MenuItem { Code = "annees", Text = "Années", Url = "../../administrations/annee/annee.aspx", Icon = "fas fa-calendar-alt", Section = "Administrations", Order = 13 },
+        new MenuItem { Code = "utilisateurs", Text = "Utilisateur", Url = "../../administrations/utilisateur/utilisateur.aspx", Icon = "fas fa-user", Section = "Administrations", Order = 14 },
+        new MenuItem { Code = "requetes", Text = "Requêtes SQL", Url = "../../administrations/requete/requetes.aspx", Icon = "fas fa-database", Section = "Administrations", Order = 15 }
     };
 
     // ============================================================

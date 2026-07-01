@@ -236,6 +236,16 @@
                                             <label for="permBulletins" style="margin: 0;">📄 Bulletins</label>
                                         </div>
                                         <div style="display: flex; align-items: center;">
+                                            <input type="checkbox" id="permAgenda" value="agenda"
+                                                style="margin-right: 8px;">
+                                            <label for="permAgenda" style="margin: 0;">📆 Agenda</label>
+                                        </div>
+                                        <div style="display: flex; align-items: center;">
+                                            <input type="checkbox" id="permEmplois" value="emplois"
+                                                style="margin-right: 8px;">
+                                            <label for="permEmplois" style="margin: 0;">⏰ Emplois du temps</label>
+                                        </div>
+                                        <div style="display: flex; align-items: center;">
                                             <input type="checkbox" id="permFrais" value="frais"
                                                 style="margin-right: 8px;">
                                             <label for="permFrais" style="margin: 0;">💰 Frais scolaires</label>
@@ -275,12 +285,7 @@
                                                 style="margin-right: 8px;">
                                             <label for="permUtilisateurs" style="margin: 0;">👤 Utilisateurs</label>
                                         </div>
-                                        <!-- ✅ LIGNE POUR LA CACHER -->
-                                        <div id="permRequetesContainer" style="display: flex; align-items: center;">
-                                            <input type="checkbox" id="permRequetes" value="requetes"
-                                                style="margin-right: 8px;">
-                                            <label for="permRequetes" style="margin: 0;">🗄️ Requêtes SQL</label>
-                                        </div>
+                                        
                                     </div>
                                 </div>
                             </div>

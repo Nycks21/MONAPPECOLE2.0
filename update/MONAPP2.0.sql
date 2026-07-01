@@ -594,6 +594,28 @@ BEGIN
 END
 GO
 
+-- Table EVENTS pour l'agenda
+IF NOT EXISTS (SELECT *
+FROM sys.tables
+WHERE name = 'EVENTS')
+BEGIN
+    CREATE TABLE EVENTS (
+        ID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+        USER_ID INT,
+        TITLE NVARCHAR(200) NOT NULL,
+        DATE DATE NOT NULL,
+        TYPE NVARCHAR(50) DEFAULT 'autre',
+        START_TIME TIME NULL,
+        END_TIME TIME NULL,
+        DESCRIPTION NVARCHAR(MAX) NULL,
+        COLOR NVARCHAR(20) DEFAULT '#1e3a2f',
+        CREATED_AT DATETIME DEFAULT GETDATE(),
+        UPDATED_AT DATETIME DEFAULT GETDATE()
+    );
+END
+GO
+
+
 -- =====================================================
 -- Table pour stocker les logs d'erreurs
 -- =====================================================
@@ -654,96 +676,6 @@ BEGIN
         (USERNAME, NOM, EMAIL, PWD, ROLEID, TELEPHONE, ACTIVE)
     VALUES
         (N'SuperAdmin', N'SuperAdmin', N'admin@ecole.com', N'0', 0, N'0321234500', N'1')
-    ,
+    ;
 END
 
--- Insertion des données exemples
-IF NOT EXISTS (SELECT 1
-FROM ELEVES)
-BEGIN
-    INSERT INTO [dbo].[ELEVES]
-        (MATRICULE, ANNEE_ID, NOM, CLASSE, STATUT, EMAIL, TELEPHONE, DATE_NAISSANCE, GENRE, ADRESSE, PARENT)
-    VALUES
-        ('MAT-2024-001', '1', 'RAKOTO Jean', '2', 'actif', 'jean.rakoto@email.com', '0340011122', '2012-05-15', 'M', 'Lot IV G 12 Antananarivo', 'Rakoto Senior'),
-        ('MAT-2024-002', '1', 'RANDRIA Alice', '2', 'actif', 'alice.rand@email.com', '0320033344', '2013-02-20', 'F', 'Cité des 67ha', 'Mme Randria'),
-        ('MAT-2024-003', '1', 'ANDRY Solo', '2', 'suspendu', 'solo.andry@email.com', '0334455566', '2006-11-10', 'M', 'Analamahitsy P.78', 'Andry Père'),
-        ('MAT-2024-004', '1', 'PEREIRA Maria', '2', 'actif', 'maria.p@email.com', '0345566677', '2007-01-05', 'F', 'Ambohibao Sud', 'Pereira Manuel'),
-        ('MAT-2024-005', '1', 'RASOA Marie', '2', 'actif', 'marie.rasoa@email.com', '0341122233', '2011-03-12', 'F', 'Sabotsy Namehana', 'Rasoa Pierre'),
-        ('MAT-2024-006', '1', 'MANITRA Tahina', '2', 'actif', 'tahina.m@email.com', '0324455566', '2010-07-25', 'M', 'Ivato Aéroport', 'Manitra David'),
-        ('MAT-2024-007', '1', 'RAVELO Fano', '2', 'inactif', 'fano.r@email.com', '0337788899', '2012-12-01', 'M', 'Tanjombato', 'Ravelo Jean'),
-        ('MAT-2024-008', '1', 'SITRAKA Noella', '2', 'actif', 'noella.s@email.com', '0348899900', '2013-05-30', 'F', 'Itaosy', 'Mme Sitraka'),
-        ('MAT-2024-009', '1', 'HARINAIVO Luc', '2', 'suspendu', 'luc.h@email.com', '0321112233', '2008-09-14', 'M', 'Ambohipo', 'Harinaivo Paul'),
-        ('MAT-2024-010', '1', 'ANDRIANINA Mamy', '2', 'actif', 'mamy.a@email.com', '0332223344', '2009-10-10', 'M', 'Besarety', 'Andrianina Eric'),
-        ('MAT-2024-011', '1', 'ZAFY Louise', '2', 'actif', 'louise.z@email.com', '0343334455', '2014-01-20', 'F', 'Ampefiloha', 'Zafy Marc'),
-        ('MAT-2024-012', '1', 'TOJO Kely', '2', 'actif', 'tojo.k@email.com', '0325556677', '2012-04-18', 'M', 'Anosizato', 'Mme Tojo'),
-        ('MAT-2024-013', '1', 'MIALISOA Fitia', '2', 'actif', 'fitia.m@email.com', '0336667788', '2011-11-22', 'F', 'Manjakaray', 'Mialisoa Robert'),
-        ('MAT-2024-014', '1', 'NIRINA Bakoly', '2', 'inactif', 'bakoly.n@email.com', '0347778899', '2010-06-05', 'F', 'Ambanidia', 'Nirina Simon'),
-        ('MAT-2024-015', '1', 'TSIRY Arnaud', '2', 'actif', 'arnaud.t@email.com', '0329990011', '2009-08-12', 'M', 'Ambohidratrimo', 'Tsiry Gerard'),
-        ('MAT-2024-016', '1', 'VONY Clara', '2', 'suspendu', 'clara.v@email.com', '0330001122', '2007-03-25', 'F', 'Alasora', 'Vony Jacques'),
-        ('MAT-2024-017', '1', 'MAMY Henri', '2', 'actif', 'henri.m@email.com', '0342224466', '2012-05-02', 'M', 'Isoraka', 'Mme Henriette'),
-        ('MAT-2024-018', '1', 'LALAO Martine', '2', 'actif', 'martine.l@email.com', '0323335577', '2013-07-14', 'F', 'Andravoahangy', 'Lalao Francois'),
-        ('MAT-2024-019', '1', 'HASINA Ranto', '2', 'actif', 'ranto.h@email.com', '0334446688', '2008-02-28', 'M', 'Analamahitsy', 'Hasina Alain'),
-        ('MAT-2024-020', '1', 'SOA Volana', '2', 'actif', 'volana.s@email.com', '0345557799', '2011-09-09', 'F', 'Ambohibao Sud', 'Soa Thomas'),
-        ('MAT-2024-021', '1', 'DIMBY Herisoa', '2', 'inactif', 'dimby.h@email.com', '0326668800', '2010-01-15', 'M', 'Ambohimanarina', 'Dimby Jean-Noel'),
-        ('MAT-2024-022', '1', 'FANJA Dina', '2', 'actif', 'dina.f@email.com', '0337779911', '2012-10-31', 'F', '67ha Nord', 'Fanja Pascal'),
-        ('MAT-2024-023', '1', 'RAOUL Julien', '2', 'actif', 'julien.r@email.com', '0348880022', '2013-04-12', 'M', 'Mahamasina', 'Mme Raoul'),
-        ('MAT-2024-024', '1', 'KOLOINA Sarah', '2', 'actif', 'sarah.k@email.com', '0321113355', '2009-05-20', 'F', 'Ankadifotsy', 'Koloina Felix');
-END
-
--- Insérer des données de frais pour les élèves existants (si nécessaire)
-INSERT INTO FRAIS
-    (ANNEE_ID, MATRICULE, NOM, CLASSE, TOTAL, PAYE)
-SELECT
-    (SELECT TOP 1
-        ID
-    FROM RANNEE
-    WHERE CLOTURE = 0),
-    MATRICULE,
-    NOM,
-    CLASSE,
-    500000.00, -- Montant total des frais
-    0.00
--- Montant déjà payé
-FROM ELEVES
-WHERE NOT EXISTS (SELECT 1
-FROM FRAIS
-WHERE FRAIS.MATRICULE = ELEVES.MATRICULE)
-
--- =====================================================
--- INSERTION SIMPLE POUR BULLETINS
--- =====================================================
--- Version plus courte avec les 10 premiers élèves
-INSERT INTO BULLETINS
-    (ANNEE_ID, MATRICULE, NOM, CLASSE, MATIERE_ID, NOTE, PERIODE, COMMENTAIRE)
-VALUES
-    (1, 'MAT-2024-001', 'RAKOTO Jean', 2, '4F387ADE-E00E-4220-9B91-E3DFF8E579CC', 15.5, 'T1', 'Bon travail'),
-    (1, 'MAT-2024-002', 'RANDRIA Alice', 2, '4F387ADE-E00E-4220-9B91-E3DFF8E579CC', 17.5, 'T1', 'Excellente'),
-    (1, 'MAT-2024-004', 'PEREIRA Maria', 2, '4F387ADE-E00E-4220-9B91-E3DFF8E579CC', 14.0, 'T1', 'Bon travail');
-
-CREATE VIEW VW_BULLETINS
-AS
-    SELECT
-        b.ID,
-        b.ANNEE_ID,
-        r.ANNEE AS ANNEE_TEXTE,
-        b.MATRICULE,
-        b.NOM,
-        b.CLASSE,
-        c.NOM AS CLASSE_NOM,
-        b.MATIERE_ID,
-        m.NOM AS MATIERE_NOM,
-        m.ENSEIGNANT,
-        u.NOM AS ENSEIGNANT_NOM,
-        m.COEFFICIENT,
-        b.NOTE,
-        (b.NOTE * m.COEFFICIENT) AS NOTE_PONDEREE,
-        b.PERIODE,
-        b.COMMENTAIRE,
-        b.CREATED_AT,
-        b.UPDATED_AT
-    FROM BULLETINS b
-        LEFT JOIN RANNEE r ON b.ANNEE_ID = r.ID
-        LEFT JOIN CLASSES c ON b.CLASSE = c.ID
-        LEFT JOIN MATIERES m ON b.MATIERE_ID = m.ID
-        LEFT JOIN USERS u ON m.ENSEIGNANT = u.IDUSER
-GO
