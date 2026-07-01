@@ -123,7 +123,6 @@ function openModal(id) {
 function closeModal(id) {
     var modal = document.getElementById(id);
     if (modal) { modal.style.display = 'none'; }
-    // Libérer le scroll uniquement si aucune autre modal n'est ouverte
     var anyOpen = ['paymentModal', 'editHistoriqueModal', 'tarifModal'].some(function (mid) {
         var m = document.getElementById(mid);
         return m && m.style.display === 'flex';
@@ -136,7 +135,6 @@ function closeTarifModal() { closeModal('tarifModal'); currentTarifId = null; }
 
 function closeEditHistoriqueModal() {
     closeModal('editHistoriqueModal');
-    // Ne pas effacer les variables ici — elles sont effacées après utilisation dans confirmEditHistorique
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -171,7 +169,6 @@ async function loadFrais() {
         applySort();
         updateStats();
         renderTable();
-        attachPaginationButtons();
 
     } catch (err) {
         console.error('loadFrais:', err);
@@ -270,11 +267,98 @@ function sortBy(column) {
 // ─────────────────────────────────────────────────────────────────────────────
 // FILTRES PAIEMENTS
 // ─────────────────────────────────────────────────────────────────────────────
+function createFilterControls() {
+    var oldContainer = document.getElementById('frais-filter-container');
+    if (oldContainer) oldContainer.remove();
+
+    var filterContainer = document.createElement('div');
+    filterContainer.id = 'frais-filter-container';
+    filterContainer.style.cssText = `
+        margin: 0 0 20px 0;
+        padding: 15px 20px;
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 10px;
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+        align-items: flex-end;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        border: 1px solid #dee2e6;
+    `;
+
+    filterContainer.innerHTML = `
+        <div style="flex: 2; min-width: 200px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600;"><i class="fas fa-search"></i> Recherche :</label>
+            <input type="text" id="fraisSearch" placeholder="Nom, matricule..." style="width:100%; padding:10px 12px; border:1px solid #ced4da; border-radius:6px;">
+        </div>
+        <div style="min-width: 160px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600;"><i class="fas fa-filter"></i> Statut :</label>
+            <select id="fraisFilterStatut" style="width:100%; padding:10px 12px; border:1px solid #ced4da; border-radius:6px;">
+                <option value="">Tous</option>
+                <option value="Terminé">Terminé</option>
+                <option value="En cours">En cours</option>
+                <option value="Non payé">Non payé</option>
+            </select>
+        </div>
+        <div style="min-width: 160px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600;"><i class="fas fa-filter"></i> Classe :</label>
+            <select id="fraisFilterClasse" style="width:100%; padding:10px 12px; border:1px solid #ced4da; border-radius:6px;">
+                <option value="">Toutes</option>
+            </select>
+        </div>
+        <div style="min-width: 160px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600;"><i class="fas fa-calendar"></i> Année :</label>
+            <select id="fraisFilterAnnee" style="width:100%; padding:10px 12px; border:1px solid #ced4da; border-radius:6px;">
+                <option value="">Toutes</option>
+            </select>
+        </div>
+        <div style="min-width: 140px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 600;"><i class="fas fa-table"></i> Lignes/page :</label>
+            <select id="frais-rows-per-page" style="width:100%; padding:10px 12px; border:1px solid #ced4da; border-radius:6px;">
+                <option value="5">5 lignes</option>
+                <option value="10" selected>10 lignes</option>
+                <option value="20">20 lignes</option>
+                <option value="50">50 lignes</option>
+                <option value="100">100 lignes</option>
+                <option value="-1">Tous</option>
+            </select>
+        </div>
+        <div>
+            <button id="frais-reset-filters" style="padding:10px 24px; background:#6c757d; color:white; border:none; border-radius:6px; cursor:pointer;">
+                <i class="fas fa-undo-alt"></i> Réinitialiser
+            </button>
+        </div>
+    `;
+
+    var dashCardBody = document.querySelector('.dash-card-body');
+    if (dashCardBody) {
+        dashCardBody.insertBefore(filterContainer, dashCardBody.firstChild);
+    } else {
+        var table = document.querySelector('.dash-table');
+        if (table?.parentNode) table.parentNode.insertBefore(filterContainer, table);
+    }
+
+    document.getElementById('fraisSearch')?.addEventListener('input', filterFraisTable);
+    document.getElementById('fraisFilterStatut')?.addEventListener('change', filterFraisTable);
+    document.getElementById('fraisFilterClasse')?.addEventListener('change', filterFraisTable);
+    document.getElementById('fraisFilterAnnee')?.addEventListener('change', filterFraisTable);
+    document.getElementById('frais-rows-per-page')?.addEventListener('change', function(e) {
+        rowsPerPage = parseInt(e.target.value);
+        currentPage = 1;
+        renderTable();
+    });
+    document.getElementById('frais-reset-filters')?.addEventListener('click', resetFilters);
+
+    // Peupler les sélecteurs après création
+    populateClassFilter();
+    populateAnneeSelects();
+}
+
 function filterFraisTable() {
     var search = (document.getElementById('fraisSearch') || {}).value || '';
     var statut = (document.getElementById('fraisFilterStatut') || {}).value || '';
     var classe = (document.getElementById('fraisFilterClasse') || {}).value || '';
-    var annee = (document.getElementById('fraisFilterAnnee') || {}).value || '';  // NOUVEAU
+    var annee = (document.getElementById('fraisFilterAnnee') || {}).value || '';
 
     search = search.toLowerCase().trim();
 
@@ -284,7 +368,7 @@ function filterFraisTable() {
             (item.MATRICULE || '').toLowerCase().includes(search);
         var matchStatut = !statut || (item.STATUT || '') === statut;
         var matchClasse = !classe || (item.CLASSE_NOM || '').toLowerCase() === classe.toLowerCase();
-        var matchAnnee = !annee || (item.ANNEE_TEXTE || '') === annee;   // NOUVEAU
+        var matchAnnee = !annee || (item.ANNEE_TEXTE || '') === annee;
         return matchSearch && matchStatut && matchClasse && matchAnnee;
     });
 
@@ -298,10 +382,104 @@ function resetFilters() {
         var el = document.getElementById(id);
         if (el) el.value = '';
     });
+    var rowsSelect = document.getElementById('frais-rows-per-page');
+    if (rowsSelect) rowsSelect.value = '10';
+    rowsPerPage = 10;
     filteredFrais = fraisData.slice();
     applySort();
     currentPage = 1;
     renderTable();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PAGINATION MODERNE
+// ─────────────────────────────────────────────────────────────────────────────
+function createPaginationControls(totalPages) {
+    var oldPagination = document.getElementById('pagination-container');
+    if (oldPagination) oldPagination.remove();
+    if (totalPages <= 1) return;
+
+    var container = document.createElement('div');
+    container.id = 'pagination-container';
+    container.style.cssText = 'margin:20px 0; display:flex; justify-content:center; gap:5px; flex-wrap:wrap;';
+
+    var createBtn = function(text, onClick, disabled, isDots) {
+        disabled = disabled || false;
+        isDots = isDots || false;
+        var btn = document.createElement('button');
+        btn.textContent = text;
+        if (isDots) {
+            btn.style.cssText = 'padding:8px 12px; border:none; background:transparent; color:#6c757d; cursor:default;';
+            return btn;
+        }
+        var isActive = (text == currentPage && !isNaN(text));
+        btn.style.cssText = 'padding:8px 14px; border:1px solid ' + (isActive ? '#007bff' : '#dee2e6') + ';' +
+            'background:' + (isActive ? '#007bff' : (disabled ? '#e9ecef' : 'white')) + ';' +
+            'color:' + (isActive ? 'white' : (disabled ? '#6c757d' : '#007bff')) + ';' +
+            'cursor:' + (disabled || isActive ? 'default' : 'pointer') + ';border-radius:6px;font-weight:' + (isActive ? '700' : '500') + ';min-width:40px;';
+        if (onClick && !disabled && !isActive) btn.onclick = onClick;
+        if (disabled) btn.disabled = true;
+        return btn;
+    };
+
+    container.appendChild(createBtn('«', function() { goToPage(1); }, currentPage === 1));
+    container.appendChild(createBtn('‹', function() { if (currentPage > 1) { currentPage--; renderTable(); } }, currentPage === 1));
+
+    var maxVisible = 5;
+    var start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+    var end = Math.min(totalPages, start + maxVisible - 1);
+    if (end - start + 1 < maxVisible) start = Math.max(1, end - maxVisible + 1);
+
+    if (start > 1) {
+        container.appendChild(createBtn('1', function() { goToPage(1); }));
+        if (start > 2) container.appendChild(createBtn('...', null, true, true));
+    }
+    for (var i = start; i <= end; i++) {
+        (function(page) {
+            container.appendChild(createBtn(page, function() { goToPage(page); }, false));
+        })(i);
+    }
+    if (end < totalPages) {
+        if (end < totalPages - 1) container.appendChild(createBtn('...', null, true, true));
+        (function(tp) {
+            container.appendChild(createBtn(tp, function() { goToPage(tp); }));
+        })(totalPages);
+    }
+    container.appendChild(createBtn('›', function() { if (currentPage < totalPages) { currentPage++; renderTable(); } }, currentPage === totalPages));
+    container.appendChild(createBtn('»', function() { goToPage(totalPages); }, currentPage === totalPages));
+
+    var table = document.querySelector('.dash-table');
+    if (table?.parentNode) table.parentNode.insertBefore(container, table.nextSibling);
+}
+
+function goToPage(page) {
+    currentPage = page;
+    renderTable();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// COMPTEUR MODERNE - STYLE ELEVES
+// ─────────────────────────────────────────────────────────────────────────────
+function updateCounter() {
+    var counter = document.getElementById('record-counter');
+    if (!counter) {
+        counter = document.createElement('div');
+        counter.id = 'record-counter';
+        counter.style.cssText = 'margin:15px 0 0; padding:10px 15px; text-align:center; font-size:14px; background:#f8f9fa; border-radius:6px; border:1px solid #e9ecef;';
+        var pagination = document.getElementById('pagination-container');
+        if (pagination?.parentNode) {
+            pagination.parentNode.insertBefore(counter, pagination);
+        } else {
+            var table = document.querySelector('.dash-table');
+            if (table?.parentNode) {
+                table.parentNode.insertBefore(counter, table.nextSibling);
+            }
+        }
+    }
+    
+    var start = filteredFrais.length === 0 ? 0 : (currentPage - 1) * rowsPerPage + 1;
+    var end = Math.min(currentPage * rowsPerPage, filteredFrais.length);
+    counter.innerHTML = '<i class="fas fa-chart-bar"></i> <strong>Affichage :</strong> ' + (filteredFrais.length === 0 ? '0' : start) + ' à ' + end + ' sur <strong>' + filteredFrais.length + '</strong> enregistrement' + (filteredFrais.length > 1 ? 's' : '');
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -315,10 +493,12 @@ function renderTable() {
         tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:50px;">'
             + '<i class="fas fa-search" style="font-size:40px;color:#ccc;display:block;margin-bottom:12px;"></i>'
             + 'Aucune donnée trouvée</td></tr>';
-        updatePaginationInfo();
+        updateCounter();
+        createPaginationControls(0);
         return;
     }
 
+    var totalPages = Math.ceil(filteredFrais.length / rowsPerPage);
     var start = (currentPage - 1) * rowsPerPage;
     var pageData = filteredFrais.slice(start, start + rowsPerPage);
 
@@ -328,19 +508,19 @@ function renderTable() {
         var pw = Math.min(100, prog);
         var row = tbody.insertRow();
         row.innerHTML =
-            '<td class="text-center"><span style="background:#f1f3f5;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:700;">'
+            '<td><span style="background:#f1f3f5;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:700;">'
             + escapeHtml(f.MATRICULE || '-') + '</span></td>'
-            + '<td class="text-center"><strong>' + escapeHtml(f.NOM || '-') + '</strong></td>'
-            + '<td class="text-center"><span style="background:#fff;color:#007bff;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;border:1px solid #007bff;">'
+            + '<td><strong>' + escapeHtml(f.NOM || '-') + '</strong></td>'
+            + '<td><span style="background:#fff;color:#007bff;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;border:1px solid #007bff;">'
             + '<i class="fas fa-folder"></i> ' + escapeHtml(f.CLASSE_NOM || '-') + '</span></td>'
-            + '<td class="text-center"><strong>' + formatMoney(f.TOTAL) + '</strong></td>'
-            + '<td class="text-center" style="color:#28a745">' + formatMoney(f.PAYE) + '</td>'
-            + '<td class="text-center" style="color:#dc3545">' + formatMoney(f.RESTE) + '</td>'
+            + '<td class="text-right"><strong>' + formatMoney(f.TOTAL) + '</strong></td>'
+            + '<td class="text-right" style="color:#28a745">' + formatMoney(f.PAYE) + '</td>'
+            + '<td class="text-right" style="color:#dc3545">' + formatMoney(f.RESTE) + '</td>'
             + '<td class="text-center"><div style="display:flex;align-items:center;gap:8px;">'
             + '<div style="flex:1;background:#e9ecef;border-radius:10px;overflow:hidden;">'
             + '<div style="width:' + pw + '%;background:' + (prog >= 100 ? '#28a745' : '#007bff') + ';height:6px;"></div></div>'
             + '<span style="font-size:12px;min-width:40px;">' + prog.toFixed(0) + '%</span></div></td>'
-            + '<td class="text-center">' + getStatusBadge(f.STATUT || 'Non payé') + '</td>'
+            + '<td>' + getStatusBadge(f.STATUT || 'Non payé') + '</td>'
             + '<td class="text-center">'
             + '<button type="button" class="btn btn-sm btn-success" onclick="openPaymentModalForStudent(\''
             + escapeHtml(f.MATRICULE) + '\',\'' + escapeHtml(f.NOM) + '\')" title="Enregistrer paiement" style="margin:0 2px;">'
@@ -356,36 +536,8 @@ function renderTable() {
             + '</td>';
     });
 
-    updatePaginationInfo();
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// PAGINATION PAIEMENTS
-// ─────────────────────────────────────────────────────────────────────────────
-function updatePaginationInfo() {
-    var total = filteredFrais.length;
-    var totalPages = Math.ceil(total / rowsPerPage);
-    var start = total ? (currentPage - 1) * rowsPerPage + 1 : 0;
-    var end = Math.min(currentPage * rowsPerPage, total);
-    var infoSpan = document.getElementById('fraisPaginationInfo');
-    if (infoSpan)
-        infoSpan.textContent = total === 0
-            ? 'Aucun enregistrement'
-            : 'Affichage de ' + start + ' à ' + end + ' sur ' + total + ' enregistrement(s)';
-
-    var prevBtn = document.getElementById('prevPageBtn');
-    var nextBtn = document.getElementById('nextPageBtn');
-    if (prevBtn) prevBtn.disabled = currentPage === 1;
-    if (nextBtn) nextBtn.disabled = currentPage === totalPages || totalPages === 0;
-}
-
-function attachPaginationButtons() {
-    var prevBtn = document.getElementById('prevPageBtn');
-    var nextBtn = document.getElementById('nextPageBtn');
-    if (prevBtn) prevBtn.onclick = function () { if (currentPage > 1) { currentPage--; renderTable(); } };
-    if (nextBtn) nextBtn.onclick = function () {
-        if (currentPage < Math.ceil(filteredFrais.length / rowsPerPage)) { currentPage++; renderTable(); }
-    };
+    updateCounter();
+    createPaginationControls(totalPages);
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -504,18 +656,19 @@ async function savePayment() {
         hideSpinner();
     }
 }
+
 // ─────────────────────────────────────────────────────────────────────────────
 // MISE À JOUR / RECALCUL
 // ─────────────────────────────────────────────────────────────────────────────
 async function updateAllFrais() {
     var confirm = await Swal.fire({
         title: 'Mettre à jour les frais',
-        html: `Cette action va :<ul style="text-align:left;margin-top:10px;">
-            <li>✅ Vérifier tous les élèves</li>
-            <li>✅ Ajouter les nouveaux élèves dans la table des frais</li>
-            <li>✅ Recalculer RESTE, PROGRESSION et STATUT</li>
-            <li>✅ Éviter les doublons</li></ul>
-            <strong>Les paiements déjà effectués sont conservés.</strong><br><br>Continuer ?`,
+        html: 'Cette action va :<ul style="text-align:left;margin-top:10px;">' +
+            '<li>✅ Vérifier tous les élèves</li>' +
+            '<li>✅ Ajouter les nouveaux élèves dans la table des frais</li>' +
+            '<li>✅ Recalculer RESTE, PROGRESSION et STATUT</li>' +
+            '<li>✅ Éviter les doublons</li></ul>' +
+            '<strong>Les paiements déjà effectués sont conservés.</strong><br><br>Continuer ?',
         icon: 'info', showCancelButton: true,
         confirmButtonText: 'Oui, mettre à jour', cancelButtonText: 'Annuler',
         confirmButtonColor: '#17a2b8'
@@ -542,11 +695,11 @@ async function updateAllFrais() {
 async function recalculerFrais() {
     var confirm = await Swal.fire({
         title: 'Recalculer les frais',
-        html: `Cette action va :<ul style="text-align:left;margin-top:10px;">
-            <li>✅ Récupérer les tarifs par classe</li>
-            <li>✅ Recalculer le montant total pour chaque élève</li>
-            <li>✅ Mettre à jour RESTE, PROGRESSION et STATUT</li></ul>
-            <strong>Attention : les paiements déjà effectués sont conservés.</strong><br><br>Continuer ?`,
+        html: 'Cette action va :<ul style="text-align:left;margin-top:10px;">' +
+            '<li>✅ Récupérer les tarifs par classe</li>' +
+            '<li>✅ Recalculer le montant total pour chaque élève</li>' +
+            '<li>✅ Mettre à jour RESTE, PROGRESSION et STATUT</li></ul>' +
+            '<strong>Attention : les paiements déjà effectués sont conservés.</strong><br><br>Continuer ?',
         icon: 'warning', showCancelButton: true,
         confirmButtonText: 'Oui, recalculer', cancelButtonText: 'Annuler',
         confirmButtonColor: '#ffc107'
@@ -602,8 +755,8 @@ async function viewPaymentHistory(matricule, nom) {
         var rows = history.map(function (h) {
             return '<tr style="border-bottom:1px solid #dee2e6;" id="history-row-' + h.ID + '">'
                 + '<td style="padding:8px;">' + formatDateTime(h.DATE_PAIEMENT) + '</td>'
-                + '<td style="padding:8px;">' + (h.MOIS || '-') + '</td>'      // ← AJOUT
-                + '<td style="padding:8px;">' + (h.ANNEE || '-') + '</td>'     // ← AJOUT
+                + '<td style="padding:8px;">' + (h.MOIS || '-') + '</td>'
+                + '<td style="padding:8px;">' + (h.ANNEE || '-') + '</td>'
                 + '<td style="padding:8px;color:#28a745;font-weight:bold;">' + formatMoney(h.MONTANT) + '</td>'
                 + '<td style="padding:8px;">' + getModePaiementBadge(h.MODE_PAIEMENT) + '</td>'
                 + '<td style="padding:8px;">' + escapeHtml(h.REFERENCE || '-') + '</td>'
@@ -639,8 +792,8 @@ async function viewPaymentHistory(matricule, nom) {
                 + '<table style="width:100%;border-collapse:collapse;">'
                 + '<thead><tr style="background:#f8f9fa;border-bottom:2px solid #dee2e6;">'
                 + '<th style="padding:10px;">Date</th>'
-                + '<th style="padding:10px;">Mois</th>'      // ← AJOUT
-                + '<th style="padding:10px;">Année</th>'     // ← AJOUT
+                + '<th style="padding:10px;">Mois</th>'
+                + '<th style="padding:10px;">Année</th>'
                 + '<th style="padding:10px;width:200px;">Montant</th>'
                 + '<th style="padding:10px;">Mode</th>'
                 + '<th style="padding:10px;">Référence</th>'
@@ -660,6 +813,7 @@ async function viewPaymentHistory(matricule, nom) {
         hideSpinner();
     }
 }
+
 // ─────────────────────────────────────────────────────────────────────────────
 // MODIFIER UN PAIEMENT HISTORIQUE
 // ─────────────────────────────────────────────────────────────────────────────
@@ -753,7 +907,6 @@ async function deleteHistoriquePaiement(historyId, matricule, montant) {
     });
     if (!result.isConfirmed) return;
 
-    // Récupérer le nom depuis la liste pour rouvrir l'historique après
     var fraisItem = fraisData.find(function (f) { return f.MATRICULE === matricule; });
     var nom = fraisItem ? fraisItem.NOM : '';
 
@@ -871,7 +1024,6 @@ function numberToWords(amount) {
 async function printStudentReceipt(matricule, nom, classe, total, paye, reste, statut) {
     showSpinner();
     try {
-        // Récupérer l'historique des paiements pour cet élève
         var res = await fetch(API_FRAIS.getHistorique + '?matricule=' + encodeURIComponent(matricule));
         var result = await res.json();
 
@@ -882,7 +1034,6 @@ async function printStudentReceipt(matricule, nom, classe, total, paye, reste, s
         var heureStr = new Date().toLocaleTimeString('fr-FR');
         var dateTimeStr = dateStr + ' à ' + heureStr;
 
-        // Générer le HTML des paiements
         var paiementsHtml = '';
         if (history.length > 0) {
             paiementsHtml = '<div style="margin-top:25px;">';
@@ -911,7 +1062,6 @@ async function printStudentReceipt(matricule, nom, classe, total, paye, reste, s
             paiementsHtml = '<p style="margin-top:25px; color:#6c757d; text-align:center; padding:20px; background:#f8f9fa; border-radius:8px;">Aucun paiement enregistré pour cet élève.</p>';
         }
 
-        // Déterminer la classe CSS pour le statut
         var statutClass = '';
         var statutIcon = '';
         if (statut === 'Terminé') {
@@ -957,12 +1107,10 @@ async function printStudentReceipt(matricule, nom, classe, total, paye, reste, s
             + '<div class="receipt-container">'
             + '<h1>🏫 Reçu de frais scolaires</h1>'
 
-            // En-tête avec numéro de reçu
             + '<div style="display:flex; justify-content:flex-end; margin-bottom:10px; padding:5px;">'
             + '<div><strong>🧾 Reçu N° :</strong> ' + new Date().getTime() + '</div>'
             + '</div>'
 
-            // Informations élève
             + '<div class="info-grid">'
             + '<div class="info-item"><span class="info-label">Matricule :</span><span class="info-value">' + escapeHtml(matricule) + '</span></div>'
             + '<div class="info-item"><span class="info-label">Nom de l\'élève :</span><span class="info-value">' + escapeHtml(nom) + '</span></div>'
@@ -970,17 +1118,14 @@ async function printStudentReceipt(matricule, nom, classe, total, paye, reste, s
             + '<div class="info-item"><span class="info-label">Statut :</span><span class="info-value"><span class="badge ' + statutClass + '">' + statutIcon + ' ' + escapeHtml(statut) + '</span></span></div>'
             + '</div>'
 
-            // Totaux
             + '<div class="totals-grid">'
             + '<div class="total-card"><div class="total-label">💰 Montant total</div><div class="total-value total">' + formatMoney(total) + '</div></div>'
             + '<div class="total-card"><div class="total-label">✅ Montant payé</div><div class="total-value paid">' + formatMoney(paye) + '</div></div>'
             + '<div class="total-card"><div class="total-label">⚠️ Reste à payer</div><div class="total-value rest">' + formatMoney(reste) + '</div></div>'
             + '</div>'
 
-            // Détail des paiements
             + paiementsHtml
 
-            // Date en bas à gauche (police 10 - plus petite)
             + '<div class="date-footer">'
             + '<div class="print-date">📅 Date d\'impression : ' + dateTimeStr + '</div>'
             + '</div>'
@@ -1300,13 +1445,11 @@ function printFraisReport() {
 // ─────────────────────────────────────────────────────────────────────────────
 function init() {
     loadFrais();
-    loadAnnees(); // Charger les années dès le départ pour le filtre de l'onglet paiements
+    loadAnnees();
+    createFilterControls();
 
-    ['fraisSearch', 'fraisFilterStatut', 'fraisFilterClasse', 'fraisFilterAnnee'].forEach(function (id) {
-        var el = document.getElementById(id);
-        if (el) el.addEventListener('input', filterFraisTable);
-        if (el) el.addEventListener('change', filterFraisTable);
-    });
+    // Les événements sont maintenant gérés dans createFilterControls()
+    // Supprimer les anciens écouteurs pour éviter les doublons
 
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') {
@@ -1326,7 +1469,8 @@ Object.assign(window, {
     viewPaymentHistory, openEditHistoriqueModal, closeEditHistoriqueModal, confirmEditHistorique, deleteHistoriquePaiement,
     switchFraisTab,
     filterTarifs, resetTarifFilters, openTarifModal, closeTarifModal, saveTarif, editTarif, deleteTarif,
-    recalculerFrais, updateAllFrais
+    recalculerFrais, updateAllFrais,
+    goToPage
 });
 
 if (document.readyState === 'loading') {

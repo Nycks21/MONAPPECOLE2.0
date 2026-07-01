@@ -654,7 +654,6 @@ body.sidebar-collapsed .main-header {
 .dash-table thead th {
     background: var(--body-bg);
     padding: 10px 14px;
-    text-align: left;
     font-weight: 700;
     color: var(--text-muted);
     text-transform: uppercase;
@@ -673,7 +672,6 @@ body.sidebar-collapsed .main-header {
 
 .dash-table tbody td {
     padding: 10px 14px;
-
     color: var(--text);
 }
 
@@ -1353,14 +1351,16 @@ input:disabled, select:disabled {
 }
 
 .dash-table th {
-    text-align: center !important;
-    vertical-align: middle !important;
+    background-color: #f8f9fa;
+    font-weight: 600;
+    white-space: nowrap;
 }
 
 /* Empêche le texte de revenir à la ligne de manière désordonnée */
 .dash-table th, .dash-table td {
-    white-space: nowrap;
-    padding: 12px 8px;
+    padding: 10px 8px;
+    vertical-align: middle;
+    border-bottom: 1px solid #dee2e6;
 }
 
 /* Permet à la colonne "Motifs" de prendre de la place tout en restant lisible */
@@ -2155,4 +2155,28 @@ body.dark-mode #spinnerOverlay {
 body.dark-mode .spinner {
     border: 3px solid rgba(255, 255, 255, 0.06);
     border-top-color: #4f7df3;
+}
+
+/* ✅ Ajoutez à la fin de global.css */
+
+/* --- ALIGNEMENT DES BOUTONS D'ACTION --- */
+.action-cell,
+.dash-table td:last-child,
+.dash-table td .action-buttons-group {
+    text-align: left !important;
+    justify-content: flex-start !important;
+}
+
+.action-buttons-group {
+    display: flex;
+    gap: 5px;
+    justify-content: flex-start !important;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+/* Pour les cellules qui contiennent les boutons d'action */
+.dash-table td .action-buttons-group {
+    margin: 0;
+    padding: 0;
 }

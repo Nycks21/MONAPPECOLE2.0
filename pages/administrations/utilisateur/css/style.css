@@ -130,4 +130,23 @@
     background: #5a5a5a;
 }
 
+.badge-name {
+    display: inline-block;
+    background: #eef2f5;
+    color: #1a2332;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid #dee2e6;
+    white-space: nowrap;
+}
+
+body.dark-mode .badge-name {
+    background: #1e2d42;
+    color: #e8edf5;
+    border-color: rgba(255,255,255,0.06);
+}
+
+
  

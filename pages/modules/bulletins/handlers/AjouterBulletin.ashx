@@ -40,11 +40,23 @@ public class AjouterBulletin : IHttpHandler, IRequiresSessionState
             if (string.IsNullOrEmpty(payload.MATIERE_ID)) throw new ArgumentException("La matière est obligatoire.");
             if (string.IsNullOrEmpty(payload.PERIODE)) throw new ArgumentException("La période est obligatoire.");
 
+            // Calculer TOTAL_NOTE si non fourni
+            decimal totalNote = 0;
+            if (payload.TOTAL_NOTE.HasValue)
+            {
+                totalNote = payload.TOTAL_NOTE.Value;
+            }
+            else
+            {
+                // Calcul automatique si les coefficients sont disponibles
+                totalNote = CalculerTotalNote(payload);
+            }
+
             using (var conn = new SqlConnection(connStr))
             {
                 conn.Open();
 
-                // Vérifier si un bulletin existe déjà pour cet élève, cette matière et cette période
+                // Vérifier si un bulletin existe déjà
                 string checkSql = @"SELECT COUNT(*) FROM BULLETINS 
                                     WHERE ELEVE_MATRICULE = @matricule 
                                     AND MATIERE_ID = @matiereId 
@@ -64,10 +76,10 @@ public class AjouterBulletin : IHttpHandler, IRequiresSessionState
                     }
                 }
 
-                // Insérer le bulletin avec les 3 notes
+                // Insérer avec TOTAL_NOTE
                 string insertSql = @"INSERT INTO BULLETINS 
-                    (ELEVE_MATRICULE, MATIERE_ID, NOTE1, NOTE2, NOTE_PROJET, APPRECIATION, PERIODE, STATUT, CREATED_AT, UPDATED_AT) 
-                    VALUES (@matricule, @matiereId, @note1, @note2, @noteProjet, @appreciation, @periode, 'Non saisi', GETDATE(), GETDATE())";
+                    (ID, ELEVE_MATRICULE, MATIERE_ID, NOTE1, NOTE2, NOTE_PROJET, TOTAL_NOTE, APPRECIATION, PERIODE, STATUT, CREATED_AT, UPDATED_AT) 
+                    VALUES (NEWID(), @matricule, @matiereId, @note1, @note2, @noteProjet, @totalNote, @appreciation, @periode, 'Non saisi', GETDATE(), GETDATE())";
                 
                 using (var cmd = new SqlCommand(insertSql, conn))
                 {
@@ -76,6 +88,7 @@ public class AjouterBulletin : IHttpHandler, IRequiresSessionState
                     cmd.Parameters.AddWithValue("@note1", payload.NOTE1.HasValue ? (object)payload.NOTE1.Value : DBNull.Value);
                     cmd.Parameters.AddWithValue("@note2", payload.NOTE2.HasValue ? (object)payload.NOTE2.Value : DBNull.Value);
                     cmd.Parameters.AddWithValue("@noteProjet", payload.NOTE_PROJET.HasValue ? (object)payload.NOTE_PROJET.Value : DBNull.Value);
+                    cmd.Parameters.AddWithValue("@totalNote", totalNote);
                     cmd.Parameters.AddWithValue("@appreciation", string.IsNullOrEmpty(payload.APPRECIATION) ? (object)DBNull.Value : payload.APPRECIATION);
                     cmd.Parameters.AddWithValue("@periode", payload.PERIODE);
                     
@@ -97,6 +110,24 @@ public class AjouterBulletin : IHttpHandler, IRequiresSessionState
         }
     }
 
+    private decimal CalculerTotalNote(BulletinPayload payload)
+    {
+        // Valeurs par défaut si coefficients non disponibles
+        decimal coeff1 = 1;
+        decimal coeff2 = 2;
+        decimal coeffProjet = 1;
+        
+        decimal total = 0;
+        if (payload.NOTE1.HasValue && payload.NOTE1.Value >= 0 && payload.NOTE1.Value <= 20)
+            total += payload.NOTE1.Value * coeff1;
+        if (payload.NOTE2.HasValue && payload.NOTE2.Value >= 0 && payload.NOTE2.Value <= 20)
+            total += payload.NOTE2.Value * coeff2;
+        if (payload.NOTE_PROJET.HasValue && payload.NOTE_PROJET.Value >= 0 && payload.NOTE_PROJET.Value <= 20)
+            total += payload.NOTE_PROJET.Value * coeffProjet;
+        
+        return total;
+    }
+
     public bool IsReusable { get { return false; } }
     
     private class BulletinPayload
@@ -106,6 +137,7 @@ public class AjouterBulletin : IHttpHandler, IRequiresSessionState
         public decimal? NOTE1 { get; set; }
         public decimal? NOTE2 { get; set; }
         public decimal? NOTE_PROJET { get; set; }
+        public decimal? TOTAL_NOTE { get; set; }  // ✅ Nouveau champ
         public string APPRECIATION { get; set; }
         public string PERIODE { get; set; }
     }

@@ -289,11 +289,11 @@
         .dash-table {
             width: 100%;
             border-collapse: collapse;
+            font-size: 13px;
         }
 
         .dash-table thead th {
             padding: 12px 15px;
-            text-align: left;
             font-size: 12px;
             text-transform: uppercase;
             color: #6c757d;
@@ -1116,148 +1116,165 @@
         }
 
         /* Styles pour les badges */
-.badge-justified {
-    background: #28a745;
-    color: #fff;
-    padding: 3px 10px;
-    border-radius: 20px;
-    font-size: 11px;
-    font-weight: 700;
-    display: inline-block;
-}
+        .badge-justified {
+            background: #28a745;
+            color: #fff;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            display: inline-block;
+        }
 
-.badge-not-justified {
-    background: #dc3545;
-    color: #fff;
-    padding: 3px 10px;
-    border-radius: 20px;
-    font-size: 11px;
-    font-weight: 700;
-    display: inline-block;
-}
+        .badge-not-justified {
+            background: #dc3545;
+            color: #fff;
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 700;
+            display: inline-block;
+        }
 
-/* Styles pour les boutons d'action */
-.action-buttons-group {
-    display: flex;
-    gap: 5px;
-    justify-content: center;
-    flex-wrap: wrap;
-}
+        .badge-name {
+            background: #eef2f5;
+            color: #000;
+            padding: 3px 10px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 700;
+            display: inline-block;
+        }
 
-.btn-action-edit, .btn-action-delete, .btn-action-justify {
-    padding: 5px 10px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 12px;
-    transition: all 0.2s;
-}
+        .badge-motif {
+            display: inline-block;
+        }
 
-.btn-action-edit {
-    background: #007bff;
-    color: white;
-}
+        /* Styles pour les boutons d'action */
+        .action-buttons-group {
+            display: flex;
+            gap: 5px;
+            justify-content: flex-start !important;
+            flex-wrap: wrap;
+            align-items: center;
+        }
 
-.btn-action-edit:hover {
-    background: #0056b3;
-}
+        /* ✅ Ajoutez aussi */
+        .dash-table td .action-buttons-group {
+            justify-content: flex-start !important;
+            margin: 0;
+            padding: 0;
+        }
 
-.btn-action-delete {
-    background: #dc3545;
-    color: white;
-}
+        /* ✅ Pour forcer l'alignement des cellules d'action */
+        .dash-table td:last-child {
+            text-align: left !important;
+        }
 
-.btn-action-delete:hover {
-    background: #c82333;
-}
+        .btn-action-edit,
+        .btn-action-delete,
+        .btn-action-justify {
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: all 0.2s;
+        }
 
-.btn-action-justify {
-    background: #28a745;
-    color: white;
-}
+        .btn-action-edit {
+            background: #007bff;
+            color: white;
+        }
 
-.btn-action-justify:hover {
-    background: #1e7e34;
-}
+        .btn-action-edit:hover {
+            background: #0056b3;
+        }
 
-/* Ajustement des cellules du tableau */
-.dash-table td {
-    padding: 10px 8px;
-    vertical-align: middle;
-    word-wrap: break-word;
-}
+        .btn-action-delete {
+            background: #dc3545;
+            color: white;
+        }
 
-.dash-table th {
-    padding: 12px 8px;
-    font-weight: 600;
-    font-size: 13px;
-}
+        .btn-action-delete:hover {
+            background: #c82333;
+        }
 
-.tab-container {
-                display: flex;
-                gap: 0;
-                margin-bottom: 20px;
-                border-bottom: 2px solid #dee2e6;
-            }
+        .btn-action-justify {
+            background: #28a745;
+            color: white;
+        }
 
-            .tab-btn {
-                padding: 12px 24px;
-                background: #f8f9fa;
-                border: none;
-                border-radius: 8px 8px 0 0;
-                cursor: pointer;
-                font-weight: 600;
-                font-size: 14px;
-                transition: all 0.2s;
-                margin-right: 2px;
-            }
+        .btn-action-justify:hover {
+            background: #1e7e34;
+        }
 
-            .tab-btn.active {
-                background: #007bff;
-                color: white;
-            }
+        /* Ajustement des cellules du tableau */
+        .tab-container {
+            display: flex;
+            gap: 0;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #dee2e6;
+        }
 
-            .tab-btn:hover:not(.active) {
-                background: #e9ecef;
-            }
+        .tab-btn {
+            padding: 12px 24px;
+            background: #f8f9fa;
+            border: none;
+            border-radius: 8px 8px 0 0;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 14px;
+            transition: all 0.2s;
+            margin-right: 2px;
+        }
 
-            .tab-content {
-                display: none;
-            }
+        .tab-btn.active {
+            background: #007bff;
+            color: white;
+        }
 
-            .tab-content.active {
-                display: block;
-            }
+        .tab-btn:hover:not(.active) {
+            background: #e9ecef;
+        }
 
-            .absence-stats {
-                display: flex;
-                gap: 20px;
-                margin-bottom: 20px;
-                flex-wrap: wrap;
-            }
+        .tab-content {
+            display: none;
+        }
 
-            .absence-card {
-                flex: 1;
-                background: #f8f9fa;
-                border-radius: 10px;
-                padding: 15px;
-                text-align: center;
-                border: 1px solid #dee2e6;
-            }
+        .tab-content.active {
+            display: block;
+        }
 
-            .stat-icon {
-                font-size: 24px;
-                margin-bottom: 10px;
-            }
+        .absence-stats {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
 
-            .stat-value {
-                font-size: 28px;
-                font-weight: bold;
-                color: #007bff;
-            }
+        .absence-card {
+            flex: 1;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            text-align: center;
+            border: 1px solid #dee2e6;
+        }
 
-            .stat-label {
-                font-size: 12px;
-                color: #6c757d;
-                margin-top: 5px;
-            }
+        .stat-icon {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+            color: #007bff;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 5px;
+        }

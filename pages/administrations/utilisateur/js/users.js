@@ -489,7 +489,8 @@ function renderSimpleTable() {
 
     pageUsers.forEach(user => {
         const row = tbody.insertRow();
-        row.insertCell(0).innerHTML = escapeHtml(user.USERNAME || '-');
+        var nameBadge = user.USERNAME ? '<span class="badge-name">' + escapeHtml(user.USERNAME) + '</span>' : '';
+        row.insertCell(0).innerHTML = nameBadge;
         row.insertCell(1).innerHTML = escapeHtml(user.NOM || '-');
         row.insertCell(2).innerHTML = escapeHtml(user.EMAIL || '-');
         row.insertCell(3).innerHTML = getUserRoleName(user.ROLEID);

@@ -1,4 +1,4 @@
-<%@ WebHandler Language="C#" Class="SauvegarderCoeffs" %>
+<%@ WebHandler Language="C#" Class="SaveCoeffs" %>
 using System;
 using System.Configuration;
 using System.Data.SqlClient;
@@ -7,7 +7,7 @@ using System.Web;
 using System.Web.Script.Serialization;
 using System.Web.SessionState;
 
-public class SauvegarderCoeffs : IHttpHandler, IRequiresSessionState
+public class SaveCoeffs : IHttpHandler, IRequiresSessionState
 {
     public void ProcessRequest(HttpContext ctx)
     {
@@ -30,28 +30,29 @@ public class SauvegarderCoeffs : IHttpHandler, IRequiresSessionState
             }
 
             var ser = new JavaScriptSerializer();
-            
-            // Extraire les valeurs manuellement
-            string matiereId = ExtractValue(body, "matiereId");
-            string classeId = ExtractValue(body, "classeId");
-            string periode = ExtractValue(body, "periode");
-            string coeff1Str = ExtractValue(body, "coeff1");
-            string coeff2Str = ExtractValue(body, "coeff2");
-            string coeffProjetStr = ExtractValue(body, "coeffProjet");
-            
-            int coeff1 = 1;
-            int coeff2 = 1;
-            int coeffProjet = 2;
-            
-            if (!string.IsNullOrEmpty(coeff1Str)) int.TryParse(coeff1Str, out coeff1);
-            if (!string.IsNullOrEmpty(coeff2Str)) int.TryParse(coeff2Str, out coeff2);
-            if (!string.IsNullOrEmpty(coeffProjetStr)) int.TryParse(coeffProjetStr, out coeffProjet);
+            var data = ser.Deserialize<Dictionary<string, object>>(body);
 
-            if (string.IsNullOrEmpty(matiereId) || string.IsNullOrEmpty(classeId) || string.IsNullOrEmpty(periode))
+            if (data == null || !data.ContainsKey("matiereId") || !data.ContainsKey("classeId") || !data.ContainsKey("periode"))
+            {
+                ctx.Response.Write("{\"success\":false,\"message\":\"Paramètres manquants (matiereId, classeId, periode)\"}");
+                return;
+            }
+
+            string matiereId = data["matiereId"].ToString();
+            string classeIdStr = data["classeId"].ToString();
+            string periode = data["periode"].ToString();
+            
+            decimal coeff1 = data.ContainsKey("coeff1") ? Convert.ToDecimal(data["coeff1"]) : 1;
+            decimal coeff2 = data.ContainsKey("coeff2") ? Convert.ToDecimal(data["coeff2"]) : 2;
+            decimal coeffProjet = data.ContainsKey("coeffProjet") ? Convert.ToDecimal(data["coeffProjet"]) : 1;
+
+            if (string.IsNullOrEmpty(matiereId) || string.IsNullOrEmpty(classeIdStr) || string.IsNullOrEmpty(periode))
             {
                 ctx.Response.Write("{\"success\":false,\"message\":\"Paramètres manquants\"}");
                 return;
             }
+
+            int classeId = Convert.ToInt32(classeIdStr);
 
             string connStr = ConfigurationManager.ConnectionStrings["MaConnexion"].ConnectionString;
             
@@ -79,7 +80,7 @@ public class SauvegarderCoeffs : IHttpHandler, IRequiresSessionState
                 using (var cmd = new SqlCommand(sql, conn))
                 {
                     cmd.Parameters.AddWithValue("@matiereId", new Guid(matiereId));
-                    cmd.Parameters.AddWithValue("@classeId", Convert.ToInt32(classeId));
+                    cmd.Parameters.AddWithValue("@classeId", classeId);
                     cmd.Parameters.AddWithValue("@periode", periode);
                     cmd.Parameters.AddWithValue("@coeff1", coeff1);
                     cmd.Parameters.AddWithValue("@coeff2", coeff2);
@@ -95,43 +96,6 @@ public class SauvegarderCoeffs : IHttpHandler, IRequiresSessionState
             ctx.Response.StatusCode = 500;
             string errorMsg = ex.Message.Replace("\"", "'").Replace("\r", " ").Replace("\n", " ");
             ctx.Response.Write("{\"success\":false,\"message\":\"" + errorMsg + "\"}");
-        }
-    }
-
-    private string ExtractValue(string json, string key)
-    {
-        if (string.IsNullOrEmpty(json)) return "";
-        
-        string searchKey = "\"" + key + "\"";
-        int keyIndex = json.IndexOf(searchKey);
-        if (keyIndex == -1) return "";
-        
-        int colonIndex = json.IndexOf(":", keyIndex);
-        if (colonIndex == -1) return "";
-        
-        int startIndex = colonIndex + 1;
-        while (startIndex < json.Length && (json[startIndex] == ' ' || json[startIndex] == '\t'))
-        {
-            startIndex++;
-        }
-        
-        if (startIndex >= json.Length) return "";
-        
-        if (json[startIndex] == '"')
-        {
-            startIndex++;
-            int endIndex = json.IndexOf("\"", startIndex);
-            if (endIndex == -1) return "";
-            return json.Substring(startIndex, endIndex - startIndex);
-        }
-        else
-        {
-            int endIndex = startIndex;
-            while (endIndex < json.Length && json[endIndex] != ',' && json[endIndex] != '}' && json[endIndex] != ' ')
-            {
-                endIndex++;
-            }
-            return json.Substring(startIndex, endIndex - startIndex);
         }
     }
 

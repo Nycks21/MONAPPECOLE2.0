@@ -197,3 +197,7 @@
     background: linear-gradient(135deg, #c82333 0%, #a71d2a 100%);
     transform: scale(1.05);
 }
+
+.text-right {
+    text-align: right !important;
+}

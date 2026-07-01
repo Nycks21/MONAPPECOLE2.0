@@ -296,6 +296,8 @@ function renderAbsencesTable() {
     
     for (var i = 0; i < pageData.length; i++) {
         var a = pageData[i];
+        var nameBadge = a.NOM ? '<span class="badge-name">' + escapeHtml(a.NOM) + '</span>' : '';
+        var motifBadge = a.MOTIF ? '<span class="badge-motif">' + escapeHtml(a.MOTIF) + '</span>' : '-';
         var justifiedBadge = a.JUSTIFIE ? '<span class="badge-justified">✓ Justifiée</span>' : '<span class="badge-not-justified">✗ Non justifiée</span>';
         var justifyBtn = !a.JUSTIFIE ? '<button type="button" class="btn-action-justify" onclick="justifyAbsence(\'' + a.ID + '\')" title="Justifier"><i class="fas fa-check"></i></button>' : '';
         
@@ -303,18 +305,18 @@ function renderAbsencesTable() {
         if (motifText.length > 50) motifText = motifText.substring(0, 47) + '...';
         
         var row = tbody.insertRow();
-        row.insertCell(0).innerHTML = escapeHtml(a.NOM);
+        row.insertCell(0).innerHTML = nameBadge;
         row.insertCell(1).innerHTML = escapeHtml(a.CLASSE_NOM);
         row.insertCell(2).innerHTML = formatDate(a.DATE_DEBUT);
         row.insertCell(3).innerHTML = formatDate(a.DATE_FIN);
         row.insertCell(4).innerHTML = a.DUREE + ' jour(s)';
         row.insertCell(5).innerHTML = justifiedBadge;
-        row.insertCell(6).innerHTML = escapeHtml(motifText);
+        row.insertCell(6).innerHTML = motifBadge;
         row.insertCell(7).innerHTML = 
             '<div class="action-buttons-group">' +
             '<button type="button" class="btn-action-edit" onclick="editAbsence(\'' + a.ID + '\')" title="Modifier"><i class="fas fa-edit"></i></button>' +
-            justifyBtn +
             '<button type="button" class="btn-action-delete" onclick="deleteAbsence(\'' + a.ID + '\')" title="Supprimer"><i class="fas fa-trash"></i></button>' +
+            justifyBtn +
             '</div>';
     }
     
@@ -772,6 +774,7 @@ function renderRetardsTable() {
     
     for (var i = 0; i < pageData.length; i++) {
         var r = pageData[i];
+        var nameBadge = r.NOM ? '<span class="badge-name">' + escapeHtml(r.NOM) + '</span>' : '';
         var justifiedBadge = r.JUSTIFIE ? '<span class="badge-justified">✓ Justifié</span>' : '<span class="badge-not-justified">✗ Non justifié</span>';
         var justifyBtn = !r.JUSTIFIE ? '<button type="button" class="btn-action-justify" onclick="justifyRetard(\'' + r.ID + '\')" title="Justifier"><i class="fas fa-check"></i></button>' : '';
         
@@ -779,7 +782,7 @@ function renderRetardsTable() {
         if (motifText.length > 50) motifText = motifText.substring(0, 47) + '...';
         
         var row = tbody.insertRow();
-        row.insertCell(0).innerHTML = escapeHtml(r.NOM);
+        row.insertCell(0).innerHTML = nameBadge;
         row.insertCell(1).innerHTML = escapeHtml(r.CLASSE_NOM);
         row.insertCell(2).innerHTML = formatDate(r.DATE_RETARD);
         row.insertCell(3).innerHTML = formatHeure(r.HEURE_ARRIVEE);
@@ -790,8 +793,8 @@ function renderRetardsTable() {
         row.insertCell(8).innerHTML = 
             '<div class="action-buttons-group">' +
             '<button type="button" class="btn-action-edit" onclick="editRetard(\'' + r.ID + '\')" title="Modifier"><i class="fas fa-edit"></i></button>' +
-            justifyBtn +
             '<button type="button" class="btn-action-delete" onclick="deleteRetard(\'' + r.ID + '\')" title="Supprimer"><i class="fas fa-trash"></i></button>' +
+            justifyBtn +
             '</div>';
     }
     

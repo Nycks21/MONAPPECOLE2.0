@@ -494,71 +494,36 @@
                                             <div class="stat-label">Taux recouvrement</div>
                                         </div>
                                     </div>
-
-                                    <!-- Filtres -->
-                                    <div class="frais-filters">
-                                        <select class="form-control" id="fraisFilterStatut" style="max-width:160px;">
-                                            <option value="">Tous les statuts</option>
-                                            <option value="Terminé">Terminé</option>
-                                            <option value="En cours">En cours</option>
-                                            <option value="Non payé">Non payé</option>
-                                        </select>
-                                        <select class="form-control" id="fraisFilterAnnee" style="max-width:160px;">
-                                            <option value="">Toutes les années</option>
-                                        </select>
-                                        <select class="form-control" id="fraisFilterClasse" style="max-width:160px;">
-                                            <option value="">Toutes les classes</option>
-                                        </select>
-                                        <div class="search-box">
-                                            <input type="text" class="form-control" id="fraisSearch"
-                                                placeholder="Rechercher élève, matricule...">
-                                        </div>
-                                        <button type="button" class="btn btn-secondary btn-sm"
-                                            onclick="resetFilters()"><i class="fas fa-undo-alt"></i>
-                                            Réinitialiser</button>
-                                    </div>
-
-                                    <!-- Tableau -->
+                                    <div id="frais-filter-container"></div>
+                                   <!-- Tableau -->
                                     <div
                                         style="overflow-x: auto; width: 100%; border: 1px solid #dee2e6; border-radius: 8px;">
                                         <table class="dash-table"
                                             style="min-width: 1000px; width: 100%; border-collapse: collapse;">
                                             <thead>
-                                                <tr style="background-color: #f8f9fa; text-align: center;">
-                                                    <th style="cursor: pointer;" onclick="sortBy('MATRICULE')">Matricule
+                                                <tr style="background-color: #f8f9fa;">
+                                                    <th style="cursor: pointer;text-align: left;width: 80px;" onclick="sortBy('MATRICULE')">Matricule
                                                         <i class="fas fa-sort"></i>
                                                     </th>
-                                                    <th style="cursor: pointer;" onclick="sortBy('NOM')">Nom <i
+                                                    <th style="cursor: pointer;text-align: left;width: 200px;" onclick="sortBy('NOM')">Nom <i
                                                             class="fas fa-sort"></i></th>
-                                                    <th style="cursor: pointer;" onclick="sortBy('CLASSE_NOM')">Classe
+                                                    <th style="cursor: pointer;text-align: left;width: 70px;" onclick="sortBy('CLASSE_NOM')">Classe
                                                         <i class="fas fa-sort"></i>
                                                     </th>
-                                                    <th style="cursor: pointer;" onclick="sortBy('TOTAL')">Total <i
+                                                    <th style="cursor: pointer;text-align: right;width: 100px;" onclick="sortBy('TOTAL')">Total <i
                                                             class="fas fa-sort"></i></th>
-                                                    <th style="cursor: pointer;" onclick="sortBy('PAYE')">Payé <i
+                                                    <th style="cursor: pointer;text-align: right;width: 100px;" onclick="sortBy('PAYE')">Payé <i
                                                             class="fas fa-sort"></i></th>
-                                                    <th style="cursor: pointer;" onclick="sortBy('RESTE')">Reste <i
+                                                    <th style="cursor: pointer;text-align: right;width: 100px;" onclick="sortBy('RESTE')">Reste <i
                                                             class="fas fa-sort"></i></th>
-                                                    <th>Progression</th>
-                                                    <th style="cursor: pointer;" onclick="sortBy('STATUT')">Statut <i
+                                                    <th style="width: 150px;">Progression</th>
+                                                    <th style="cursor: pointer;text-align: left;width: 70px;" onclick="sortBy('STATUT')">Statut <i
                                                             class="fas fa-sort"></i></th>
-                                                    <th>Actions</th>
+                                                    <th style="cursor: pointer;text-align: left;width: 80px;">Actions</th>
                                                 </tr>
                                             </thead>
                                             <tbody id="fraisTableBody"></tbody>
                                         </table>
-                                    </div>
-
-                                    <!-- Pagination -->
-                                    <div
-                                        style="display:flex;justify-content:space-between;align-items:center;margin-top:15px;flex-wrap:wrap;gap:10px;">
-                                        <span id="fraisPaginationInfo" style="color:#6c757d;font-size:13px;"></span>
-                                        <div class="action-buttons">
-                                            <button type="button" class="btn btn-sm btn-secondary" id="prevPageBtn"
-                                                disabled><i class="fas fa-chevron-left"></i> Précédent</button>
-                                            <button type="button" class="btn btn-sm btn-secondary"
-                                                id="nextPageBtn">Suivant <i class="fas fa-chevron-right"></i></button>
-                                        </div>
                                     </div>
                                 </div>
                             </div>

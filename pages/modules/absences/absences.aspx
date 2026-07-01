@@ -336,14 +336,14 @@
                                         <table class="dash-table">
                                             <thead>
                                                 <tr>
-                                                    <th style="min-width: 100px;">Élève</th>
-                                                    <th style="min-width: 80px;">Classe</th>
-                                                    <th style="min-width: 100px;">Date début</th>
-                                                    <th style="min-width: 100px;">Date fin</th>
-                                                    <th style="min-width: 60px;">Durée</th>
-                                                    <th style="min-width: 80px;">Justifiée</th>
-                                                    <th style="min-width: 150px;">Motif</th>
-                                                    <th style="min-width: 100px;">Actions</th>
+                                                    <th style="min-width: 100px; text-align: left;">Élève</th>
+                                                    <th style="min-width: 80px; text-align: left;">Classe</th>
+                                                    <th style="min-width: 100px; text-align: left;">Date début</th>
+                                                    <th style="min-width: 100px; text-align: left;">Date fin</th>
+                                                    <th style="min-width: 60px; text-align: left;">Durée</th>
+                                                    <th style="min-width: 80px; text-align: left;">Justifiée</th>
+                                                    <th style="min-width: 150px; text-align: left;">Motif</th>
+                                                    <th style="min-width: 100px; text-align: left;">Actions</th>
                                                 </tr>
                                             </thead>
                                             <tbody id="absencesTableBody"></tbody>
@@ -394,15 +394,15 @@
                                         <table class="dash-table">
                                             <thead>
                                                 <tr>
-                                                    <th style="min-width: 100px;">Élève</th>
-                                                    <th style="min-width: 80px;">Classe</th>
-                                                    <th style="min-width: 100px;">Date</th>
-                                                    <th style="min-width: 90px;">Heure arrivée</th>
-                                                    <th style="min-width: 90px;">Heure prévue</th>
-                                                    <th style="min-width: 60px;">Durée</th>
-                                                    <th style="min-width: 80px;">Justifié</th>
-                                                    <th style="min-width: 150px;">Motif</th>
-                                                    <th style="min-width: 100px;">Actions</th>
+                                                    <th style="min-width: 100px; text-align: left;">Élève</th>
+                                                    <th style="min-width: 80px; text-align: left;">Classe</th>
+                                                    <th style="min-width: 100px; text-align: left;">Date</th>
+                                                    <th style="min-width: 90px; text-align: left;">Heure arrivée</th>
+                                                    <th style="min-width: 90px; text-align: left;">Heure prévue</th>
+                                                    <th style="min-width: 60px; text-align: left;">Durée</th>
+                                                    <th style="min-width: 80px; text-align: left;">Justifié</th>
+                                                    <th style="min-width: 150px; text-align: left;">Motif</th>
+                                                    <th style="min-width: 100px; text-align: left;">Actions</th>
                                                 </tr>
                                             </thead>
                                             <tbody id="retardsTableBody"></tbody>
