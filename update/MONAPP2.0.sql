@@ -638,7 +638,87 @@ BEGIN
         CreatedAt DATETIME DEFAULT GETDATE()
     );
 END
+GO
 
+-- ─────────────────────────────────────────────────────────────────
+--  1. TABLE DES MODÈLES (panneau gauche)
+-- ─────────────────────────────────────────────────────────────────
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'EVENTTEMPLATES')
+BEGIN
+    CREATE TABLE EVENTTEMPLATES (
+        ID              INT IDENTITY(1,1) PRIMARY KEY,
+        NOM             NVARCHAR(200) NOT NULL,
+        COULEUR         VARCHAR(20)   NULL DEFAULT '#6f42c1',
+        HEURE_DEBUT     VARCHAR(5)    NULL,
+        HEURE_FIN       VARCHAR(5)    NULL,
+        DESCRIPTION     NVARCHAR(MAX) NULL,
+        TYPE            VARCHAR(50)   NULL,  -- Pour correspondre au data-type des événements externes
+        LIEU            NVARCHAR(200) NULL,  -- Ajouté car présent dans le formulaire
+        PUBLIC          VARCHAR(20)   NULL DEFAULT 'all', -- Ajouté car présent dans le formulaire
+        URL             NVARCHAR(500) NULL,  -- Ajouté car présent dans le formulaire
+        CREATED_AT      DATETIME      NULL DEFAULT GETDATE()
+    );
+END
+GO
+
+-- ─────────────────────────────────────────────────────────────────
+--  2. TABLE DES INSTANCES CALENDRIER
+--     Conserve tous les champs de l'ancienne CalendarEvents
+--     + FK vers le modèle d'origine (nullable : drop libre possible)
+-- ─────────────────────────────────────────────────────────────────
+
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'CALENDAREVENTS')
+BEGIN
+    CREATE TABLE CALENDAREVENTS (
+        ID              UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+        TEMPLATE_ID     INT           NULL,
+        IDUSER          INT           NULL,
+        TITRE           NVARCHAR(200) NULL,
+        DATE_DEBUT      DATETIME      NULL,
+        DATE_FIN        DATETIME      NULL,
+        COULEUR         VARCHAR(20)   NULL DEFAULT '#6f42c1',
+        HEURE_DEBUT     VARCHAR(5)    NULL,
+        HEURE_FIN       VARCHAR(5)    NULL,
+        DESCRIPTION     NVARCHAR(MAX) NULL,
+        TYPE            VARCHAR(50)   NULL,  -- reunion_parents, examen, vacances, ferie, autre
+        LIEU            NVARCHAR(200) NULL,  -- Ajouté
+        PUBLIC          VARCHAR(20)   NULL DEFAULT 'all', -- eleves, parents, enseignants, personnel, all
+        URL             NVARCHAR(500) NULL,  -- Ajouté
+        CREATED_AT      DATETIME      NULL DEFAULT GETDATE(),
+
+        CONSTRAINT FK_CALENDAREVENTS_EVENTTEMPLATES
+            FOREIGN KEY (TEMPLATE_ID) REFERENCES EVENTTEMPLATES(ID)
+            ON DELETE SET NULL
+            ON UPDATE CASCADE,
+
+        CONSTRAINT FK_CALENDAREVENTS_USERS
+            FOREIGN KEY (IDUSER) REFERENCES USERS(IDUSER)
+            ON DELETE SET NULL
+            ON UPDATE CASCADE
+    );
+END
+GO
+
+-- ─────────────────────────────────────────────────────────────────
+--  3. TABLE DES ÉVÉNEMENTS EXTERNES (pour le drag & drop)
+-- ─────────────────────────────────────────────────────────────────
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'EXTERNALEVENTS')
+BEGIN
+    CREATE TABLE EXTERNALEVENTS (
+        ID              INT IDENTITY(1,1) PRIMARY KEY,
+        NOM             NVARCHAR(200) NOT NULL,
+        TYPE            VARCHAR(50)   NOT NULL, -- reunion_parents, ferie, etc.
+        COULEUR         VARCHAR(20)   NULL DEFAULT '#6f42c1',
+        ACTIF           BIT           NULL DEFAULT 1,
+        CREATED_AT      DATETIME      NULL DEFAULT GETDATE()
+    );
+    
+    -- Insertion des événements par défaut (correspondant au code)
+    INSERT INTO EXTERNALEVENTS (NOM, TYPE, COULEUR) VALUES 
+    ('👨‍👩‍👦 Réunion Parents', 'reunion_parents', '#6f42c1'),
+    ('🎉 Jour férié', 'ferie', '#fd7e14');
+END
+GO
 -- =====================================================
 -- INSERTION DES DONNÉES INITIALES
 -- =====================================================

@@ -22,26 +22,14 @@ const eventColors = {
 };
 
 const typeLabels = {
-    'cours': '📚 Cours',
-    'examen': '📝 Examens',
-    'reunion': '🤝 Réunions',
-    'reunion_parents': '👨‍👩‍👦 Réunions Parents',
-    'vacances': '🏖️ Vacances',
-    'ferie': '🎉 Jours fériés',
-    'autre': '📌 Autre'
+    'cours': 'Cours',
+    'examen': 'Examens',
+    'reunion': 'Réunions',
+    'reunion_parents': 'Réunion Parents',
+    'vacances': 'Vacances',
+    'ferie': 'Jours fériés',
+    'autre': 'Autre'
 };
-
-// Couleurs prédéfinies pour les événements rapides
-const presetColors = [
-    '#28a745', // Vert
-    '#dc3545', // Rouge
-    '#17a2b8', // Bleu
-    '#ffc107', // Jaune
-    '#6f42c1', // Violet
-    '#fd7e14', // Orange
-    '#20c997', // Turquoise
-    '#e83e8c'  // Rose
-];
 
 // ============================================================
 // INITIALISATION
@@ -52,7 +40,14 @@ document.addEventListener('DOMContentLoaded', function() {
     initControls();
     initExternalEvents();
     loadEvents();
+    loadTemplates();
+    loadUpcomingEvents();
+    loadStatistics(); // ✅ Ajouté
 });
+
+// ============================================================
+// CONTROLES
+// ============================================================
 
 function initControls() {
     // Ajouter un événement
@@ -68,25 +63,13 @@ function initControls() {
     if (btnRefresh) {
         btnRefresh.addEventListener('click', function() {
             loadEvents();
+            loadTemplates();
+            loadUpcomingEvents();
+            loadStatistics(); // ✅ Ajouté
         });
     }
 
-    // Filtres
-    var ddlEventType = document.getElementById('ddlEventType');
-    if (ddlEventType) {
-        ddlEventType.addEventListener('change', function() {
-            applyFilters();
-        });
-    }
-
-    var ddlEventStatus = document.getElementById('ddlEventStatus');
-    if (ddlEventStatus) {
-        ddlEventStatus.addEventListener('change', function() {
-            applyFilters();
-        });
-    }
-
-    // ✅ Ajouter un événement depuis la sidebar
+    // Ajouter un événement depuis la sidebar
     var addNewEvent = document.getElementById('add-new-event');
     if (addNewEvent) {
         addNewEvent.addEventListener('click', function(e) {
@@ -95,7 +78,7 @@ function initControls() {
         });
     }
 
-    // ✅ Sélection de couleur
+    // Sélection de couleur
     var colorChooser = document.querySelectorAll('#color-chooser > li > a');
     if (colorChooser.length > 0) {
         colorChooser.forEach(function(el) {
@@ -112,7 +95,7 @@ function initControls() {
         });
     }
 
-    // ✅ Enter dans le champ de saisie rapide
+    // Enter dans le champ de saisie rapide
     var newEventInput = document.getElementById('new-event');
     if (newEventInput) {
         newEventInput.addEventListener('keypress', function(e) {
@@ -135,7 +118,6 @@ function initCalendar() {
         return;
     }
     
-    // Vérifier que FullCalendar est chargé
     if (typeof FullCalendar === 'undefined') {
         console.error('FullCalendar non chargé');
         return;
@@ -147,7 +129,6 @@ function initCalendar() {
     var containerEl = document.getElementById('external-events');
     var checkbox = document.getElementById('drop-remove');
     
-    // ✅ Initialiser les événements externes draggable uniquement si le conteneur existe
     if (containerEl && Draggable) {
         new Draggable(containerEl, {
             itemSelector: '.external-event',
@@ -160,7 +141,7 @@ function initCalendar() {
                     extendedProps: {
                         type: eventEl.dataset.type || 'autre',
                         location: eventEl.dataset.location || '',
-                        audience: eventEl.dataset.audience || 'all'
+                        publique: eventEl.dataset.publique || 'all'
                     }
                 };
             }
@@ -214,7 +195,7 @@ function initCalendar() {
                 type: info.draggedEl.dataset.type || 'autre',
                 color: window.getComputedStyle(info.draggedEl, null).getPropertyValue('background-color'),
                 location: info.draggedEl.dataset.location || '',
-                audience: info.draggedEl.dataset.audience || 'all'
+                publique: info.draggedEl.dataset.publique || 'all'
             };
             
             saveEventFromDrop(eventData);
@@ -291,14 +272,16 @@ async function loadEvents() {
                             type: e.type,
                             description: e.description || '',
                             location: e.location || '',
-                            audience: e.audience || 'all',
+                            publique: e.publique || 'all',
                             created_at: e.created_at
                         }
                     });
                 });
             }
             
-            updateUpcomingEvents(window._agendaEvents);
+            // ✅ Mettre à jour les statistiques
+            await loadStatistics();
+            
             hideLoading();
         } else {
             showToast(data.message || 'Erreur de chargement', 'error');
@@ -308,6 +291,259 @@ async function loadEvents() {
         console.error('Erreur:', e);
         showToast('Erreur de connexion: ' + e.message, 'error');
         hideLoading();
+    }
+}
+
+// ============================================================
+// CHARGEMENT DES STATISTIQUES
+// ============================================================
+
+async function loadStatistics() {
+    try {
+        var response = await fetch('handlers/GetStatistics.ashx');
+        var data = await response.json();
+        
+        if (data.success) {
+            var monthEl = document.getElementById('statMonthEvents');
+            var upcomingEl = document.getElementById('statUpcoming');
+            var pastEl = document.getElementById('statPast');
+            
+            if (monthEl) monthEl.textContent = data.monthEvents || 0;
+            if (upcomingEl) upcomingEl.textContent = data.upcoming || 0;
+            if (pastEl) pastEl.textContent = data.past || 0;
+        }
+    } catch (e) {
+        console.error('Erreur chargement statistiques:', e);
+    }
+}
+
+// ============================================================
+// CHARGEMENT DES MODÈLES (TEMPLATES)
+// ============================================================
+
+async function loadTemplates() {
+    var container = document.getElementById('templateList');
+    if (!container) return;
+    
+    try {
+        var response = await fetch('handlers/GetTemplates.ashx');
+        var data = await response.json();
+        
+        if (!data.success) {
+            container.innerHTML = '<div class="text-center text-muted" style="padding:10px;font-size:12px;">Aucun modèle disponible</div>';
+            return;
+        }
+        
+        var templates = data.templates || [];
+        
+        if (templates.length === 0) {
+            container.innerHTML = `
+                <div class="text-center text-muted" style="padding:15px;font-size:12px;">
+                    <i class="fas fa-plus-circle" style="display:block;font-size:20px;margin-bottom:5px;"></i>
+                    Aucun modèle<br>
+                    <small>Créez-en dans l'agenda</small>
+                </div>
+            `;
+            return;
+        }
+        
+        var html = '';
+        templates.forEach(function(t) {
+            var color = t.COULEUR || '#007bff';
+            html += `
+                <div class="template-item" style="display:flex; align-items:center; padding:6px 10px; margin-bottom:4px; border-radius:4px; cursor:pointer; transition:background 0.2s;" 
+                     onmouseover="this.style.background='#f0f7f4'" 
+                     onmouseout="this.style.background='transparent'"
+                     onclick="addEventFromTemplate('${t.ID}')">
+                    <span style="width:12px; height:12px; border-radius:50%; background:${color}; display:inline-block; margin-right:10px; flex-shrink:0;"></span>
+                    <span style="font-size:12px; color:#1e3a2f; flex:1;">${escapeHtml(t.NOM)}</span>
+                    <span style="font-size:10px; color:#6c757d;">${t.HEURE_DEBUT || ''}</span>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+        
+    } catch (e) {
+        console.error('Erreur chargement templates:', e);
+        container.innerHTML = '<div class="text-center text-danger" style="padding:10px;font-size:12px;">Erreur de chargement</div>';
+    }
+}
+
+// ============================================================
+// CHARGEMENT DES ÉVÉNEMENTS À VENIR
+// ============================================================
+
+async function loadUpcomingEvents() {
+    var container = document.getElementById('upcomingEvents');
+    if (!container) return;
+    
+    container.innerHTML = '<div class="text-center text-muted" style="padding:20px;"><i class="fas fa-spinner fa-spin"></i> Chargement...</div>';
+    
+    try {
+        var response = await fetch('handlers/GetUpcomingEvents.ashx');
+        var data = await response.json();
+        
+        if (!data.success) {
+            container.innerHTML = `<div class="text-center text-danger" style="padding:10px;font-size:13px;">${data.message || 'Erreur de chargement'}</div>`;
+            return;
+        }
+        
+        var events = data.events || [];
+        
+        if (events.length === 0) {
+            container.innerHTML = `
+                <div class="text-center text-muted" style="padding:20px;">
+                    <i class="fas fa-calendar-check" style="font-size:28px;display:block;margin-bottom:8px;"></i>
+                    Aucun événement à venir
+                </div>
+            `;
+            return;
+        }
+        
+        var html = '';
+        events.forEach(function(event) {
+            var color = event.COULEUR || '#007bff';
+            var date = new Date(event.DATE_DEBUT);
+            var dateStr = date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+            var timeStr = event.HEURE_DEBUT ? ` à ${event.HEURE_DEBUT}` : '';
+            
+            html += `
+                <div class="upcoming-event-item" style="border-left:4px solid ${color}; padding:10px 12px; margin-bottom:10px; background:#f8f9fa; border-radius:4px; cursor:pointer;" onclick="showUpcomingEventDetail('${event.ID}')">
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <div style="flex:1;">
+                            <div style="font-weight:600; font-size:13px; color:#1e3a2f;">${escapeHtml(event.TITRE || 'Sans titre')}</div>
+                            <div style="font-size:11px; color:#6c757d; margin-top:2px;">
+                                <i class="far fa-calendar-alt"></i> ${dateStr}${timeStr}
+                            </div>
+                        </div>
+                        <span style="font-size:10px; background:${color}; color:white; padding:2px 8px; border-radius:10px; white-space:nowrap; margin-left:8px;">
+                            ${event.TYPE || 'Événement'}
+                        </span>
+                    </div>
+                </div>
+            `;
+        });
+        
+        container.innerHTML = html;
+        
+    } catch (e) {
+        console.error('Erreur chargement événements:', e);
+        container.innerHTML = '<div class="text-center text-danger" style="padding:10px;font-size:13px;">Erreur de connexion</div>';
+    }
+}
+
+// ============================================================
+// AJOUTER UN ÉVÉNEMENT DEPUIS UN TEMPLATE
+// ============================================================
+
+async function addEventFromTemplate(templateId) {
+    showLoading('Création de l\'événement...');
+    
+    try {
+        var response = await fetch('handlers/AddEventFromTemplate.ashx', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                templateId: templateId
+            })
+        });
+        
+        var data = await response.json();
+        
+        if (data.success) {
+            showToast('Événement ajouté avec succès', 'success');
+            await loadEvents();
+            await loadUpcomingEvents();
+            await loadStatistics(); // ✅ Ajouté
+        } else {
+            showToast(data.message || 'Erreur lors de l\'ajout', 'error');
+        }
+        hideLoading();
+    } catch (e) {
+        console.error('Erreur:', e);
+        showToast('Erreur de connexion', 'error');
+        hideLoading();
+    }
+}
+
+// ============================================================
+// AFFICHER LES DÉTAILS D'UN ÉVÉNEMENT À VENIR
+// ============================================================
+
+async function showUpcomingEventDetail(eventId) {
+    try {
+        var response = await fetch('handlers/GetEventDetail.ashx?id=' + encodeURIComponent(eventId));
+        var data = await response.json();
+        
+        if (!data.success) {
+            showToast(data.message || 'Erreur', 'error');
+            return;
+        }
+        
+        var event = data.event;
+        var color = event.COULEUR || '#007bff';
+        var date = new Date(event.DATE_DEBUT);
+        var dateStr = date.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+        var timeStr = event.HEURE_DEBUT ? event.HEURE_DEBUT + (event.HEURE_FIN ? ' - ' + event.HEURE_FIN : '') : 'Journée entière';
+        
+        var publiqueLabels = {
+            'all': 'Tous',
+            'eleves': 'Élèves',
+            'parents': 'Parents',
+            'enseignants': 'Enseignants',
+            'personnel': 'Personnel'
+        };
+        
+        Swal.fire({
+            title: event.TITRE || 'Événement',
+            html: `
+                <div style="text-align:left; padding:10px 0;">
+                    <div style="display:flex; align-items:center; gap:12px; margin-bottom:12px;">
+                        <span style="width:20px; height:20px; border-radius:4px; background:${color}; display:inline-block;"></span>
+                        <span style="font-size:13px; color:#6c757d;">${event.TYPE || 'Événement'}</span>
+                    </div>
+                    <div style="margin-bottom:8px;">
+                        <i class="far fa-calendar-alt" style="width:20px; color:#6c757d;"></i>
+                        <span style="font-size:14px;">${dateStr}</span>
+                    </div>
+                    <div style="margin-bottom:8px;">
+                        <i class="far fa-clock" style="width:20px; color:#6c757d;"></i>
+                        <span style="font-size:14px;">${timeStr}</span>
+                    </div>
+                    ${event.LIEU ? `
+                        <div style="margin-bottom:8px;">
+                            <i class="fas fa-map-marker-alt" style="width:20px; color:#6c757d;"></i>
+                            <span style="font-size:14px;">${escapeHtml(event.LIEU)}</span>
+                        </div>
+                    ` : ''}
+                    ${event.PUBLIQUE && event.PUBLIQUE !== 'all' ? `
+                        <div style="margin-bottom:8px;">
+                            <i class="fas fa-users" style="width:20px; color:#6c757d;"></i>
+                            <span style="font-size:14px;">Public : ${publiqueLabels[event.PUBLIQUE] || event.PUBLIQUE}</span>
+                        </div>
+                    ` : ''}
+                    ${event.URL ? `
+                        <div style="margin-bottom:8px;">
+                            <i class="fas fa-link" style="width:20px; color:#6c757d;"></i>
+                            <a href="${event.URL}" target="_blank" style="font-size:14px; color:#007bff;">${event.URL}</a>
+                        </div>
+                    ` : ''}
+                    ${event.DESCRIPTION ? `
+                        <div style="margin-top:12px; padding-top:12px; border-top:1px solid #dee2e6;">
+                            <div style="font-size:13px; color:#495057;">${escapeHtml(event.DESCRIPTION)}</div>
+                        </div>
+                    ` : ''}
+                </div>
+            `,
+            icon: 'info',
+            confirmButtonText: 'Fermer',
+            confirmButtonColor: '#1e3a2f'
+        });
+        
+    } catch (e) {
+        console.error('Erreur:', e);
+        showToast('Erreur de connexion', 'error');
     }
 }
 
@@ -348,7 +584,7 @@ function applyFilters() {
 }
 
 // ============================================================
-// ÉVÉNEMENTS À VENIR
+// ÉVÉNEMENTS À VENIR (DANS LE CALENDRIER)
 // ============================================================
 
 function updateUpcomingEvents(events) {
@@ -446,6 +682,7 @@ function addEventFromSidebar() {
     eventDiv.style.color = '#ffffff';
     eventDiv.textContent = title;
     eventDiv.dataset.type = 'autre';
+    eventDiv.dataset.publique = 'all';
     
     container.prepend(eventDiv);
     makeEventDraggable(eventDiv);
@@ -472,7 +709,7 @@ async function saveEventFromDrop(eventData) {
                 end: null,
                 color: eventData.color || '#1e3a2f',
                 location: eventData.location || '',
-                audience: eventData.audience || 'all'
+                publique: eventData.publique || 'all'
             })
         });
         
@@ -481,6 +718,8 @@ async function saveEventFromDrop(eventData) {
         if (data.success) {
             showToast('Événement ajouté avec succès', 'success');
             await loadEvents();
+            await loadUpcomingEvents();
+            await loadStatistics(); // ✅ Ajouté
         } else {
             showToast(data.message || 'Erreur', 'error');
         }
@@ -504,15 +743,8 @@ function openEventModal(data) {
     
     isEditMode = false;
     
-    // Réinitialiser
-    document.getElementById('eventId').value = '';
-    document.getElementById('eventTitle').value = '';
-    document.getElementById('eventType').value = 'cours';
-    document.getElementById('eventDescription').value = '';
-    document.getElementById('eventColor').value = '#1e3a2f';
-    document.getElementById('eventLocation').value = '';
-    document.getElementById('eventAudience').value = 'all';
-    if (deleteBtn) deleteBtn.style.display = 'none';
+    // Réinitialiser le formulaire
+    resetEventForm();
     
     if (data && data.id) {
         isEditMode = true;
@@ -523,7 +755,8 @@ function openEventModal(data) {
         document.getElementById('eventDescription').value = data.description || '';
         document.getElementById('eventColor').value = data.color || '#1e3a2f';
         document.getElementById('eventLocation').value = data.location || '';
-        document.getElementById('eventAudience').value = data.audience || 'all';
+        document.getElementById('eventAudience').value = data.publique || 'all';
+        if (data.url) document.getElementById('eventUrl').value = data.url;
         if (deleteBtn) deleteBtn.style.display = 'inline-block';
         currentEventId = data.id;
         
@@ -538,20 +771,42 @@ function openEventModal(data) {
     } else {
         title.textContent = 'Ajouter un événement';
         currentEventId = null;
+        if (deleteBtn) deleteBtn.style.display = 'none';
         
         var now = new Date();
+        now.setMinutes(0, 0, 0);
+        
         if (data && data.date) {
             var date = new Date(data.date);
+            if (data.date.length <= 10) {
+                date.setHours(8, 0, 0);
+            }
             document.getElementById('eventStart').value = date.toISOString().slice(0, 16);
         } else {
             document.getElementById('eventStart').value = now.toISOString().slice(0, 16);
         }
-        document.getElementById('eventEnd').value = '';
+        
+        var defaultEnd = new Date(now);
+        defaultEnd.setHours(now.getHours() + 1);
+        document.getElementById('eventEnd').value = defaultEnd.toISOString().slice(0, 16);
     }
     
     modal.style.display = 'flex';
     modal.classList.add('active');
     document.body.style.overflow = 'hidden';
+}
+
+function resetEventForm() {
+    document.getElementById('eventId').value = '';
+    document.getElementById('eventTitle').value = '';
+    document.getElementById('eventType').value = 'cours';
+    document.getElementById('eventDescription').value = '';
+    document.getElementById('eventColor').value = '#1e3a2f';
+    document.getElementById('eventLocation').value = '';
+    document.getElementById('eventAudience').value = 'all';
+    document.getElementById('eventStart').value = '';
+    document.getElementById('eventEnd').value = '';
+    document.getElementById('eventUrl').value = '';
 }
 
 function closeEventModal() {
@@ -586,14 +841,22 @@ async function saveEvent() {
     var description = document.getElementById('eventDescription').value.trim();
     var color = document.getElementById('eventColor').value;
     var location = document.getElementById('eventLocation').value.trim();
-    var audience = document.getElementById('eventAudience').value;
+    var publique = document.getElementById('eventAudience').value;
+    var url = document.getElementById('eventUrl').value.trim();
     
-    if (!title || !start) {
-        showToast('Veuillez remplir le titre et la date de début', 'warning');
+    if (!title) {
+        showToast('Veuillez saisir un titre', 'warning');
+        document.getElementById('eventTitle').focus();
         return;
     }
     
-    var url = id ? 'handlers/UpdateEvent.ashx' : 'handlers/AddEvent.ashx';
+    if (!start) {
+        showToast('Veuillez sélectionner une date de début', 'warning');
+        document.getElementById('eventStart').focus();
+        return;
+    }
+    
+    var endpoint = id ? 'handlers/UpdateEvent.ashx' : 'handlers/AddEvent.ashx';
     var payload = {
         id: id || null,
         title: title,
@@ -603,17 +866,22 @@ async function saveEvent() {
         description: description,
         color: color,
         location: location,
-        audience: audience
+        publique: publique,
+        url: url
     };
     
     showLoading('Sauvegarde en cours...');
     
     try {
-        var response = await fetch(url, {
+        var response = await fetch(endpoint, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
+        
+        if (!response.ok) {
+            throw new Error('Erreur HTTP ' + response.status);
+        }
         
         var data = await response.json();
         
@@ -621,21 +889,42 @@ async function saveEvent() {
             showToast(id ? 'Événement modifié avec succès' : 'Événement ajouté avec succès', 'success');
             closeEventModal();
             await loadEvents();
+            await loadUpcomingEvents();
+            await loadStatistics(); // ✅ Ajouté
         } else {
-            showToast(data.message || 'Erreur', 'error');
+            showToast(data.message || 'Erreur lors de l\'enregistrement', 'error');
         }
         hideLoading();
     } catch (e) {
+        console.error('Erreur saveEvent:', e);
         hideLoading();
-        showToast('Erreur de connexion', 'error');
+        showToast('Erreur de connexion: ' + e.message, 'error');
     }
 }
 
 async function deleteEvent() {
     var id = document.getElementById('eventId').value;
-    if (!id) return;
+    if (!id) {
+        closeEventModal();
+        return;
+    }
     
-    if (!confirm('Voulez-vous vraiment supprimer cet événement ?')) return;
+    if (typeof Swal !== 'undefined') {
+        var result = await Swal.fire({
+            title: 'Confirmation de suppression',
+            text: 'Voulez-vous vraiment supprimer cet événement ? Cette action est irréversible.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#dc3545',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: 'Oui, supprimer',
+            cancelButtonText: 'Annuler'
+        });
+        
+        if (!result.isConfirmed) return;
+    } else {
+        if (!confirm('Voulez-vous vraiment supprimer cet événement ?')) return;
+    }
     
     showLoading('Suppression en cours...');
     
@@ -646,19 +935,26 @@ async function deleteEvent() {
             body: JSON.stringify({ id: id })
         });
         
+        if (!response.ok) {
+            throw new Error('Erreur HTTP ' + response.status);
+        }
+        
         var data = await response.json();
         
         if (data.success) {
-            showToast('Événement supprimé', 'success');
+            showToast('Événement supprimé avec succès', 'success');
             closeEventModal();
             await loadEvents();
+            await loadUpcomingEvents();
+            await loadStatistics(); // ✅ Ajouté
         } else {
-            showToast(data.message || 'Erreur', 'error');
+            showToast(data.message || 'Erreur lors de la suppression', 'error');
         }
         hideLoading();
     } catch (e) {
+        console.error('Erreur deleteEvent:', e);
         hideLoading();
-        showToast('Erreur de connexion', 'error');
+        showToast('Erreur de connexion: ' + e.message, 'error');
     }
 }
 
@@ -674,13 +970,18 @@ async function updateEventDate(event) {
             })
         });
         
+        if (!response.ok) {
+            throw new Error('Erreur HTTP ' + response.status);
+        }
+        
         var data = await response.json();
         if (!data.success) {
-            showToast('Erreur lors de la mise à jour', 'error');
+            showToast('Erreur lors de la mise à jour de la date', 'error');
             loadEvents();
         }
     } catch (e) {
-        showToast('Erreur de connexion', 'error');
+        console.error('Erreur updateEventDate:', e);
+        showToast('Erreur de connexion: ' + e.message, 'error');
         loadEvents();
     }
 }
@@ -697,12 +998,13 @@ function showEventDetail(event) {
     var type = event.extendedProps.type || 'autre';
     var description = event.extendedProps.description || '';
     var location = event.extendedProps.location || '';
-    var audience = event.extendedProps.audience || 'all';
+    var publique = event.extendedProps.publique || 'all';
+    var url = event.extendedProps.url || '';
     
     var startDate = new Date(event.start);
     var endDate = event.end ? new Date(event.end) : null;
     
-    var audienceLabels = {
+    var publiqueLabels = {
         'all': 'Tous',
         'eleves': 'Élèves',
         'parents': 'Parents',
@@ -725,8 +1027,12 @@ function showEventDetail(event) {
         html += `<div class="detail-location">📍 ${location}</div>`;
     }
     
-    if (audience !== 'all') {
-        html += `<div class="detail-audience">👥 Public : ${audienceLabels[audience] || audience}</div>`;
+    if (publique && publique !== 'all') {
+        html += `<div class="detail-audience">👥 Public : ${publiqueLabels[publique] || publique}</div>`;
+    }
+    
+    if (url) {
+        html += `<div class="detail-url">🔗 <a href="${url}" target="_blank">${url}</a></div>`;
     }
     
     if (description) {
@@ -750,7 +1056,8 @@ function showEventDetail(event) {
                 description: description,
                 color: event.backgroundColor,
                 location: location,
-                audience: audience
+                publique: publique,
+                url: url
             };
             openEventModal(eventData);
         };
@@ -779,6 +1086,13 @@ function rgbToHex(rgb) {
     var b = parseInt(match[3]);
     
     return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+}
+
+function escapeHtml(str) {
+    if (!str) return '';
+    var div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
 }
 
 function showLoading(message) {

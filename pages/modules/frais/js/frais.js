@@ -550,7 +550,7 @@ function _resetPaymentForm() {
     var dateEl = document.getElementById('paymentDate');
     if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
     var methodEl = document.getElementById('paymentMethod');
-    if (methodEl) methodEl.value = 'Especes';
+    if (methodEl) methodEl.value = '';
     var infoDiv = document.getElementById('paymentInfo');
     if (infoDiv) infoDiv.style.display = 'none';
 }

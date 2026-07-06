@@ -70,9 +70,9 @@
                                         section.<br>Revenez bientôt pour découvrir les nouvelles fonctionnalités.</p>
                                     <div class="construction-progress">
                                         <div class="progress-bar">
-                                            <div class="progress-fill" style="width: 25%;"></div>
+                                            <div class="progress-fill" style="width: 50%;"></div>
                                         </div>
-                                        <span class="progress-label">Progression : 25%</span>
+                                        <span class="progress-label">Progression : 50%</span>
                                     </div>
                                     <div class="construction-estimate">
                                         <i class="fas fa-clock"></i> Mise en ligne prévue :
