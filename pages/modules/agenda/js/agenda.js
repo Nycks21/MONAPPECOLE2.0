@@ -42,7 +42,7 @@ document.addEventListener('DOMContentLoaded', function() {
     loadEvents();
     loadTemplates();
     loadUpcomingEvents();
-    loadStatistics(); // ✅ Ajouté
+    loadStatistics();
 });
 
 // ============================================================
@@ -65,7 +65,7 @@ function initControls() {
             loadEvents();
             loadTemplates();
             loadUpcomingEvents();
-            loadStatistics(); // ✅ Ajouté
+            loadStatistics();
         });
     }
 
@@ -102,6 +102,32 @@ function initControls() {
             if (e.key === 'Enter') {
                 e.preventDefault();
                 addEventFromSidebar();
+            }
+        });
+    }
+
+    // ============================================================
+    // ✅ NOUVEAU : Synchroniser END avec START si END < START
+    // ============================================================
+    var startInput = document.getElementById('eventStart');
+    var endInput = document.getElementById('eventEnd');
+    
+    if (startInput && endInput) {
+        startInput.addEventListener('change', function() {
+            var startVal = this.value;
+            var endVal = endInput.value;
+            
+            if (startVal && endVal) {
+                var startDate = new Date(startVal);
+                var endDate = new Date(endVal);
+                
+                // Si END < START, on ajuste END = START + 1h
+                if (endDate < startDate) {
+                    var newEnd = new Date(startDate);
+                    newEnd.setHours(startDate.getHours() + 1);
+                    endInput.value = newEnd.toISOString().slice(0, 16);
+                    showToast('⏰ La date de fin a été ajustée automatiquement', 'info');
+                }
             }
         });
     }
@@ -279,9 +305,7 @@ async function loadEvents() {
                 });
             }
             
-            // ✅ Mettre à jour les statistiques
             await loadStatistics();
-            
             hideLoading();
         } else {
             showToast(data.message || 'Erreur de chargement', 'error');
@@ -455,7 +479,7 @@ async function addEventFromTemplate(templateId) {
             showToast('Événement ajouté avec succès', 'success');
             await loadEvents();
             await loadUpcomingEvents();
-            await loadStatistics(); // ✅ Ajouté
+            await loadStatistics();
         } else {
             showToast(data.message || 'Erreur lors de l\'ajout', 'error');
         }
@@ -696,6 +720,17 @@ function addEventFromSidebar() {
 // ============================================================
 
 async function saveEventFromDrop(eventData) {
+    // ✅ Vérifier que END >= START pour les événements créés par drag & drop
+    var startDate = new Date(eventData.start);
+    var endDate = eventData.end ? new Date(eventData.end) : null;
+    
+    if (endDate && endDate < startDate) {
+        // Si END < START, on le met à START + 1h
+        endDate = new Date(startDate);
+        endDate.setHours(startDate.getHours() + 1);
+        eventData.end = endDate.toISOString();
+    }
+    
     showLoading('Enregistrement...');
     
     try {
@@ -706,7 +741,7 @@ async function saveEventFromDrop(eventData) {
                 title: eventData.title,
                 type: eventData.type || 'autre',
                 start: eventData.start,
-                end: null,
+                end: eventData.end || null,
                 color: eventData.color || '#1e3a2f',
                 location: eventData.location || '',
                 publique: eventData.publique || 'all'
@@ -719,7 +754,7 @@ async function saveEventFromDrop(eventData) {
             showToast('Événement ajouté avec succès', 'success');
             await loadEvents();
             await loadUpcomingEvents();
-            await loadStatistics(); // ✅ Ajouté
+            await loadStatistics();
         } else {
             showToast(data.message || 'Erreur', 'error');
         }
@@ -766,6 +801,13 @@ function openEventModal(data) {
         }
         if (data.end) {
             var endDate = new Date(data.end);
+            var startDate = new Date(data.start);
+            // ✅ S'assurer que END >= START
+            if (endDate < startDate) {
+                // Si END < START, on le met à START + 1h par défaut
+                endDate = new Date(startDate);
+                endDate.setHours(startDate.getHours() + 1);
+            }
             document.getElementById('eventEnd').value = endDate.toISOString().slice(0, 16);
         }
     } else {
@@ -776,18 +818,20 @@ function openEventModal(data) {
         var now = new Date();
         now.setMinutes(0, 0, 0);
         
+        var startDate;
         if (data && data.date) {
-            var date = new Date(data.date);
+            startDate = new Date(data.date);
             if (data.date.length <= 10) {
-                date.setHours(8, 0, 0);
+                startDate.setHours(8, 0, 0);
             }
-            document.getElementById('eventStart').value = date.toISOString().slice(0, 16);
         } else {
-            document.getElementById('eventStart').value = now.toISOString().slice(0, 16);
+            startDate = new Date(now);
         }
+        document.getElementById('eventStart').value = startDate.toISOString().slice(0, 16);
         
-        var defaultEnd = new Date(now);
-        defaultEnd.setHours(now.getHours() + 1);
+        // ✅ END = START + 1h par défaut
+        var defaultEnd = new Date(startDate);
+        defaultEnd.setHours(startDate.getHours() + 1);
         document.getElementById('eventEnd').value = defaultEnd.toISOString().slice(0, 16);
     }
     
@@ -856,6 +900,18 @@ async function saveEvent() {
         return;
     }
     
+    // ✅ NOUVELLE VALIDATION : Vérifier que END >= START
+    if (end) {
+        var startDate = new Date(start);
+        var endDate = new Date(end);
+        
+        if (endDate < startDate) {
+            showToast('La date de fin doit être postérieure ou égale à la date de début', 'warning');
+            document.getElementById('eventEnd').focus();
+            return;
+        }
+    }
+    
     var endpoint = id ? 'handlers/UpdateEvent.ashx' : 'handlers/AddEvent.ashx';
     var payload = {
         id: id || null,
@@ -890,7 +946,7 @@ async function saveEvent() {
             closeEventModal();
             await loadEvents();
             await loadUpcomingEvents();
-            await loadStatistics(); // ✅ Ajouté
+            await loadStatistics();
         } else {
             showToast(data.message || 'Erreur lors de l\'enregistrement', 'error');
         }
@@ -1000,7 +1056,7 @@ function showConfirmDialog(title, message, confirmText = 'Confirmer', cancelText
             }
         });
 
-        // ✅ Afficher la modale avec la classe active
+        // Afficher la modale avec la classe active
         modal.style.display = 'flex';
         modal.classList.add('active');
         document.body.style.overflow = 'hidden';
@@ -1017,11 +1073,11 @@ function closeConfirmDeleteModal() {
 }
 
 // ============================================================
-// SUPPRESSION D'UN ÉVÉNEMENT - CORRIGÉE
+// SUPPRESSION D'UN ÉVÉNEMENT
 // ============================================================
 
 async function deleteEvent(e) {
-    // ✅ Empêcher le rechargement de la page
+    // Empêcher le rechargement de la page
     if (e) {
         e.preventDefault();
         e.stopPropagation();
@@ -1035,7 +1091,7 @@ async function deleteEvent(e) {
         return;
     }
     
-    // ✅ Utiliser showConfirmDialog
+    // Utiliser showConfirmDialog
     var confirmed = await showConfirmDialog(
         '⚠️ Supprimer l\'événement',
         'Voulez-vous vraiment supprimer cet événement ?\n\nCette action est irréversible.',
@@ -1114,8 +1170,20 @@ async function deleteEvent(e) {
     }
 }
 
+// ============================================================
+// MISE À JOUR DE LA DATE D'UN ÉVÉNEMENT
+// ============================================================
+
 async function updateEventDate(event) {
     try {
+        // ✅ Vérifier que END >= START avant la mise à jour
+        if (event.end && event.end < event.start) {
+            showToast('La date de fin ne peut pas être antérieure à la date de début', 'warning');
+            // Recharger pour rétablir l'état correct
+            await loadEvents();
+            return;
+        }
+        
         var response = await fetch('handlers/UpdateEvent.ashx', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -1279,6 +1347,11 @@ function showToast(message, type, duration) {
     
     var container = document.getElementById('toastContainer');
     if (!container) return;
+
+    // ✅ S'assurer que le conteneur a un z-index élevé
+    container.style.position = 'fixed';
+    container.style.zIndex = '99999'; // Supérieur aux modales
+    container.style.pointerEvents = 'none'; // Pour ne pas bloquer les clics
     
     var colors = {
         success: '#d4edda;color:#155724;border-left:4px solid #28a745',
