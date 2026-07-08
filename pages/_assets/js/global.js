@@ -904,6 +904,77 @@ function closeModal(id) {
     }
 }
 
+// ============================================
+// GESTION DU SÉLECTEUR DE LANGUE - VERSION .NET 4.0
+// ============================================
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🔍 Initialisation du sélecteur de langue...');
+    
+    // Récupérer tous les sélecteurs
+    var selectors = document.querySelectorAll('.language-selector');
+    console.log('📦 Sélecteurs trouvés:', selectors.length);
+    
+    for (var i = 0; i < selectors.length; i++) {
+        var selector = selectors[i];
+        var btn = selector.querySelector('.btn');
+        var dropdown = selector.querySelector('.dropdown-menu');
+        
+        if (btn && dropdown) {
+            console.log('✅ Sélecteur ' + i + ' initialisé');
+            
+            // Toggle du dropdown - utiliser une closure pour conserver la référence
+            (function(btnRef, dropdownRef) {
+                btnRef.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    dropdownRef.classList.toggle('show');
+                    console.log('📂 Dropdown toggled:', dropdownRef.classList.contains('show'));
+                });
+            })(btn, dropdown);
+        } else {
+            console.warn('⚠️ Sélecteur ' + i + ' incomplet:', {
+                btn: !!btn,
+                dropdown: !!dropdown
+            });
+        }
+    }
+    
+    // Fermer le dropdown si on clique ailleurs
+    document.addEventListener('click', function(e) {
+        var allDropdowns = document.querySelectorAll('.language-selector .dropdown-menu');
+        for (var i = 0; i < allDropdowns.length; i++) {
+            var dropdown = allDropdowns[i];
+            var parent = dropdown.parentNode;
+            if (parent && !parent.contains(e.target)) {
+                dropdown.classList.remove('show');
+            }
+        }
+    });
+    
+    // ✅ Fonction améliorée qui conserve les paramètres GET (compatible .NET 4.0)
+    window.setLanguage = function(culture) {
+        console.log('🌐 Changement de langue vers:', culture);
+        var currentUrl = window.location.href;
+        var separator = currentUrl.indexOf('?') > -1 ? '&' : '?';
+        var newUrl = currentUrl + separator + 'lang=' + culture;
+        
+        // Nettoyer les doublons de lang
+        newUrl = newUrl.replace(/([?&])lang=[^&]*&/g, '$1');
+        newUrl = newUrl.replace(/([?&])lang=[^&]*$/, '');
+        
+        // Réajouter la langue
+        if (newUrl.indexOf('?') > -1) {
+            newUrl = newUrl + '&lang=' + culture;
+        } else {
+            newUrl = newUrl + '?lang=' + culture;
+        }
+        
+        window.location.href = newUrl;
+    };
+    
+    console.log('✅ Sélecteur de langue initialisé');
+});
+
 // ============================================================================
 // EXPOSITION GLOBALE
 // ============================================================================

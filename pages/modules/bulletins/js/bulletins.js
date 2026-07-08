@@ -118,36 +118,6 @@ function hideLoading() {
 }
 
 // ============================================================
-// CONTEXTE UTILISATEUR
-// ============================================================
-
-function getUserContext() {
-    currentUser.role = document.getElementById('hfUserRole')?.value || '';
-    currentUser.userName = document.getElementById('hfUserName')?.value || '';
-    currentUser.professeurId = document.getElementById('hfProfesseurId')?.value || '';
-
-    const classesStr = document.getElementById('hfClassesAutorisees')?.value || '[]';
-    const matieresStr = document.getElementById('hfMatieresAutorisees')?.value || '[]';
-
-    try {
-        currentUser.classesAutorisees = JSON.parse(classesStr);
-        currentUser.matieresAutorisees = JSON.parse(matieresStr);
-    } catch (e) {
-        currentUser.classesAutorisees = [];
-        currentUser.matieresAutorisees = [];
-    }
-
-    const username = document.getElementById('navbarUsername');
-    if (username && currentUser.userName) username.textContent = currentUser.userName;
-
-    const profil = document.getElementById('profilUsername');
-    if (profil) {
-        const roles = { '0': 'Super Admin', '1': 'Admin', '3': 'Professeur', '4': 'Secrétaire', '5': 'Comptable' };
-        profil.textContent = 'Profil : ' + (roles[currentUser.role] || 'Utilisateur');
-    }
-}
-
-// ============================================================
 // CHARGEMENT DES MATIÈRES
 // ============================================================
 
@@ -771,6 +741,27 @@ function renderTable() {
     tbody.innerHTML = '';
     tbody.appendChild(fragment);
     attachEventListeners();
+}
+
+// ============================================================
+// CONTEXTE UTILISATEUR
+// ============================================================
+
+function getUserContext() {
+    currentUser.role = document.getElementById('hfUserRole')?.value || '';
+    currentUser.userName = document.getElementById('hfUserName')?.value || '';
+    currentUser.professeurId = document.getElementById('hfProfesseurId')?.value || '';
+
+    const classesStr = document.getElementById('hfClassesAutorisees')?.value || '[]';
+    const matieresStr = document.getElementById('hfMatieresAutorisees')?.value || '[]';
+
+    try {
+        currentUser.classesAutorisees = JSON.parse(classesStr);
+        currentUser.matieresAutorisees = JSON.parse(matieresStr);
+    } catch (e) {
+        currentUser.classesAutorisees = [];
+        currentUser.matieresAutorisees = [];
+    }
 }
 
 // ============================================================

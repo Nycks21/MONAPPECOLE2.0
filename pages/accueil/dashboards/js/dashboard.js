@@ -11,6 +11,8 @@
 let chartPresence = null;
 let chartDonut = null;
 let chartFrais = null;
+let currentDate = new Date();
+let calendarEvents = [];
 
 // URLs des APIs
 const API = {
@@ -20,7 +22,8 @@ const API = {
     reussite: 'handlers/GetReussite.ashx',
     frais: 'handlers/GetFrais.ashx',
     absences: 'handlers/GetAbsencesFrequentes.ashx',
-    activite: 'handlers/GetActivite.ashx'
+    activite: 'handlers/GetActivite.ashx',
+    events: 'handlers/GetEvents.ashx'
 };
 
 // Couleurs
@@ -33,7 +36,7 @@ const C = {
 };
 
 // ─────────────────────────────────────────────────────────────
-// CHARGEMENT PRINCIPAL - Version corrigée
+// CHARGEMENT PRINCIPAL
 // ─────────────────────────────────────────────────────────────
 function loadDashboard() {
     showSpinner();
@@ -66,7 +69,8 @@ function loadDashboard() {
         loadReussite(),
         loadFrais(),
         loadAbsencesFrequentes(),
-        loadActivite()
+        loadActivite(),
+        loadCalendarEvents()  // Nouveau: charger les événements
     ]).catch(error => {
         console.error('Erreur chargement dashboard:', error);
     }).finally(() => {
@@ -74,7 +78,7 @@ function loadDashboard() {
     });
     
     // Générer le calendrier
-    generateCalendar(new Date());
+    generateCalendar(currentDate);
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -391,7 +395,29 @@ async function loadActivite() {
 }
 
 // ─────────────────────────────────────────────────────────────
-// 8. CALENDRIER
+// 8. ÉVÉNEMENTS DU CALENDRIER (NOUVEAU)
+// ─────────────────────────────────────────────────────────────
+async function loadCalendarEvents() {
+    try {
+        const response = await fetch(API.events);
+        const data = await response.json();
+        
+        if (data.success && data.events) {
+            calendarEvents = data.events;
+            // Re-générer le calendrier avec les événements
+            generateCalendar(currentDate);
+        } else {
+            console.warn('Aucun événement chargé');
+            calendarEvents = [];
+        }
+    } catch (error) {
+        console.error('Erreur chargement événements:', error);
+        calendarEvents = [];
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// 9. CALENDRIER (AMÉLIORÉ AVEC ÉVÉNEMENTS)
 // ─────────────────────────────────────────────────────────────
 function generateCalendar(date) {
     const grid = document.getElementById('calendarGrid');
@@ -411,41 +437,184 @@ function generateCalendar(date) {
     
     for (let i = 0; i < startOffset; i++) html += '<div class="cal-d empty"></div>';
     
-    // Événements prédéfinis (à remplacer par des données réelles)
-    const eventDays = [5, 12, 20, 28];
+    // Récupérer les événements pour le mois en cours
+    const monthEvents = calendarEvents.filter(e => {
+        if (!e.start) return false;
+        const eventDate = new Date(e.start);
+        return eventDate.getFullYear() === year && eventDate.getMonth() === month;
+    });
+    
+    // Grouper les événements par jour
+    const eventsByDay = {};
+    monthEvents.forEach(e => {
+        const eventDate = new Date(e.start);
+        const day = eventDate.getDate();
+        if (!eventsByDay[day]) eventsByDay[day] = [];
+        eventsByDay[day].push(e);
+    });
     
     for (let d = 1; d <= lastDate; d++) {
         const isToday = d === today.getDate() && month === today.getMonth() && year === today.getFullYear();
-        const isEvent = eventDays.includes(d);
+        const hasEvent = eventsByDay[d] && eventsByDay[d].length > 0;
+        const eventColor = hasEvent ? eventsByDay[d][0].color || C.terra : null;
+        
         let cls = 'cal-d';
         if (isToday) cls += ' today';
-        if (isEvent) cls += ' event';
-        html += `<div class="${cls}" onclick="selectDate(${d})">${d}</div>`;
+        if (hasEvent) cls += ' event';
+        
+        // Ajouter un petit indicateur de couleur
+        const dot = hasEvent ? `<span class="cal-dot" style="background:${eventColor}"></span>` : '';
+        
+        html += `<div class="${cls}" onclick="selectDate(${d})" title="${hasEvent ? eventsByDay[d].map(e => e.title).join(', ') : ''}">
+            ${d}${dot}
+        </div>`;
     }
     
     grid.innerHTML = html;
     
-    // Événements du mois
-    const eventList = document.getElementById('eventList');
-    if (eventList) {
-        const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
-        const events = [
-            { jour: 5, desc: 'Conseil de classe' },
-            { jour: 12, desc: 'Remise des bulletins' },
-            { jour: 20, desc: 'Réunion parents' },
-            { jour: 28, desc: 'Sortie pédagogique' }
-        ];
-        eventList.innerHTML = events.map(e => `
-            <div class="event-list-item">
-                <span class="event-date">${e.jour} ${monthNames[month]}</span>
-                <span class="event-desc">— ${e.desc}</span>
-            </div>
-        `).join('');
+    // Mettre à jour la liste des événements
+    updateEventList(monthEvents);
+    
+    // Mettre à jour le titre du mois
+    const monthNames = ['Janvier', 'Février', 'Mars', 'Avril', 'Mai', 'Juin', 'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'];
+    const monthTitle = document.getElementById('calendarMonthTitle');
+    if (monthTitle) {
+        monthTitle.textContent = monthNames[month] + ' ' + year;
     }
 }
 
 // ─────────────────────────────────────────────────────────────
-// 9. JAUGES
+// 10. LISTE DES ÉVÉNEMENTS
+// ─────────────────────────────────────────────────────────────
+function updateEventList(events) {
+    const eventList = document.getElementById('eventList');
+    if (!eventList) return;
+    
+    if (!events || events.length === 0) {
+        eventList.innerHTML = '<div class="event-empty">Aucun événement ce mois</div>';
+        return;
+    }
+    
+    // Trier par date
+    const sorted = [...events].sort((a, b) => {
+        if (!a.start) return 1;
+        if (!b.start) return -1;
+        return new Date(a.start) - new Date(b.start);
+    });
+    
+    // Limiter à 5 événements pour ne pas surcharger
+    const displayEvents = sorted.slice(0, 8);
+    
+    eventList.innerHTML = displayEvents.map(e => {
+        const eventDate = new Date(e.start);
+        const day = eventDate.getDate();
+        const monthNames = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Août', 'Sep', 'Oct', 'Nov', 'Déc'];
+        const month = monthNames[eventDate.getMonth()];
+        const color = e.color || C.terra;
+        
+        // Déterminer l'icône selon le type
+        let icon = 'fa-calendar-alt';
+        if (e.type === 'cours') icon = 'fa-chalkboard-teacher';
+        else if (e.type === 'examen') icon = 'fa-file-alt';
+        else if (e.type === 'reunion') icon = 'fa-users';
+        else if (e.type === 'sortie') icon = 'fa-bus';
+        
+        return `
+            <div class="event-list-item" onclick="showEventDetail('${escapeHtml(e.id)}')" style="cursor:pointer;">
+                <div class="event-color-indicator" style="background:${color};width:4px;flex-shrink:0;border-radius:2px;"></div>
+                <div style="flex:1;min-width:0;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <span class="event-desc" style="font-size:13px;font-weight:500;color:#1a1a1a;">
+                            <i class="fas ${icon}" style="color:${color};margin-right:6px;font-size:11px;"></i>
+                            ${escapeHtml(e.title)}
+                        </span>
+                        <span class="event-date" style="font-size:11px;color:#6c757d;white-space:nowrap;margin-left:8px;">
+                            ${day} ${month}
+                            ${e.heureDebut ? ' à ' + e.heureDebut : ''}
+                        </span>
+                    </div>
+                    ${e.description ? `<div style="font-size:11px;color:#6c757d;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(e.description)}</div>` : ''}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// ─────────────────────────────────────────────────────────────
+// 11. NAVIGATION DU CALENDRIER
+// ─────────────────────────────────────────────────────────────
+function prevMonth() {
+    currentDate.setMonth(currentDate.getMonth() - 1);
+    generateCalendar(currentDate);
+    return false;
+}
+
+function nextMonth() {
+    currentDate.setMonth(currentDate.getMonth() + 1);
+    generateCalendar(currentDate);
+    return false;
+}
+
+function todayMonth() {
+    currentDate = new Date();
+    generateCalendar(currentDate);
+    return false;
+}
+
+// ─────────────────────────────────────────────────────────────
+// 12. DÉTAIL D'UN ÉVÉNEMENT
+// ─────────────────────────────────────────────────────────────
+function showEventDetail(eventId) {
+    const event = calendarEvents.find(e => e.id === eventId);
+    if (!event) {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire('Information', 'Événement non trouvé', 'info');
+        }
+        return;
+    }
+    
+    const eventDate = new Date(event.start);
+    const dateStr = eventDate.toLocaleDateString('fr-FR', { 
+        weekday: 'long', 
+        day: 'numeric', 
+        month: 'long', 
+        year: 'numeric' 
+    });
+    
+    const typeLabels = {
+        'cours': 'Cours',
+        'examen': 'Examen',
+        'reunion': 'Réunion',
+        'sortie': 'Sortie',
+        'autre': 'Autre'
+    };
+    
+    let details = `
+        <div style="text-align:left;font-size:14px;line-height:1.6;">
+            <p><strong>📅 Date :</strong> ${dateStr}</p>
+            ${event.heureDebut ? `<p><strong>⏰ Heure :</strong> ${event.heureDebut}${event.heureFin ? ' - ' + event.heureFin : ''}</p>` : ''}
+            ${event.type ? `<p><strong>📂 Type :</strong> ${typeLabels[event.type] || event.type}</p>` : ''}
+            ${event.location ? `<p><strong>📍 Lieu :</strong> ${escapeHtml(event.location)}</p>` : ''}
+            ${event.description ? `<p><strong>📝 Description :</strong><br>${escapeHtml(event.description)}</p>` : ''}
+            ${event.url ? `<p><strong>🔗 Lien :</strong> <a href="${escapeHtml(event.url)}" target="_blank">${escapeHtml(event.url)}</a></p>` : ''}
+        </div>
+    `;
+    
+    if (typeof Swal !== 'undefined') {
+        Swal.fire({
+            title: event.title || 'Événement',
+            html: details,
+            icon: 'info',
+            confirmButtonText: 'Fermer',
+            width: '500px'
+        });
+    } else {
+        alert('Événement: ' + event.title + '\nDate: ' + dateStr);
+    }
+}
+
+// ─────────────────────────────────────────────────────────────
+// 13. JAUGES
 // ─────────────────────────────────────────────────────────────
 function updateGauges(items) {
     const container = document.getElementById('gaugeContainer');
@@ -562,10 +731,29 @@ window.showStudentDetail = function(name) {
 };
 
 window.selectDate = function(day) {
+    // Afficher les événements du jour sélectionné
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    const dayEvents = calendarEvents.filter(e => {
+        if (!e.start) return false;
+        const eventDate = new Date(e.start);
+        return eventDate.getFullYear() === year && 
+               eventDate.getMonth() === month && 
+               eventDate.getDate() === day;
+    });
+    
+    if (dayEvents.length === 0) {
+        if (typeof Swal !== 'undefined') {
+            Swal.fire('Aucun événement', `Aucun événement prévu le ${day}/${month+1}/${year}`, 'info');
+        }
+        return;
+    }
+    
+    const eventList = dayEvents.map(e => `• ${escapeHtml(e.title)}${e.heureDebut ? ' (' + e.heureDebut + ')' : ''}`).join('\n');
     if (typeof Swal !== 'undefined') {
-        Swal.fire('Date', `Vous avez sélectionné le ${day}`, 'info');
+        Swal.fire(`Événements du ${day}/${month+1}/${year}`, eventList, 'info');
     } else {
-        alert('Date sélectionnée: ' + day);
+        alert(`Événements du ${day}/${month+1}/${year}:\n${eventList}`);
     }
 };
 
@@ -580,6 +768,12 @@ window.showKPIDetail = function(type) {
         Swal.fire('Détail', titles[type] || 'Information', 'info');
     }
 };
+
+// Fonctions de navigation du calendrier (exposées globalement)
+window.prevMonth = prevMonth;
+window.nextMonth = nextMonth;
+window.todayMonth = todayMonth;
+window.showEventDetail = showEventDetail;
 
 // Fonctions modales globales
 window.closeModal = function() {

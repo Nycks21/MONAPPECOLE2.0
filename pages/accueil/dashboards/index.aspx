@@ -1,11 +1,11 @@
-﻿﻿<%@ Page Language="C#" AutoEventWireup="true" CodeFile="index.cs" Inherits="index" %>
+﻿﻿<%@ Page Language="C#" AutoEventWireup="true" CodeFile="index.cs" Inherits="index" UICulture="Auto" Culture="Auto"%>
     <!DOCTYPE html>
     <html lang="fr">
 
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Tableau de bord — Gestion Scolaire</title>
+        <title><%= LocalizationHelper.GetString("Dashboard") %> — Gestion Scolaire</title>
 
         <link rel="stylesheet" href="../../_assets/css/all.min.css?v=<%=AuthHelper.Version %>">
         <link rel="stylesheet" href="../../_assets/css/fontawesome.css?v=<%=AuthHelper.Version %>">
@@ -31,17 +31,6 @@
                         </a>
 
                         <div class="sidebar">
-                            <div class="user-profile-nav">
-                                <div class="user-avatar">
-                                    <i class="fas fa-user-tie"></i>
-                                    <span class="status-indicator"></span>
-                                </div>
-                                <div class="user-info">
-                                    <span id="profilUsername" class="user-role">Profile :</span>
-                                    <span id="navbarUsername" class="user-name">-</span>
-                                </div>
-                            </div>
-
                             <!-- GÉNÉRATION AUTOMATIQUE DES MENUS -->
                             <%= AuthHelper.RenderMenuHTML() %>
                         </div>
@@ -260,23 +249,44 @@
                                     <div class="row mt-1">
                                         <div class="col-12">
                                             <div class="dash-card">
+                                                <!-- EN-TÊTE AVEC LE TITRE UNIQUEMENT -->
                                                 <div class="dash-card-head">
-                                                    <span class="dash-card-title"><span class="dot-terra"></span>Agenda
-                                                        scolaire</span>
-                                                    <div class="cal-legend">
-                                                        <span class="leg-item"><span class="leg-sq"
-                                                                style="background:var(--forest)"></span>Aujourd'hui</span>
-                                                        <span class="leg-item"><span class="leg-sq"
-                                                                style="background:var(--terra)"></span>Événement</span>
-                                                    </div>
+                                                    <span class="dash-card-title">
+                                                        <span class="dot-terra"></span>Agenda scolaire
+                                                    </span>
                                                 </div>
-                                                <div class="dash-card-body1"
+
+                                                <!-- CORPS AVEC CALENDRIER + LISTE ÉVÉNEMENTS -->
+                                                <div class="dash-card-body2"
                                                     style="display:flex;gap:30px;align-items:flex-start;flex-wrap:wrap;">
-                                                    <div style="flex:0 0 260px;max-width:260px;">
-                                                        <div id="calendarGrid" class="mini-cal" style="gap:4px;"></div>
+                                                    <!-- PARTIE GAUCHE : CALENDRIER -->
+                                                    <div style="flex:0 0 280px;max-width:280px;">
+                                                        <!-- CONTROLES DE NAVIGATION AU-DESSUS DU CALENDRIER -->
+                                                        <div class="cal-legend">
+                                                            <button type="button" class="btn btn-sm btn-outline-secondary"
+                                                                onclick="prevMonth()" title="Mois précédent">
+                                                                <i class="fas fa-chevron-left"></i>
+                                                            </button>
+                                                            <span id="calendarMonthTitle"
+                                                                class="calendar-month-title">Janvier 2026</span>
+                                                            <button type="button" class="btn btn-sm btn-outline-secondary"
+                                                                onclick="nextMonth()" title="Mois suivant">
+                                                                <i class="fas fa-chevron-right"></i>
+                                                            </button>
+                                                            <button type="button" class="btn btn-sm btn-outline-secondary"
+                                                                onclick="todayMonth()" title="Aujourd'hui">
+                                                                <i class="fas fa-calendar-day"></i>
+                                                            </button>
+                                                        </div>
+                                                        <!-- GRILLE DU CALENDRIER -->
+                                                        <div id="calendarGrid" class="mini-cal"></div>
                                                     </div>
+
+                                                    <!-- PARTIE DROITE : LISTE DES ÉVÉNEMENTS -->
                                                     <div style="flex:1;min-width:200px;">
-                                                        <div class="event-list" id="eventList"></div>
+                                                        <div class="event-list" id="eventList">
+                                                            <div class="event-empty">Chargement des événements...</div>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
@@ -390,6 +400,7 @@
             <script src="../../_assets/js/chart.umd.min.js?v=<%=AuthHelper.Version %>"></script>
             <script src="js/dashboard.js?v=<%=AuthHelper.Version %>"></script>
             <script src="../../_assets/js/global.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="../../_assets/js/sweetalert2.all.min.js?v=<%=AuthHelper.Version %>"></script>
         </form>
     </body>
 

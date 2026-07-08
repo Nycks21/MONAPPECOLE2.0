@@ -31,24 +31,27 @@ public static class AuthHelper
         }
     }
 
-    // Définition de tous les menus disponibles
+    // ============================================================
+    // DÉFINITION DES MENUS - AVEC CLÉS DE TRADUCTION
+    // ============================================================
+
     public static readonly List<MenuItem> AllMenus = new List<MenuItem>
     {
         new MenuItem { Code = "dashboard", Text = "Dashboard", Url = "../../accueil/dashboards/index.aspx", Icon = "fas fa-chalkboard", Section = "Accueil", Order = 1 },
-        new MenuItem { Code = "eleves", Text = "Liste des élèves", Url = "../../modules/eleves/eleves.aspx", Icon = "fas fa-users", Section = "Modules", Order = 2 },
-        new MenuItem { Code = "absences", Text = "Retards & Absences", Url = "../../modules/absences/absences.aspx", Icon = "fas fa-calendar-times", Section = "Modules", Order = 3 },
-        new MenuItem { Code = "bulletins", Text = "Bulletins", Url = "../../modules/bulletins/bulletins.aspx", Icon = "fas fa-file-alt", Section = "Modules", Order = 4 },
+        new MenuItem { Code = "eleves", Text = "Students", Url = "../../modules/eleves/eleves.aspx", Icon = "fas fa-users", Section = "Modules", Order = 2 },
+        new MenuItem { Code = "absences", Text = "Absences", Url = "../../modules/absences/absences.aspx", Icon = "fas fa-calendar-times", Section = "Modules", Order = 3 },
+        new MenuItem { Code = "bulletins", Text = "Grades", Url = "../../modules/bulletins/bulletins.aspx", Icon = "fas fa-file-alt", Section = "Modules", Order = 4 },
         new MenuItem { Code = "agenda", Text = "Agenda", Url = "../../modules/agenda/agenda.aspx", Icon = "fas fa-calendar-alt", Section = "Modules", Order = 5 },
-        new MenuItem { Code = "emplois", Text = "Emplois du temps", Url = "../../modules/emplois/emplois.aspx", Icon = "fas fa-clock", Section = "Modules", Order = 6 },
-        new MenuItem { Code = "frais", Text = "Frais scolaires", Url = "../../modules/frais/frais.aspx", Icon = "fas fa-money-bill-wave", Section = "Ecolage", Order = 7 },
-        new MenuItem { Code = "niveaux", Text = "Niveau", Url = "../../parametres/niveaux/niveaux.aspx", Icon = "fas fa-layer-group", Section = "Paramètres", Order = 8 },
-        new MenuItem { Code = "salles", Text = "Salle", Url = "../../parametres/salles/salles.aspx", Icon = "fas fa-door-open", Section = "Paramètres", Order = 9 },
-        new MenuItem { Code = "classes", Text = "Classes", Url = "../../parametres/classes/classes.aspx", Icon = "fas fa-folder", Section = "Paramètres", Order = 10 },
-        new MenuItem { Code = "matieres", Text = "Matières", Url = "../../parametres/matieres/matieres.aspx", Icon = "fas fa-book", Section = "Paramètres", Order = 11 },
-        new MenuItem { Code = "importation", Text = "Importation élèves", Url = "../../administrations/utilitaires/utilitaires.aspx", Icon = "fas fa-cogs", Section = "Utilitaires", Order = 12 },
-        new MenuItem { Code = "annees", Text = "Années", Url = "../../administrations/annee/annee.aspx", Icon = "fas fa-calendar-alt", Section = "Administrations", Order = 13 },
-        new MenuItem { Code = "utilisateurs", Text = "Utilisateur", Url = "../../administrations/utilisateur/utilisateur.aspx", Icon = "fas fa-user", Section = "Administrations", Order = 14 },
-        new MenuItem { Code = "requetes", Text = "Requêtes SQL", Url = "../../administrations/requete/requetes.aspx", Icon = "fas fa-database", Section = "Administrations", Order = 15 }
+        new MenuItem { Code = "emplois", Text = "Schedule", Url = "../../modules/emplois/emplois.aspx", Icon = "fas fa-clock", Section = "Modules", Order = 6 },
+        new MenuItem { Code = "frais", Text = "Fees", Url = "../../modules/frais/frais.aspx", Icon = "fas fa-money-bill-wave", Section = "Ecolage", Order = 7 },
+        new MenuItem { Code = "niveaux", Text = "Levels", Url = "../../parametres/niveaux/niveaux.aspx", Icon = "fas fa-layer-group", Section = "Settings", Order = 8 },
+        new MenuItem { Code = "salles", Text = "Rooms", Url = "../../parametres/salles/salles.aspx", Icon = "fas fa-door-open", Section = "Settings", Order = 9 },
+        new MenuItem { Code = "classes", Text = "Classes", Url = "../../parametres/classes/classes.aspx", Icon = "fas fa-folder", Section = "Settings", Order = 10 },
+        new MenuItem { Code = "matieres", Text = "Subjects", Url = "../../parametres/matieres/matieres.aspx", Icon = "fas fa-book", Section = "Settings", Order = 11 },
+        new MenuItem { Code = "importation", Text = "ImportStudents", Url = "../../administrations/utilitaires/utilitaires.aspx", Icon = "fas fa-cogs", Section = "Utilities", Order = 12 },
+        new MenuItem { Code = "annees", Text = "SchoolYears", Url = "../../administrations/annee/annee.aspx", Icon = "fas fa-calendar-alt", Section = "Administration", Order = 13 },
+        new MenuItem { Code = "utilisateurs", Text = "Users", Url = "../../administrations/utilisateur/utilisateur.aspx", Icon = "fas fa-user", Section = "Administration", Order = 14 },
+        new MenuItem { Code = "requetes", Text = "SQLQueries", Url = "../../administrations/requete/requetes.aspx", Icon = "fas fa-database", Section = "Administration", Order = 15 }
     };
 
     // ============================================================
@@ -242,7 +245,63 @@ public static class AuthHelper
     }
 
     // ============================================================
-    // GÉNÉRATION DU MENU HTML
+    // MULTI-LANGAGE - TRADUCTIONS
+    // ============================================================
+
+    public static string T(string key)
+    {
+        return LocalizationHelper.GetString(key);
+    }
+
+    public static string T(string key, params object[] args)
+    {
+        return LocalizationHelper.GetString(key, args);
+    }
+
+    public static string RenderLanguageSelector()
+    {
+        return LocalizationHelper.RenderLanguageSelector();
+    }
+
+    // ============================================================
+    // GÉNÉRATION DU PROFIL UTILISATEUR
+    // ============================================================
+
+    public static string RenderUserProfileHTML()
+    {
+        try
+        {
+            string userName = GetUserName();
+            string roleName = GetRoleName();
+
+            if (string.IsNullOrEmpty(userName))
+            {
+                userName = T("User");
+            }
+
+            var html = new StringBuilder();
+            html.Append(@"
+            <div class=""user-profile-nav"">
+                <div class=""user-avatar"">
+                    <i class=""fas fa-user-tie""></i>
+                    <span class=""status-indicator""></span>
+                </div>
+                <div class=""user-info"">
+                    <span id=""profilUsername"" class=""user-role"">" + roleName + @"</span>
+                    <span id=""navbarUsername"" class=""user-name"">" + userName + @"</span>
+                </div>
+            </div>");
+
+            return html.ToString();
+        }
+        catch (Exception ex)
+        {
+            return "<div style='color:red;padding:10px;'>Erreur profil: " + ex.Message + "</div>";
+        }
+    }
+
+    // ============================================================
+    // GÉNÉRATION DU MENU HTML (AVEC PROFIL INTÉGRÉ ET TRADUCTIONS)
     // ============================================================
 
     public static string RenderMenuHTML()
@@ -253,38 +312,49 @@ public static class AuthHelper
 
             if (menus == null || menus.Count == 0)
             {
-                return "<div class='nav-section' style='padding:15px;text-align:center;'>Aucun menu disponible<br><small>Contactez l'administrateur</small></div>";
+                return "<div class='nav-section' style='padding:15px;text-align:center;'>" + 
+                    T("NoData") + 
+                    "<br><small>" + T("ContactAdmin") + "</small></div>";
             }
 
             var sections = new Dictionary<string, List<MenuItem>>();
 
             foreach (var menu in menus)
             {
-                if (!sections.ContainsKey(menu.Section))
+                // Traduire le nom de la section
+                string sectionKey = menu.Section;
+                if (!sections.ContainsKey(sectionKey))
                 {
-                    sections[menu.Section] = new List<MenuItem>();
+                    sections[sectionKey] = new List<MenuItem>();
                 }
-                sections[menu.Section].Add(menu);
+                sections[sectionKey].Add(menu);
             }
 
             var html = new StringBuilder();
+
+            // ========== PROFIL UTILISATEUR ==========
+            html.Append(RenderUserProfileHTML());
+
+            // ========== MENUS ==========
             html.Append(@"<ul class=""nav-pills"">");
 
             foreach (var section in sections)
             {
+                string sectionName = T(section.Key);
                 html.AppendFormat(@"
-                <li class=""nav-item"">
-                    <div class=""nav-section"">{0}</div>", section.Key);
+                    <li class=""nav-item"">
+                        <div class=""nav-section"">{0}</div>", sectionName);
 
                 foreach (var menu in section.Value)
                 {
+                    string menuText = T(menu.Text);
                     html.AppendFormat(@"
-                    <a href=""{0}"" class=""nav-link"" data-menu=""{1}"">
-                        <div style=""width:30px; text-align:center; margin-right:10px;"">
-                            <i class=""{2}""></i>
-                        </div>
-                        <span>{3}</span>
-                    </a>", menu.Url, menu.Code, menu.Icon, menu.Text);
+                        <a href=""{0}"" class=""nav-link"" data-menu=""{1}"">
+                            <div style=""width:30px; text-align:center; margin-right:10px;"">
+                                <i class=""{2}""></i>
+                            </div>
+                            <span>{3}</span>
+                        </a>", menu.Url, menu.Code, menu.Icon, menuText);
                 }
 
                 html.Append(@"</li>");
@@ -299,7 +369,6 @@ public static class AuthHelper
         }
     }
 
-
     // ============================================================
     // GÉNÉRATION DE LA TOPBAR HTML
     // ============================================================
@@ -310,10 +379,10 @@ public static class AuthHelper
         {
             var html = new StringBuilder();
 
-            // ✅ Déterminer si nous sommes sur la page Utilisateurs (sans l'opérateur ?.)
+            // ✅ Déterminer si nous sommes sur la page Utilisateurs
             string currentPage = "";
             bool isUsersPage = false;
-            
+
             try
             {
                 if (HttpContext.Current != null && HttpContext.Current.Request != null && HttpContext.Current.Request.Url != null)
@@ -322,88 +391,104 @@ public static class AuthHelper
                 }
             }
             catch { }
-            
+
             if (!string.IsNullOrEmpty(currentPage))
             {
                 isUsersPage = currentPage.Contains("utilisateur.aspx") || currentPage.Contains("users.aspx");
             }
 
             html.Append(@"
-            <nav class=""main-header"">
-                <ul class=""navbar-nav"">
-                    <li class=""nav-item"">
-                        <a class=""nav-link"" id=""menuToggle"" role=""button"">
-                            <i class=""fas fa-bars""></i>
-                        </a>
-                    </li>
-                </ul>
-                <ul class=""navbar-nav"">
-                    <li class=""nav-item"">
-                        <span><i class=""fas fa-moon""></i> Mode sombre</span>
-                        <label class=""switch"">
-                            <input type=""checkbox"" id=""toggleDarkMode"">
-                            <span class=""slider round""></span>
-                        </label>
-                    </li>");
+        <nav class=""main-header"">
+            <ul class=""navbar-nav"">
+                <li class=""nav-item"">
+                    <a class=""nav-link"" id=""menuToggle"" role=""button"">
+                        <i class=""fas fa-bars""></i>
+                    </a>
+                </li>
+            </ul>
+            <ul class=""navbar-nav"">");
 
-            // Notifications (uniquement si l'utilisateur a les droits)
+            // ========== SÉLECTEUR DE LANGUE ==========
+            string langSelector = RenderLanguageSelector();
+            if (!string.IsNullOrEmpty(langSelector))
+            {
+                html.Append(@"
+                <li class=""nav-item language-selector-wrapper"" style=""display:flex;align-items:center;margin:0 5px;""><span><i class=""fas fa-globe""></i></span>");
+                html.Append(langSelector);
+                html.Append(@"</li>");
+            }
+
+            // ========== MODE SOMBRE ==========
+            html.Append(@"
+                <li class=""nav-item"">
+                    <span style=""display:flex;align-items:center;gap:6px;font-size:13px;"">
+                        <i class=""fas fa-moon""></i>
+                        <span style=""font-size:12px;"">" + T("DarkMode") + @"</span>
+                    </span>
+                    <label class=""switch"">
+                        <input type=""checkbox"" id=""toggleDarkMode"">
+                        <span class=""slider round""></span>
+                    </label>
+                </li>");
+
+            // ========== NOTIFICATIONS ==========
             if (HasPermission("dashboard"))
             {
                 html.Append(@"
-                    <li class=""nav-item"">
-                        <a class=""nav-link"" id=""notifToggle"" title=""Notifications"">
-                            <i class=""fas fa-bell""></i>
-                            <span class=""badge-notif"" id=""badgeNotif"">3</span>
+                <li class=""nav-item"">
+                    <a class=""nav-link"" id=""notifToggle"" title=""" + T("Notifications") + @""" style=""position:relative;"">
+                        <i class=""fas fa-bell""></i>
+                        <span class=""badge-notif"" id=""badgeNotif"">3</span>
+                    </a>
+                    <div class=""dropdown-menu"" id=""notifDropdown"">
+                        <span class=""dropdown-header"">3 " + T("Notifications") + @"</span>
+                        <div class=""dropdown-divider""></div>
+                        <a href=""#"" class=""dropdown-item"">
+                            <i class=""fas fa-user-plus text-success mr-2""></i> " + T("NewStudent") + @"
+                            <span style=""float: right; color: #6c757d; font-size: 11px;"">" + T("TimeAgo") + @" 23 min</span>
                         </a>
-                        <div class=""dropdown-menu"" id=""notifDropdown"">
-                            <span class=""dropdown-header"">3 notifications</span>
-                            <div class=""dropdown-divider""></div>
-                            <a href=""#"" class=""dropdown-item"">
-                                <i class=""fas fa-user-plus text-success mr-2""></i> Nouvel élève inscrit
-                                <span style=""float: right; color: #6c757d; font-size: 11px;"">Il y a 23 min</span>
-                            </a>
-                            <a href=""#"" class=""dropdown-item"">
-                                <i class=""fas fa-exclamation-circle text-danger mr-2""></i> Absence signalée
-                                <span style=""float: right; color: #6c757d; font-size: 11px;"">Il y a 1h</span>
-                            </a>
-                            <a href=""#"" class=""dropdown-item"">
-                                <i class=""fas fa-money-bill text-warning mr-2""></i> Paiement reçu
-                                <span style=""float: right; color: #6c757d; font-size: 11px;"">Il y a 2h</span>
-                            </a>
-                        </div>
-                    </li>");
+                        <a href=""#"" class=""dropdown-item"">
+                            <i class=""fas fa-exclamation-circle text-danger mr-2""></i> " + T("AbsenceReported") + @"
+                            <span style=""float: right; color: #6c757d; font-size: 11px;"">" + T("TimeAgo") + @" 1h</span>
+                        </a>
+                        <a href=""#"" class=""dropdown-item"">
+                            <i class=""fas fa-money-bill text-warning mr-2""></i> " + T("PaymentReceived") + @"
+                            <span style=""float: right; color: #6c757d; font-size: 11px;"">" + T("TimeAgo") + @" 2h</span>
+                        </a>
+                    </div>
+                </li>");
             }
 
-            // Déconnexion
+            // ========== DÉCONNEXION ==========
             html.Append(@"
-                    <li class=""nav-item"">
-                        <a href=""../../../auth/Logout.aspx"" class=""nav-link"" title=""Se déconnecter"">
-                            <i class=""fas fa-sign-out-alt""></i>
-                        </a>
-                    </li>");
+                <li class=""nav-item"">
+                    <a href=""../../../auth/Logout.aspx"" class=""nav-link"" title=""" + T("Logout") + @""">
+                        <i class=""fas fa-sign-out-alt""></i>
+                    </a>
+                </li>");
 
-            // Plein écran
+            // ========== PLEIN ÉCRAN ==========
             html.Append(@"
-                    <li class=""nav-item"">
-                        <a class=""nav-link"" id=""fullscreenToggle"" title=""Plein écran"">
-                            <i class=""fas fa-expand-arrows-alt""></i>
-                        </a>
-                    </li>");
+                <li class=""nav-item"">
+                    <a class=""nav-link"" id=""fullscreenToggle"" title=""" + T("Fullscreen") + @""">
+                        <i class=""fas fa-expand-arrows-alt""></i>
+                    </a>
+                </li>");
 
-            // ✅ Paramètres - UNIQUEMENT sur la page Utilisateurs ET si l'utilisateur a les droits
+            // ========== PARAMÈTRES ==========
             if (isUsersPage && HasPermission("utilisateurs"))
             {
                 html.Append(@"
-                    <li class=""nav-item"">
-                        <a class=""nav-link"" id=""toggleSidebarBtn"" title=""Paramètres"" style=""cursor: pointer;"">
-                            <i class=""fas fa-cog""></i>
-                        </a>
-                    </li>");
+                <li class=""nav-item"">
+                    <a class=""nav-link"" id=""toggleSidebarBtn"" title=""" + T("Settings") + @""" style=""cursor: pointer;"">
+                        <i class=""fas fa-cog""></i>
+                    </a>
+                </li>");
             }
 
             html.Append(@"
-                </ul>
-            </nav>");
+            </ul>
+        </nav>");
 
             return html.ToString();
         }
@@ -429,7 +514,7 @@ public static class AuthHelper
                 <div class=""p-3"">
                     <div style=""display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #4a5259; padding-bottom: 10px; margin-bottom: 15px;"">
                         <h5 style=""margin: 0; color: #fff;"">
-                            <i class=""fas fa-cog""></i> Paramètres
+                            <i class=""fas fa-cog""></i> " + T("Settings") + @"
                         </h5>
                         <button type=""button"" id=""closeSidebarBtn""
                             style=""background: none; border: none; color: #fff; font-size: 20px; cursor: pointer;"">
@@ -438,12 +523,12 @@ public static class AuthHelper
                     </div>
 
                     <div id=""licenceExpirationInfo"" class=""mb-3"" style=""color: #adb5bd; font-size: 0.85em;"">
-                        <i class=""fas fa-calendar-alt""></i> Licence expirée le :
+                        <i class=""fas fa-calendar-alt""></i> " + T("LicenceExpires") + @" :
                         <strong id=""expirationDateStr"">" + GetExpirationDateString() + @"</strong>
                     </div>
 
                     <div class=""mb-3"" style=""color: #adb5bd; font-size: 0.85em;"">
-                        <i class=""fas fa-users""></i> Utilisateur max :
+                        <i class=""fas fa-users""></i> " + T("MaxUsers") + @" :
                         <strong id=""maxUsersCount"">" + GetMaxUsersString() + @"</strong>
                     </div>
 
@@ -458,21 +543,21 @@ public static class AuthHelper
                             <button type=""button"" id=""btnCheckUpdates"" class=""btn btn-primary""
                                 style=""width: 100%; padding: 10px 15px; text-align: center;""
                                 onclick=""checkForUpdates()"">
-                                <i class=""fas fa-sync-alt""></i> Vérifier les MAJ
+                                <i class=""fas fa-sync-alt""></i> " + T("CheckUpdates") + @"
                             </button>
                         </div>
                         <div style=""width: 100%;"">
                             <button type=""button"" id=""btnBackup"" class=""btn btn-success""
                                 style=""width: 100%; padding: 10px 15px; text-align: center;""
                                 onclick=""backupDatabase()"">
-                                <i class=""fas fa-database""></i> Sauvegarde
+                                <i class=""fas fa-database""></i> " + T("Backup") + @"
                             </button>
                         </div>
                         <div style=""width: 100%;"">
                             <button type=""button"" id=""btnRestore"" class=""btn btn-warning""
                                 style=""width: 100%; padding: 10px 15px; text-align: center;""
                                 onclick=""openRestoreModal()"">
-                                <i class=""fas fa-undo-alt""></i> Restitution
+                                <i class=""fas fa-undo-alt""></i> " + T("Restore") + @"
                             </button>
                         </div>
                     </div>
@@ -626,12 +711,12 @@ public static class AuthHelper
 
         switch (roleId.Value)
         {
-            case 0: return "Super Administrateur";
-            case 1: return "Administrateur";
-            case 3: return "Professeur";
-            case 4: return "Secrétaire";
-            case 5: return "Comptable";
-            default: return "Utilisateur";
+            case 0: return T("SuperAdmin");
+            case 1: return T("Admin");
+            case 3: return T("Teacher");
+            case 4: return T("Secretary");
+            case 5: return T("Accountant");
+            default: return T("User");
         }
     }
 
@@ -732,11 +817,11 @@ public static class AuthHelper
         }
         else if (status == LicenceStatus.Manquante)
         {
-            return "Licence manquante";
+            return T("LicenceMissing");
         }
         else
         {
-            return "Licence invalide";
+            return T("LicenceInvalid");
         }
     }
 
@@ -809,12 +894,12 @@ public static class AuthHelper
         }
         else if (status == LicenceStatus.Manquante)
         {
-            expirationText = "Licence manquante";
+            expirationText = T("LicenceMissing");
             maxUsersText = "0";
         }
         else
         {
-            expirationText = "Licence invalide";
+            expirationText = T("LicenceInvalid");
             maxUsersText = "0";
         }
 

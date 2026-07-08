@@ -822,7 +822,14 @@ function openEditHistoriqueModal(historyId, matricule, nom, ancienMontant, dateP
     _editMatricule = matricule;
     _editNom = nom;
 
-    document.getElementById('editStudentName').value = nom;
+    var nomField = document.getElementById('editStudentName');
+    if (nomField) {
+        nomField.value = nom;
+        nomField.disabled = true;  // ✅ Désactiver le champ
+        nomField.style.backgroundColor = '#e9ecef';  // ✅ Style grisé
+        nomField.style.cursor = 'not-allowed';       // ✅ Curseur interdit
+    }
+
     document.getElementById('editMontant').value = ancienMontant;
     document.getElementById('editPaymentMonth').value = mois || '';
     document.getElementById('editPaymentYear').value = annee || '';

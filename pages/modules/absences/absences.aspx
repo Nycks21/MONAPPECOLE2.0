@@ -261,13 +261,6 @@
                     <span class="brand-text">Gestion Scolaire</span>
                 </a>
                 <div class="sidebar">
-                    <div class="user-profile-nav">
-                        <div class="user-avatar"><i class="fas fa-user-tie"></i><span class="status-indicator"></span></div>
-                        <div class="user-info">
-                            <span id="profilUsername" class="user-role">Profile :</span>
-                            <span id="navbarUsername" class="user-name">-</span>
-                        </div>
-                    </div>
                     <%= AuthHelper.RenderMenuHTML() %>
                 </div>
             </aside>

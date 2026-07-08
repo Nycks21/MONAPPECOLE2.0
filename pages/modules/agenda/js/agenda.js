@@ -902,31 +902,153 @@ async function saveEvent() {
     }
 }
 
-async function deleteEvent() {
-    var id = document.getElementById('eventId').value;
+// ============================================================
+// MODALE DE CONFIRMATION - UTILISATION DE LA MODALE EXISTANTE
+// ============================================================
+
+function showConfirmDialog(title, message, confirmText = 'Confirmer', cancelText = 'Annuler', isDanger = true) {
+    return new Promise(function(resolve) {
+        var modal = document.getElementById('confirmDeleteModal');
+        var msgEl = document.getElementById('confirmDeleteMessage');
+        var okBtn = document.getElementById('confirmDeleteBtn');
+        var cancelBtn = document.querySelector('#confirmDeleteModal .btn-secondary');
+        var closeBtn = document.querySelector('#confirmDeleteModal .modal-close');
+
+        if (!modal || !msgEl || !okBtn) {
+            // Fallback si la modale n'existe pas
+            if (confirm(message)) {
+                resolve(true);
+            } else {
+                resolve(false);
+            }
+            return;
+        }
+
+        // Configurer le message
+        msgEl.textContent = message;
+
+        // Changer le texte du bouton
+        okBtn.textContent = confirmText;
+        if (cancelBtn) cancelBtn.textContent = cancelText;
+
+        // Changer la couleur du bouton OK
+        if (isDanger) {
+            okBtn.style.background = '#dc3545';
+        } else {
+            okBtn.style.background = '#28a745';
+        }
+
+        // Nettoyer les anciens écouteurs
+        var newOkBtn = okBtn.cloneNode(true);
+        okBtn.parentNode.replaceChild(newOkBtn, okBtn);
+        
+        if (cancelBtn) {
+            var newCancelBtn = cancelBtn.cloneNode(true);
+            cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+        }
+        
+        if (closeBtn) {
+            var newCloseBtn = closeBtn.cloneNode(true);
+            closeBtn.parentNode.replaceChild(newCloseBtn, closeBtn);
+        }
+
+        // Fonction de fermeture
+        var close = function(result) {
+            modal.classList.remove('active');
+            modal.style.display = 'none';
+            document.body.style.overflow = '';
+            resolve(result);
+        };
+
+        // Écouteur du bouton OK
+        newOkBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            close(true);
+        });
+
+        // Écouteur du bouton Annuler
+        if (newCancelBtn) {
+            newCancelBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                close(false);
+            });
+        }
+
+        // Écouteur du bouton fermer (X)
+        if (newCloseBtn) {
+            newCloseBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                close(false);
+            });
+        }
+
+        // Fermeture par overlay
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                close(false);
+            }
+        });
+
+        // Fermeture par Echap
+        document.addEventListener('keydown', function escListener(e) {
+            if (e.key === 'Escape') {
+                close(false);
+                document.removeEventListener('keydown', escListener);
+            }
+        });
+
+        // ✅ Afficher la modale avec la classe active
+        modal.style.display = 'flex';
+        modal.classList.add('active');
+        document.body.style.overflow = 'hidden';
+    });
+}
+
+function closeConfirmDeleteModal() {
+    var modal = document.getElementById('confirmDeleteModal');
+    if (modal) {
+        modal.classList.remove('active');
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+}
+
+// ============================================================
+// SUPPRESSION D'UN ÉVÉNEMENT - CORRIGÉE
+// ============================================================
+
+async function deleteEvent(e) {
+    // ✅ Empêcher le rechargement de la page
+    if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    
+    var idField = document.getElementById('eventId');
+    var id = idField ? idField.value : '';
+    
     if (!id) {
         closeEventModal();
         return;
     }
     
-    if (typeof Swal !== 'undefined') {
-        var result = await Swal.fire({
-            title: 'Confirmation de suppression',
-            text: 'Voulez-vous vraiment supprimer cet événement ? Cette action est irréversible.',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#dc3545',
-            cancelButtonColor: '#6c757d',
-            confirmButtonText: 'Oui, supprimer',
-            cancelButtonText: 'Annuler'
-        });
-        
-        if (!result.isConfirmed) return;
-    } else {
-        if (!confirm('Voulez-vous vraiment supprimer cet événement ?')) return;
-    }
+    // ✅ Utiliser showConfirmDialog
+    var confirmed = await showConfirmDialog(
+        '⚠️ Supprimer l\'événement',
+        'Voulez-vous vraiment supprimer cet événement ?\n\nCette action est irréversible.',
+        'Oui, supprimer',
+        'Annuler',
+        true
+    );
     
-    showLoading('Suppression en cours...');
+    if (!confirmed) return;
+    
+    // Afficher le spinner
+    var spinner = document.getElementById('spinnerOverlay');
+    if (spinner) spinner.style.display = 'flex';
     
     try {
         var response = await fetch('handlers/DeleteEvent.ashx', {
@@ -935,6 +1057,8 @@ async function deleteEvent() {
             body: JSON.stringify({ id: id })
         });
         
+        if (spinner) spinner.style.display = 'none';
+        
         if (!response.ok) {
             throw new Error('Erreur HTTP ' + response.status);
         }
@@ -942,19 +1066,51 @@ async function deleteEvent() {
         var data = await response.json();
         
         if (data.success) {
-            showToast('Événement supprimé avec succès', 'success');
+            // Fermer les modales
             closeEventModal();
+            closeConfirmDeleteModal();
+            
+            // Notification de succès
+            if (typeof showToast === 'function') {
+                showToast('✅ Événement supprimé avec succès', 'success');
+            } else if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'success',
+                    title: 'Supprimé !',
+                    text: 'Événement supprimé avec succès',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+            }
+            
+            // Recharger les données
             await loadEvents();
             await loadUpcomingEvents();
-            await loadStatistics(); // ✅ Ajouté
+            await loadStatistics();
+            
         } else {
-            showToast(data.message || 'Erreur lors de la suppression', 'error');
+            if (typeof showToast === 'function') {
+                showToast('❌ ' + (data.message || 'Erreur lors de la suppression'), 'error');
+            } else if (typeof Swal !== 'undefined') {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Erreur',
+                    text: data.message || 'Erreur lors de la suppression'
+                });
+            }
         }
-        hideLoading();
-    } catch (e) {
-        console.error('Erreur deleteEvent:', e);
-        hideLoading();
-        showToast('Erreur de connexion: ' + e.message, 'error');
+    } catch (err) {
+        console.error('Erreur deleteEvent:', err);
+        if (spinner) spinner.style.display = 'none';
+        if (typeof showToast === 'function') {
+            showToast('❌ Erreur de connexion: ' + err.message, 'error');
+        } else if (typeof Swal !== 'undefined') {
+            Swal.fire({
+                icon: 'error',
+                title: 'Erreur',
+                text: 'Erreur de connexion: ' + err.message
+            });
+        }
     }
 }
 

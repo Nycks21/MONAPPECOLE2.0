@@ -15,13 +15,6 @@ public class GetHistoriquePaiements : IHttpHandler, IRequiresSessionState
         ctx.Response.Charset = "utf-8";
         ctx.Response.Cache.SetNoStore();
 
-        if (ctx.Session["authenticated"] == null || !(bool)ctx.Session["authenticated"])
-        {
-            ctx.Response.StatusCode = 401;
-            ctx.Response.Write("{\"success\":false,\"message\":\"Non authentifié\"}");
-            return;
-        }
-
         string matricule = ctx.Request.QueryString["matricule"];
         if (string.IsNullOrEmpty(matricule))
         {
