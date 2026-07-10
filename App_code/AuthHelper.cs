@@ -304,70 +304,96 @@ public static class AuthHelper
     // GÉNÉRATION DU MENU HTML (AVEC PROFIL INTÉGRÉ ET TRADUCTIONS)
     // ============================================================
 
-    public static string RenderMenuHTML()
+  public static string RenderMenuHTML()
+{
+    try
     {
+        var menus = GetAuthorizedMenus();
+
+        if (menus == null || menus.Count == 0)
+        {
+            return "<div class='nav-section' style='padding:15px;text-align:center;'>" + 
+                T("NoData") + 
+                "<br><small>" + T("ContactAdmin") + "</small></div>";
+        }
+
+        // ✅ Récupérer la page actuelle
+        string currentPage = "";
         try
         {
-            var menus = GetAuthorizedMenus();
-
-            if (menus == null || menus.Count == 0)
+            if (HttpContext.Current != null && HttpContext.Current.Request != null && HttpContext.Current.Request.Url != null)
             {
-                return "<div class='nav-section' style='padding:15px;text-align:center;'>" + 
-                    T("NoData") + 
-                    "<br><small>" + T("ContactAdmin") + "</small></div>";
+                currentPage = HttpContext.Current.Request.Url.AbsolutePath.ToLower();
             }
-
-            var sections = new Dictionary<string, List<MenuItem>>();
-
-            foreach (var menu in menus)
-            {
-                // Traduire le nom de la section
-                string sectionKey = menu.Section;
-                if (!sections.ContainsKey(sectionKey))
-                {
-                    sections[sectionKey] = new List<MenuItem>();
-                }
-                sections[sectionKey].Add(menu);
-            }
-
-            var html = new StringBuilder();
-
-            // ========== PROFIL UTILISATEUR ==========
-            html.Append(RenderUserProfileHTML());
-
-            // ========== MENUS ==========
-            html.Append(@"<ul class=""nav-pills"">");
-
-            foreach (var section in sections)
-            {
-                string sectionName = T(section.Key);
-                html.AppendFormat(@"
-                    <li class=""nav-item"">
-                        <div class=""nav-section"">{0}</div>", sectionName);
-
-                foreach (var menu in section.Value)
-                {
-                    string menuText = T(menu.Text);
-                    html.AppendFormat(@"
-                        <a href=""{0}"" class=""nav-link"" data-menu=""{1}"">
-                            <div style=""width:30px; text-align:center; margin-right:10px;"">
-                                <i class=""{2}""></i>
-                            </div>
-                            <span>{3}</span>
-                        </a>", menu.Url, menu.Code, menu.Icon, menuText);
-                }
-
-                html.Append(@"</li>");
-            }
-
-            html.Append(@"</ul>");
-            return html.ToString();
         }
-        catch (Exception ex)
+        catch { }
+
+        var sections = new Dictionary<string, List<MenuItem>>();
+
+        foreach (var menu in menus)
         {
-            return "<div style='color:red;padding:10px;'>Erreur: " + ex.Message + "</div>";
+            string sectionKey = menu.Section;
+            if (!sections.ContainsKey(sectionKey))
+            {
+                sections[sectionKey] = new List<MenuItem>();
+            }
+            sections[sectionKey].Add(menu);
         }
+
+        var html = new StringBuilder();
+
+        // Profil utilisateur
+        html.Append(RenderUserProfileHTML());
+
+        // Menus
+        html.Append(@"<ul class=""nav-pills"">");
+
+        foreach (var section in sections)
+        {
+            string sectionName = T(section.Key);
+            html.AppendFormat(@"
+                <li class=""nav-item"">
+                    <div class=""nav-section"">{0}</div>", sectionName);
+
+            foreach (var menu in section.Value)
+            {
+                string menuText = T(menu.Text);
+                
+                // ✅ Vérifier si ce menu correspond à la page actuelle
+                bool isActive = false;
+                if (!string.IsNullOrEmpty(currentPage) && !string.IsNullOrEmpty(menu.Url))
+                {
+                    // ✅ Compatible .NET 4.0 (pas d'opérateur ?.)
+                    string menuFileName = System.IO.Path.GetFileName(menu.Url).ToLower();
+                    if (!string.IsNullOrEmpty(menuFileName))
+                    {
+                        isActive = currentPage.Contains(menuFileName);
+                    }
+                }
+
+                // ✅ Ajouter la classe "active" si nécessaire
+                string activeClass = isActive ? " active" : "";
+
+                html.AppendFormat(@"
+                    <a href=""{0}"" class=""nav-link{1}"" data-menu=""{2}"">
+                        <div style=""width:30px; text-align:center; margin-right:10px;"">
+                            <i class=""{3}""></i>
+                        </div>
+                        <span>{4}</span>
+                    </a>", menu.Url, activeClass, menu.Code, menu.Icon, menuText);
+            }
+
+            html.Append(@"</li>");
+        }
+
+        html.Append(@"</ul>");
+        return html.ToString();
     }
+    catch (Exception ex)
+    {
+        return "<div style='color:red;padding:10px;'>Erreur: " + ex.Message + "</div>";
+    }
+}
 
     // ============================================================
     // GÉNÉRATION DE LA TOPBAR HTML

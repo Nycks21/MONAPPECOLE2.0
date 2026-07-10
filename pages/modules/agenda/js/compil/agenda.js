@@ -192,9 +192,15 @@ function initCalendar() {
             list: 'Liste'
         },
         
+        // ✅ Utiliser une fonction events qui retourne directement les événements
         events: function(info, successCallback, failureCallback) {
-            fetchEvents(successCallback, failureCallback);
+            // Récupérer les événements depuis la variable globale
+            var events = window._agendaEvents || [];
+            successCallback(events);
         },
+        
+        // ✅ NE PAS UTILISER eventSources pour éviter les doublons
+        eventSources: [],
         
         eventClick: function(info) {
             showEventDetail(info.event);
@@ -255,6 +261,11 @@ function initCalendar() {
             info.el.addEventListener('mouseleave', function() {
                 tooltip.style.display = 'none';
             });
+        },
+        
+        // ✅ Rafraîchir les événements lors du changement de vue
+        datesSet: function(info) {
+            // Pas besoin de recharger, les événements sont déjà chargés
         }
     });
     
@@ -286,7 +297,10 @@ async function loadEvents() {
             window._agendaEvents = data.events || [];
             
             if (calendar) {
+                // ✅ SUPPRIMER TOUS LES ÉVÉNEMENTS AVANT DE REAJOUTER
                 calendar.removeAllEvents();
+                
+                // ✅ Ajouter les nouveaux événements
                 window._agendaEvents.forEach(function(e) {
                     calendar.addEvent({
                         id: e.id,
@@ -906,7 +920,7 @@ async function saveEvent() {
         var endDate = new Date(end);
         
         if (endDate < startDate) {
-            showToast('La date de fin doit être postérieure ou égale à la date de début', 'warning');
+            showToast('La date et l\'heure de fin doit être postérieure ou égale à la date de début', 'error');
             document.getElementById('eventEnd').focus();
             return;
         }
@@ -1128,7 +1142,7 @@ async function deleteEvent(e) {
             
             // Notification de succès
             if (typeof showToast === 'function') {
-                showToast('✅ Événement supprimé avec succès', 'success');
+                showToast('Événement supprimé avec succès', 'success');
             } else if (typeof Swal !== 'undefined') {
                 Swal.fire({
                     icon: 'success',
@@ -1343,7 +1357,7 @@ function hideLoading() {
 
 function showToast(message, type, duration) {
     type = type || 'info';
-    duration = duration || 4000;
+    duration = duration || 10000;
     
     var container = document.getElementById('toastContainer');
     if (!container) return;

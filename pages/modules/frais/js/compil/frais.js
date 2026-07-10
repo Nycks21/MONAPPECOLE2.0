@@ -38,8 +38,6 @@ var currentSortDir = 'ASC';
 var currentTarifPage = 1;
 var tarifsPerPage = 10;
 var currentTarifId = null;
-
-// Variables pour l'édition de l'historique — conservées jusqu'à la fin du workflow
 var _editHistoryId = null;
 var _editMatricule = null;
 var _editNom = null;
@@ -63,9 +61,10 @@ function formatDateTime(dateStr) {
     if (!dateStr) return '-';
     try {
         var d = new Date(dateStr);
-        if (!isNaN(d.getTime()))
+        if (!isNaN(d.getTime())) {
             return d.toLocaleDateString('fr-FR') + ' ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
-    } catch (e) { }
+        }
+    } catch (e) {}
     return dateStr;
 }
 
@@ -74,7 +73,7 @@ function formatDate(dateStr) {
     try {
         var d = new Date(dateStr);
         if (!isNaN(d.getTime())) return d.toLocaleDateString('fr-FR');
-    } catch (e) { }
+    } catch (e) {}
     return dateStr;
 }
 
@@ -100,11 +99,20 @@ function getStatusBadge(status) {
 // ─────────────────────────────────────────────────────────────────────────────
 function showSpinner() {
     var s = document.getElementById('spinnerOverlay');
-    if (s) { s.style.display = 'flex'; s.style.visibility = 'visible'; s.style.opacity = '1'; }
+    if (s) {
+        s.style.display = 'flex';
+        s.style.visibility = 'visible';
+        s.style.opacity = '1';
+    }
 }
+
 function hideSpinner() {
     var s = document.getElementById('spinnerOverlay');
-    if (s) { s.style.display = 'none'; s.style.visibility = 'hidden'; s.style.opacity = '0'; }
+    if (s) {
+        s.style.display = 'none';
+        s.style.visibility = 'hidden';
+        s.style.opacity = '0';
+    }
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -132,10 +140,7 @@ function closeModal(id) {
 
 function closePaymentModal() { closeModal('paymentModal'); }
 function closeTarifModal() { closeModal('tarifModal'); currentTarifId = null; }
-
-function closeEditHistoriqueModal() {
-    closeModal('editHistoriqueModal');
-}
+function closeEditHistoriqueModal() { closeModal('editHistoriqueModal'); }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // CHARGEMENT DES DONNÉES
@@ -155,10 +160,8 @@ async function loadFrais() {
 
         if (fraisResult.success) fraisData = fraisResult.data || [];
         if (elevesResult.success) elevesList = elevesResult.Eleves || [];
-
         if (classesResult.success) {
-            classesList = classesResult.Classes || classesResult.niveaux
-                || classesResult.data || (Array.isArray(classesResult) ? classesResult : []);
+            classesList = classesResult.Classes || classesResult.niveaux || classesResult.data || (Array.isArray(classesResult) ? classesResult : []);
         }
 
         populateStudentSelect();
@@ -211,7 +214,7 @@ function populateTarifClasseSelects() {
     ['tarifClasse', 'tarifClasseFilter'].forEach(function (selId) {
         var sel = document.getElementById(selId);
         if (!sel) return;
-        var isFilter = selId === 'tarifClasseFilter';
+        var isFilter = (selId === 'tarifClasseFilter');
         sel.innerHTML = isFilter
             ? '<option value="">Toutes les classes</option>'
             : '<option value="">-- Sélectionner une classe --</option>';
@@ -250,8 +253,9 @@ function applySort() {
     filteredFrais.sort(function (a, b) {
         var va = a[currentSortCol] || '';
         var vb = b[currentSortCol] || '';
-        if (typeof va === 'number' && typeof vb === 'number')
+        if (typeof va === 'number' && typeof vb === 'number') {
             return currentSortDir === 'ASC' ? va - vb : vb - va;
+        }
         var sa = String(va).toLowerCase(), sb = String(vb).toLowerCase();
         return currentSortDir === 'ASC' ? sa.localeCompare(sb) : sb.localeCompare(sa);
     });
@@ -273,92 +277,90 @@ function createFilterControls() {
 
     var filterContainer = document.createElement('div');
     filterContainer.id = 'frais-filter-container';
-    filterContainer.style.cssText = `
-        margin: 0 0 20px 0;
-        padding: 15px 20px;
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        border-radius: 10px;
-        display: flex;
-        gap: 15px;
-        flex-wrap: wrap;
-        align-items: flex-end;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
-        border: 1px solid #dee2e6;
-    `;
+    filterContainer.style.cssText = 'margin:0 0 20px 0;padding:15px 20px;background:linear-gradient(135deg,#f8f9fa 0%,#e9ecef 100%);border-radius:10px;display:flex;gap:15px;flex-wrap:wrap;align-items:flex-end;box-shadow:0 2px 8px rgba(0,0,0,0.08);border:1px solid #dee2e6;';
 
-    filterContainer.innerHTML = `
-        <div style="flex: 2; min-width: 200px;">
-            <label style="display: block; margin-bottom: 8px; font-weight: 600;"><i class="fas fa-search"></i> Recherche :</label>
-            <input type="text" id="fraisSearch" placeholder="Nom, matricule..." style="width:100%; padding:10px 12px; border:1px solid #ced4da; border-radius:6px;">
-        </div>
-        <div style="min-width: 160px;">
-            <label style="display: block; margin-bottom: 8px; font-weight: 600;"><i class="fas fa-filter"></i> Statut :</label>
-            <select id="fraisFilterStatut" style="width:100%; padding:10px 12px; border:1px solid #ced4da; border-radius:6px;">
-                <option value="">Tous</option>
-                <option value="Terminé">Terminé</option>
-                <option value="En cours">En cours</option>
-                <option value="Non payé">Non payé</option>
-            </select>
-        </div>
-        <div style="min-width: 160px;">
-            <label style="display: block; margin-bottom: 8px; font-weight: 600;"><i class="fas fa-filter"></i> Classe :</label>
-            <select id="fraisFilterClasse" style="width:100%; padding:10px 12px; border:1px solid #ced4da; border-radius:6px;">
-                <option value="">Toutes</option>
-            </select>
-        </div>
-        <div style="min-width: 160px;">
-            <label style="display: block; margin-bottom: 8px; font-weight: 600;"><i class="fas fa-calendar"></i> Année :</label>
-            <select id="fraisFilterAnnee" style="width:100%; padding:10px 12px; border:1px solid #ced4da; border-radius:6px;">
-                <option value="">Toutes</option>
-            </select>
-        </div>
-        <div style="min-width: 140px;">
-            <label style="display: block; margin-bottom: 8px; font-weight: 600;"><i class="fas fa-table"></i> Lignes/page :</label>
-            <select id="frais-rows-per-page" style="width:100%; padding:10px 12px; border:1px solid #ced4da; border-radius:6px;">
-                <option value="5">5 lignes</option>
-                <option value="10" selected>10 lignes</option>
-                <option value="20">20 lignes</option>
-                <option value="50">50 lignes</option>
-                <option value="100">100 lignes</option>
-                <option value="-1">Tous</option>
-            </select>
-        </div>
-        <div>
-            <button id="frais-reset-filters" style="padding:10px 24px; background:#6c757d; color:white; border:none; border-radius:6px; cursor:pointer;">
-                <i class="fas fa-undo-alt"></i> Réinitialiser
-            </button>
-        </div>
-    `;
+    filterContainer.innerHTML = ''
+        + '<div style="flex:2;min-width:200px;">'
+        + '<label style="display:block;margin-bottom:8px;font-weight:600;"><i class="fas fa-search"></i> Recherche :</label>'
+        + '<input type="text" id="fraisSearch" placeholder="Nom, matricule..." style="width:100%;padding:10px 12px;border:1px solid #ced4da;border-radius:6px;">'
+        + '</div>'
+        + '<div style="min-width:160px;">'
+        + '<label style="display:block;margin-bottom:8px;font-weight:600;"><i class="fas fa-filter"></i> Statut :</label>'
+        + '<select id="fraisFilterStatut" style="width:100%;padding:10px 12px;border:1px solid #ced4da;border-radius:6px;">'
+        + '<option value="">Tous</option>'
+        + '<option value="Terminé">Terminé</option>'
+        + '<option value="En cours">En cours</option>'
+        + '<option value="Non payé">Non payé</option>'
+        + '</select>'
+        + '</div>'
+        + '<div style="min-width:160px;">'
+        + '<label style="display:block;margin-bottom:8px;font-weight:600;"><i class="fas fa-filter"></i> Classe :</label>'
+        + '<select id="fraisFilterClasse" style="width:100%;padding:10px 12px;border:1px solid #ced4da;border-radius:6px;">'
+        + '<option value="">Toutes</option>'
+        + '</select>'
+        + '</div>'
+        + '<div style="min-width:160px;">'
+        + '<label style="display:block;margin-bottom:8px;font-weight:600;"><i class="fas fa-calendar"></i> Année :</label>'
+        + '<select id="fraisFilterAnnee" style="width:100%;padding:10px 12px;border:1px solid #ced4da;border-radius:6px;">'
+        + '<option value="">Toutes</option>'
+        + '</select>'
+        + '</div>'
+        + '<div style="min-width:140px;">'
+        + '<label style="display:block;margin-bottom:8px;font-weight:600;"><i class="fas fa-table"></i> Lignes/page :</label>'
+        + '<select id="frais-rows-per-page" style="width:100%;padding:10px 12px;border:1px solid #ced4da;border-radius:6px;">'
+        + '<option value="5">5 lignes</option>'
+        + '<option value="10" selected>10 lignes</option>'
+        + '<option value="20">20 lignes</option>'
+        + '<option value="50">50 lignes</option>'
+        + '<option value="100">100 lignes</option>'
+        + '<option value="-1">Tous</option>'
+        + '</select>'
+        + '</div>'
+        + '<div>'
+        + '<button id="frais-reset-filters" style="padding:10px 24px;background:#6c757d;color:white;border:none;border-radius:6px;cursor:pointer;">'
+        + '<i class="fas fa-undo-alt"></i> Réinitialiser'
+        + '</button>'
+        + '</div>';
 
     var dashCardBody = document.querySelector('.dash-card-body');
     if (dashCardBody) {
         dashCardBody.insertBefore(filterContainer, dashCardBody.firstChild);
     } else {
         var table = document.querySelector('.dash-table');
-        if (table?.parentNode) table.parentNode.insertBefore(filterContainer, table);
+        if (table && table.parentNode) {
+            table.parentNode.insertBefore(filterContainer, table);
+        }
     }
 
-    document.getElementById('fraisSearch')?.addEventListener('input', filterFraisTable);
-    document.getElementById('fraisFilterStatut')?.addEventListener('change', filterFraisTable);
-    document.getElementById('fraisFilterClasse')?.addEventListener('change', filterFraisTable);
-    document.getElementById('fraisFilterAnnee')?.addEventListener('change', filterFraisTable);
-    document.getElementById('frais-rows-per-page')?.addEventListener('change', function(e) {
-        rowsPerPage = parseInt(e.target.value);
-        currentPage = 1;
-        renderTable();
-    });
-    document.getElementById('frais-reset-filters')?.addEventListener('click', resetFilters);
+    var searchEl = document.getElementById('fraisSearch');
+    var statutEl = document.getElementById('fraisFilterStatut');
+    var classeEl = document.getElementById('fraisFilterClasse');
+    var anneeEl = document.getElementById('fraisFilterAnnee');
+    var rowsEl = document.getElementById('frais-rows-per-page');
+    var resetEl = document.getElementById('frais-reset-filters');
 
-    // Peupler les sélecteurs après création
+    if (searchEl) searchEl.addEventListener('input', filterFraisTable);
+    if (statutEl) statutEl.addEventListener('change', filterFraisTable);
+    if (classeEl) classeEl.addEventListener('change', filterFraisTable);
+    if (anneeEl) anneeEl.addEventListener('change', filterFraisTable);
+    if (rowsEl) {
+        rowsEl.addEventListener('change', function(e) {
+            rowsPerPage = parseInt(e.target.value);
+            currentPage = 1;
+            renderTable();
+        });
+    }
+    if (resetEl) resetEl.addEventListener('click', resetFilters);
+
     populateClassFilter();
     populateAnneeSelects();
 }
 
 function filterFraisTable() {
-    var search = (document.getElementById('fraisSearch') || {}).value || '';
-    var statut = (document.getElementById('fraisFilterStatut') || {}).value || '';
-    var classe = (document.getElementById('fraisFilterClasse') || {}).value || '';
-    var annee = (document.getElementById('fraisFilterAnnee') || {}).value || '';
+    var search = document.getElementById('fraisSearch') ? document.getElementById('fraisSearch').value || '' : '';
+    var statut = document.getElementById('fraisFilterStatut') ? document.getElementById('fraisFilterStatut').value || '' : '';
+    var classe = document.getElementById('fraisFilterClasse') ? document.getElementById('fraisFilterClasse').value || '' : '';
+    var annee = document.getElementById('fraisFilterAnnee') ? document.getElementById('fraisFilterAnnee').value || '' : '';
 
     search = search.toLowerCase().trim();
 
@@ -392,7 +394,7 @@ function resetFilters() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// PAGINATION MODERNE
+// PAGINATION
 // ─────────────────────────────────────────────────────────────────────────────
 function createPaginationControls(totalPages) {
     var oldPagination = document.getElementById('pagination-container');
@@ -401,7 +403,7 @@ function createPaginationControls(totalPages) {
 
     var container = document.createElement('div');
     container.id = 'pagination-container';
-    container.style.cssText = 'margin:20px 0; display:flex; justify-content:center; gap:5px; flex-wrap:wrap;';
+    container.style.cssText = 'margin:20px 0;display:flex;justify-content:center;gap:5px;flex-wrap:wrap;';
 
     var createBtn = function(text, onClick, disabled, isDots) {
         disabled = disabled || false;
@@ -409,14 +411,14 @@ function createPaginationControls(totalPages) {
         var btn = document.createElement('button');
         btn.textContent = text;
         if (isDots) {
-            btn.style.cssText = 'padding:8px 12px; border:none; background:transparent; color:#6c757d; cursor:default;';
+            btn.style.cssText = 'padding:8px 12px;border:none;background:transparent;color:#6c757d;cursor:default;';
             return btn;
         }
         var isActive = (text == currentPage && !isNaN(text));
-        btn.style.cssText = 'padding:8px 14px; border:1px solid ' + (isActive ? '#007bff' : '#dee2e6') + ';' +
-            'background:' + (isActive ? '#007bff' : (disabled ? '#e9ecef' : 'white')) + ';' +
-            'color:' + (isActive ? 'white' : (disabled ? '#6c757d' : '#007bff')) + ';' +
-            'cursor:' + (disabled || isActive ? 'default' : 'pointer') + ';border-radius:6px;font-weight:' + (isActive ? '700' : '500') + ';min-width:40px;';
+        btn.style.cssText = 'padding:8px 14px;border:1px solid ' + (isActive ? '#007bff' : '#dee2e6') + ';'
+            + 'background:' + (isActive ? '#007bff' : (disabled ? '#e9ecef' : 'white')) + ';'
+            + 'color:' + (isActive ? 'white' : (disabled ? '#6c757d' : '#007bff')) + ';'
+            + 'cursor:' + (disabled || isActive ? 'default' : 'pointer') + ';border-radius:6px;font-weight:' + (isActive ? '700' : '500') + ';min-width:40px;';
         if (onClick && !disabled && !isActive) btn.onclick = onClick;
         if (disabled) btn.disabled = true;
         return btn;
@@ -449,7 +451,9 @@ function createPaginationControls(totalPages) {
     container.appendChild(createBtn('»', function() { goToPage(totalPages); }, currentPage === totalPages));
 
     var table = document.querySelector('.dash-table');
-    if (table?.parentNode) table.parentNode.insertBefore(container, table.nextSibling);
+    if (table && table.parentNode) {
+        table.parentNode.insertBefore(container, table.nextSibling);
+    }
 }
 
 function goToPage(page) {
@@ -457,21 +461,18 @@ function goToPage(page) {
     renderTable();
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// COMPTEUR MODERNE - STYLE ELEVES
-// ─────────────────────────────────────────────────────────────────────────────
 function updateCounter() {
     var counter = document.getElementById('record-counter');
     if (!counter) {
         counter = document.createElement('div');
         counter.id = 'record-counter';
-        counter.style.cssText = 'margin:15px 0 0; padding:10px 15px; text-align:center; font-size:14px; background:#f8f9fa; border-radius:6px; border:1px solid #e9ecef;';
+        counter.style.cssText = 'margin:15px 0 0;padding:10px 15px;text-align:center;font-size:14px;background:#f8f9fa;border-radius:6px;border:1px solid #e9ecef;';
         var pagination = document.getElementById('pagination-container');
-        if (pagination?.parentNode) {
+        if (pagination && pagination.parentNode) {
             pagination.parentNode.insertBefore(counter, pagination);
         } else {
             var table = document.querySelector('.dash-table');
-            if (table?.parentNode) {
+            if (table && table.parentNode) {
                 table.parentNode.insertBefore(counter, table.nextSibling);
             }
         }
@@ -545,7 +546,8 @@ function renderTable() {
 // ─────────────────────────────────────────────────────────────────────────────
 function _resetPaymentForm() {
     ['paymentAmount', 'paymentRef', 'paymentComment'].forEach(function (id) {
-        var el = document.getElementById(id); if (el) el.value = '';
+        var el = document.getElementById(id);
+        if (el) el.value = '';
     });
     var dateEl = document.getElementById('paymentDate');
     if (dateEl) dateEl.value = new Date().toISOString().split('T')[0];
@@ -572,19 +574,26 @@ function openPaymentModalForStudent(matricule, nom) {
 async function updatePaymentInfo() {
     var sel = document.getElementById('paymentStudent');
     var infoDiv = document.getElementById('paymentInfo');
-    if (!sel || !sel.value) { if (infoDiv) infoDiv.style.display = 'none'; return; }
+    if (!sel || !sel.value) {
+        if (infoDiv) infoDiv.style.display = 'none';
+        return;
+    }
 
     var matricule = sel.value;
     var fraisItem = fraisData.find(function (f) { return f.MATRICULE === matricule; });
 
-    var set = function (id, val) { var el = document.getElementById(id); if (el) el.textContent = val; };
+    var set = function (id, val) {
+        var el = document.getElementById(id);
+        if (el) el.textContent = val;
+    };
 
     if (fraisItem) {
         set('infoTotal', formatMoney(fraisItem.TOTAL));
         set('infoPaye', formatMoney(fraisItem.PAYE));
         set('infoReste', formatMoney(fraisItem.RESTE));
     } else {
-        var classe = (sel.options[sel.selectedIndex] || {}).dataset && sel.options[sel.selectedIndex].dataset.classe;
+        var selectedOption = sel.options[sel.selectedIndex];
+        var classe = selectedOption && selectedOption.dataset ? selectedOption.dataset.classe : '';
         var tarif = classe ? await _getTarifForClasse(classe) : 0;
         set('infoTotal', formatMoney(tarif));
         set('infoPaye', formatMoney(0));
@@ -611,14 +620,14 @@ async function _getCurrentAnneeId() {
 }
 
 async function savePayment() {
-    var matricule = (document.getElementById('paymentStudent') || {}).value;
-    var montant = parseFloat((document.getElementById('paymentAmount') || {}).value);
-    var mois = (document.getElementById('paymentMonth') || {}).value;
-    var annee = (document.getElementById('paymentYear') || {}).value;
-    var date = (document.getElementById('paymentDate') || {}).value;
-    var mode = (document.getElementById('paymentMethod') || {}).value;
-    var reference = (document.getElementById('paymentRef') || {}).value;
-    var commentaire = (document.getElementById('paymentComment') || {}).value;
+    var matricule = document.getElementById('paymentStudent') ? document.getElementById('paymentStudent').value : '';
+    var montant = parseFloat(document.getElementById('paymentAmount') ? document.getElementById('paymentAmount').value : 0);
+    var mois = document.getElementById('paymentMonth') ? document.getElementById('paymentMonth').value : '';
+    var annee = document.getElementById('paymentYear') ? document.getElementById('paymentYear').value : '';
+    var date = document.getElementById('paymentDate') ? document.getElementById('paymentDate').value : '';
+    var mode = document.getElementById('paymentMethod') ? document.getElementById('paymentMethod').value : '';
+    var reference = document.getElementById('paymentRef') ? document.getElementById('paymentRef').value : '';
+    var commentaire = document.getElementById('paymentComment') ? document.getElementById('paymentComment').value : '';
 
     if (!matricule) { Swal.fire('Erreur', 'Veuillez sélectionner un élève.', 'warning'); return; }
     if (!montant || montant <= 0) { Swal.fire('Erreur', 'Le montant doit être supérieur à 0.', 'warning'); return; }
@@ -632,14 +641,14 @@ async function savePayment() {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                matricule,
-                montant,
+                matricule: matricule,
+                montant: montant,
                 moisPaiement: mois,
                 annee: annee,
                 datePaiement: date,
                 modePaiement: mode,
-                reference,
-                commentaire
+                reference: reference,
+                commentaire: commentaire
             })
         });
         var result = await res.json();
@@ -658,15 +667,15 @@ async function savePayment() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// MISE À JOUR / RECALCUL
+// MISE À JOUR DES FRAIS (Ajoute TOUS les élèves actifs)
 // ─────────────────────────────────────────────────────────────────────────────
 async function updateAllFrais() {
     var confirm = await Swal.fire({
         title: 'Mettre à jour les frais',
         html: 'Cette action va :<ul style="text-align:left;margin-top:10px;">' +
-            '<li>✅ Vérifier tous les élèves</li>' +
+            '<li>✅ Récupérer <strong>TOUS les élèves actifs</strong></li>' +
             '<li>✅ Ajouter les nouveaux élèves dans la table des frais</li>' +
-            '<li>✅ Recalculer RESTE, PROGRESSION et STATUT</li>' +
+            '<li>✅ Mettre à jour les noms et classes des élèves</li>' +
             '<li>✅ Éviter les doublons</li></ul>' +
             '<strong>Les paiements déjà effectués sont conservés.</strong><br><br>Continuer ?',
         icon: 'info', showCancelButton: true,
@@ -677,10 +686,28 @@ async function updateAllFrais() {
 
     showSpinner();
     try {
-        var res = await fetch(API_FRAIS.updateAll, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+        var res = await fetch(API_FRAIS.updateAll, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
         var data = await res.json();
+
         if (data.success) {
-            Swal.fire({ icon: 'success', title: 'Succès', text: data.message, timer: 3000, showConfirmButton: false });
+            await Swal.fire({
+                icon: 'success',
+                title: '✅ Mise à jour terminée',
+                html: '<div style="text-align:left;">'
+                    + '<p><strong>' + data.message + '</strong></p>'
+                    + '<hr>'
+                    + '<ul style="list-style:none;padding:0;">'
+                    + '<li>📚 Année active : <strong>' + (data.anneeActiveId || 'N/A') + '</strong></li>'
+                    + '<li>👨‍🎓 Élèves actifs : <strong>' + (data.elevesTraites || 0) + '</strong></li>'
+                    + '<li>➕ Nouveaux élèves ajoutés : <strong>' + (data.nouveauxEleves || 0) + '</strong></li>'
+                    + '<li>📝 Élèves mis à jour : <strong>' + (data.nomsMisAJour || 0) + '</strong></li>'
+                    + '</ul></div>',
+                timer: 4000,
+                showConfirmButton: true
+            });
             loadFrais();
         } else {
             Swal.fire('Erreur', data.message || 'Erreur lors de la mise à jour', 'error');
@@ -692,14 +719,19 @@ async function updateAllFrais() {
     }
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+// RECALCULER LES FRAIS (Met à jour les classes + recalcule les montants)
+// ─────────────────────────────────────────────────────────────────────────────
 async function recalculerFrais() {
     var confirm = await Swal.fire({
         title: 'Recalculer les frais',
         html: 'Cette action va :<ul style="text-align:left;margin-top:10px;">' +
+            '<li>✅ <strong>Synchroniser les classes des élèves</strong></li>' +
+            '<li>✅ Ajouter les nouveaux élèves dans la table des frais</li>' +
             '<li>✅ Récupérer les tarifs par classe</li>' +
             '<li>✅ Recalculer le montant total pour chaque élève</li>' +
-            '<li>✅ Mettre à jour RESTE, PROGRESSION et STATUT</li></ul>' +
-            '<strong>Attention : les paiements déjà effectués sont conservés.</strong><br><br>Continuer ?',
+            '<li>✅ Mettre à jour automatiquement RESTE, PROGRESSION et STATUT</li></ul>' +
+            '<strong>Les paiements déjà effectués sont conservés.</strong><br><br>Continuer ?',
         icon: 'warning', showCancelButton: true,
         confirmButtonText: 'Oui, recalculer', cancelButtonText: 'Annuler',
         confirmButtonColor: '#ffc107'
@@ -708,13 +740,66 @@ async function recalculerFrais() {
 
     showSpinner();
     try {
-        var res = await fetch(API_FRAIS.recalculer, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
+        var res = await fetch(API_FRAIS.recalculer, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        });
         var data = await res.json();
+
         if (data.success) {
-            Swal.fire({ icon: 'success', title: 'Succès', text: data.message, timer: 3000, showConfirmButton: false });
+            await Swal.fire({
+                icon: 'success',
+                title: '✅ Recalcul terminé',
+                html: '<div style="text-align:left;">'
+                    + '<p><strong>' + data.message + '</strong></p>'
+                    + '<hr>'
+                    + '<ul style="list-style:none;padding:0;">'
+                    + '<li>📚 Année active : <strong>' + (data.anneeActiveId || 'N/A') + '</strong></li>'
+                    + '<li>📚 Classes mises à jour : <strong>' + (data.classesMisesAJour || 0) + '</strong></li>'
+                    + '<li>➕ Nouveaux élèves ajoutés : <strong>' + (data.nouveauxEleves || 0) + '</strong></li>'
+                    + '<li>💰 Montants recalculés : <strong>' + (data.montantsRecalculés || 0) + '</strong></li>'
+                    + '</ul></div>',
+                timer: 4000,
+                showConfirmButton: true
+            });
             loadFrais();
         } else {
             Swal.fire('Erreur', data.message || 'Erreur lors du recalcul', 'error');
+        }
+    } catch (err) {
+        Swal.fire('Erreur', err.message, 'error');
+    } finally {
+        hideSpinner();
+    }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FONCTION SPÉCIFIQUE : Mettre à jour la classe d'un élève individuel
+// ─────────────────────────────────────────────────────────────────────────────
+async function updateEleveClasse(eleveId, nouvelleClasse) {
+    showSpinner();
+    try {
+        var res = await fetch(API_FRAIS.updateEleveClasse, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                eleveId: eleveId,
+                classe: nouvelleClasse
+            })
+        });
+        var data = await res.json();
+
+        if (data.success) {
+            await Swal.fire({
+                icon: 'success',
+                title: '✅ Classe mise à jour',
+                text: data.message,
+                timer: 2000,
+                showConfirmButton: false
+            });
+            loadFrais();
+        } else {
+            Swal.fire('Erreur', data.message || 'Erreur lors de la mise à jour', 'error');
         }
     } catch (err) {
         Swal.fire('Erreur', err.message, 'error');
@@ -825,9 +910,9 @@ function openEditHistoriqueModal(historyId, matricule, nom, ancienMontant, dateP
     var nomField = document.getElementById('editStudentName');
     if (nomField) {
         nomField.value = nom;
-        nomField.disabled = true;  // ✅ Désactiver le champ
-        nomField.style.backgroundColor = '#e9ecef';  // ✅ Style grisé
-        nomField.style.cursor = 'not-allowed';       // ✅ Curseur interdit
+        nomField.disabled = true;
+        nomField.style.backgroundColor = '#e9ecef';
+        nomField.style.cursor = 'not-allowed';
     }
 
     document.getElementById('editMontant').value = ancienMontant;
@@ -922,7 +1007,7 @@ async function deleteHistoriquePaiement(historyId, matricule, montant) {
         var res = await fetch(API_FRAIS.supprimerHistorique, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: historyId, matricule })
+            body: JSON.stringify({ id: historyId, matricule: matricule })
         });
         var data = await res.json();
         if (data.success) {
@@ -952,7 +1037,6 @@ function numberToWords(amount) {
 
     function convertLessThanThousand(n) {
         if (n === 0) return '';
-
         var result = '';
         var hundred = Math.floor(n / 100);
         var remainder = n % 100;
@@ -972,10 +1056,8 @@ function numberToWords(amount) {
             } else {
                 var ten = Math.floor(remainder / 10);
                 var unit = remainder % 10;
-
                 if (ten === 7 || ten === 9) {
-                    result += tens[ten - 1] + '-';
-                    result += units[unit + 10];
+                    result += tens[ten - 1] + '-' + units[unit + 10];
                 } else {
                     result += tens[ten];
                     if (unit > 0) {
@@ -985,13 +1067,11 @@ function numberToWords(amount) {
                 }
             }
         }
-
         return result + ' ';
     }
 
     var integerPart = Math.floor(amount);
     var result = '';
-
     var billions = Math.floor(integerPart / 1000000000);
     var millions = Math.floor((integerPart % 1000000000) / 1000000);
     var thousands = Math.floor((integerPart % 1000000) / 1000);
@@ -1002,13 +1082,11 @@ function numberToWords(amount) {
         if (billions > 1) result += 's';
         if (millions > 0 || thousands > 0 || rest > 0) result += ' ';
     }
-
     if (millions > 0) {
         result += convertLessThanThousand(millions) + ' Million';
         if (millions > 1) result += 's';
         if (thousands > 0 || rest > 0) result += ' ';
     }
-
     if (thousands > 0) {
         if (thousands === 1) {
             result += 'Mille';
@@ -1017,11 +1095,9 @@ function numberToWords(amount) {
         }
         if (rest > 0) result += ' ';
     }
-
     if (rest > 0) {
         result += convertLessThanThousand(rest);
     }
-
     return result + ' Ariary';
 }
 
@@ -1044,29 +1120,29 @@ async function printStudentReceipt(matricule, nom, classe, total, paye, reste, s
         var paiementsHtml = '';
         if (history.length > 0) {
             paiementsHtml = '<div style="margin-top:25px;">';
-            paiementsHtml += '<h3 style="color:#495057; border-left:4px solid #007bff; padding-left:12px; margin-bottom:15px; font-size:16px;">📋 Détail des paiements</h3>';
+            paiementsHtml += '<h3 style="color:#495057;border-left:4px solid #007bff;padding-left:12px;margin-bottom:15px;font-size:16px;">📋 Détail des paiements</h3>';
 
             for (var i = 0; i < history.length; i++) {
                 var h = history[i];
                 var borderStyle = i < history.length - 1 ? 'border-bottom:1px solid #e9ecef;' : '';
-                paiementsHtml += '<div style="padding:5px 0; ' + borderStyle + '">';
-                paiementsHtml += '<div style="display:flex; flex-wrap:wrap; gap:12px; align-items:center;">';
+                paiementsHtml += '<div style="padding:5px 0;' + borderStyle + '">';
+                paiementsHtml += '<div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;">';
                 paiementsHtml += '<div style="min-width:110px;"><strong>Date de paiement:</strong><br>' + formatDateTime(h.DATE_PAIEMENT) + '</div>';
                 paiementsHtml += '<div style="min-width:70px;"><strong>Mois:</strong><br>' + escapeHtml(h.MOIS || '-') + '</div>';
                 paiementsHtml += '<div style="min-width:65px;"><strong>Année:</strong><br>' + escapeHtml(h.ANNEE || '-') + '</div>';
-                paiementsHtml += '<div style="min-width:100px; text-align:right;"><strong>Montant:</strong><br><span style="color:#28a745; font-weight:bold;">' + formatMoney(h.MONTANT) + '</span></div>';
+                paiementsHtml += '<div style="min-width:100px;text-align:right;"><strong>Montant:</strong><br><span style="color:#28a745;font-weight:bold;">' + formatMoney(h.MONTANT) + '</span></div>';
                 paiementsHtml += '<div style="min-width:90px;"><strong>Mode:</strong><br>' + getModePaiementBadge(h.MODE_PAIEMENT) + '</div>';
                 paiementsHtml += '<div style="min-width:90px;"><strong>Référence:</strong><br>' + escapeHtml(h.REFERENCE || '-') + '</div>';
                 paiementsHtml += '<div style="flex:1;"><strong>Commentaire:</strong><br>' + escapeHtml(h.COMMENTAIRE || '-') + '</div>';
                 paiementsHtml += '</div></div>';
             }
 
-            paiementsHtml += '<div style="margin-top:15px; padding:12px; background:#e8f4fd; border-radius:8px; text-align:right;">';
+            paiementsHtml += '<div style="margin-top:15px;padding:12px;background:#e8f4fd;border-radius:8px;text-align:right;">';
             paiementsHtml += '<div><strong>💰 Total des paiements : ' + formatMoney(totalPaiements) + '</strong></div>';
-            paiementsHtml += '<div style="font-size:11px; color:#6c757d; margin-top:5px;">Arrêté le montant total à la somme de : ' + numberToWords(totalPaiements) + '</div>';
+            paiementsHtml += '<div style="font-size:11px;color:#6c757d;margin-top:5px;">Arrêté le montant total à la somme de : ' + numberToWords(totalPaiements) + '</div>';
             paiementsHtml += '</div></div>';
         } else {
-            paiementsHtml = '<p style="margin-top:25px; color:#6c757d; text-align:center; padding:20px; background:#f8f9fa; border-radius:8px;">Aucun paiement enregistré pour cet élève.</p>';
+            paiementsHtml = '<p style="margin-top:25px;color:#6c757d;text-align:center;padding:20px;background:#f8f9fa;border-radius:8px;">Aucun paiement enregistré pour cet élève.</p>';
         }
 
         var statutClass = '';
@@ -1113,35 +1189,28 @@ async function printStudentReceipt(matricule, nom, classe, total, paye, reste, s
             + '</style></head><body>'
             + '<div class="receipt-container">'
             + '<h1>🏫 Reçu de frais scolaires</h1>'
-
-            + '<div style="display:flex; justify-content:flex-end; margin-bottom:10px; padding:5px;">'
+            + '<div style="display:flex;justify-content:flex-end;margin-bottom:10px;padding:5px;">'
             + '<div><strong>🧾 Reçu N° :</strong> ' + new Date().getTime() + '</div>'
             + '</div>'
-
             + '<div class="info-grid">'
             + '<div class="info-item"><span class="info-label">Matricule :</span><span class="info-value">' + escapeHtml(matricule) + '</span></div>'
             + '<div class="info-item"><span class="info-label">Nom de l\'élève :</span><span class="info-value">' + escapeHtml(nom) + '</span></div>'
             + '<div class="info-item"><span class="info-label">Classe :</span><span class="info-value">' + escapeHtml(classe) + '</span></div>'
             + '<div class="info-item"><span class="info-label">Statut :</span><span class="info-value"><span class="badge ' + statutClass + '">' + statutIcon + ' ' + escapeHtml(statut) + '</span></span></div>'
             + '</div>'
-
             + '<div class="totals-grid">'
             + '<div class="total-card"><div class="total-label">💰 Montant total</div><div class="total-value total">' + formatMoney(total) + '</div></div>'
             + '<div class="total-card"><div class="total-label">✅ Montant payé</div><div class="total-value paid">' + formatMoney(paye) + '</div></div>'
             + '<div class="total-card"><div class="total-label">⚠️ Reste à payer</div><div class="total-value rest">' + formatMoney(reste) + '</div></div>'
             + '</div>'
-
             + paiementsHtml
-
             + '<div class="date-footer">'
             + '<div class="print-date">📅 Date d\'impression : ' + dateTimeStr + '</div>'
             + '</div>'
-
             + '<div class="footer">'
             + '<p>Document généré automatiquement par le système de Gestion Scolaire</p>'
             + '<p>Ce reçu fait office de preuve de paiement</p>'
             + '</div>'
-
             + '<button class="print-btn" onclick="window.print()">🖨️ Imprimer le reçu</button>'
             + '</div></body></html>';
 
@@ -1174,7 +1243,7 @@ function populateAnneeSelects() {
     ['tarifAnnee', 'tarifAnneeFilter', 'fraisFilterAnnee'].forEach(function (selId) {
         var sel = document.getElementById(selId);
         if (!sel) return;
-        var isFilter = selId !== 'tarifAnnee';
+        var isFilter = (selId !== 'tarifAnnee');
         sel.innerHTML = isFilter
             ? '<option value="">Toutes les années</option>'
             : '<option value="">-- Sélectionner une année --</option>';
@@ -1191,8 +1260,8 @@ async function loadTarifs() {
     showSpinner();
     try {
         var params = new URLSearchParams();
-        var anneeFilter = (document.getElementById('tarifAnneeFilter') || {}).value || '';
-        var classeFilter = (document.getElementById('tarifClasseFilter') || {}).value || '';
+        var anneeFilter = document.getElementById('tarifAnneeFilter') ? document.getElementById('tarifAnneeFilter').value || '' : '';
+        var classeFilter = document.getElementById('tarifClasseFilter') ? document.getElementById('tarifClasseFilter').value || '' : '';
         if (anneeFilter) params.append('anneeId', anneeFilter);
         if (classeFilter) params.append('classeId', classeFilter);
 
@@ -1205,8 +1274,7 @@ async function loadTarifs() {
             filteredTarifs = tarifsData.slice();
             renderTarifsTable();
         }
-    } catch (err) { console.error('loadTarifs:', err); }
-    finally { hideSpinner(); }
+    } catch (err) { console.error('loadTarifs:', err); } finally { hideSpinner(); }
 }
 
 function renderTarifsTable() {
@@ -1249,28 +1317,39 @@ function updateTarifPaginationInfo(totalPages) {
     var start = total ? (currentTarifPage - 1) * tarifsPerPage + 1 : 0;
     var end = Math.min(currentTarifPage * tarifsPerPage, total);
     var info = document.getElementById('tarifsPaginationInfo');
-    if (info) info.textContent = total === 0
-        ? 'Aucun enregistrement'
-        : 'Affichage de ' + start + ' à ' + end + ' sur ' + total + ' enregistrement(s)';
+    if (info) {
+        info.textContent = total === 0
+            ? 'Aucun enregistrement'
+            : 'Affichage de ' + start + ' à ' + end + ' sur ' + total + ' enregistrement(s)';
+    }
 
     var prevBtn = document.getElementById('prevTarifPageBtn');
     var nextBtn = document.getElementById('nextTarifPageBtn');
     if (prevBtn) {
-        prevBtn.disabled = currentTarifPage === 1;
-        prevBtn.onclick = function () { if (currentTarifPage > 1) { currentTarifPage--; renderTarifsTable(); } };
+        prevBtn.disabled = (currentTarifPage === 1);
+        prevBtn.onclick = function () {
+            if (currentTarifPage > 1) {
+                currentTarifPage--;
+                renderTarifsTable();
+            }
+        };
     }
     if (nextBtn) {
-        nextBtn.disabled = currentTarifPage >= totalPages || totalPages === 0;
-        nextBtn.onclick = function () { if (currentTarifPage < totalPages) { currentTarifPage++; renderTarifsTable(); } };
+        nextBtn.disabled = (currentTarifPage >= totalPages || totalPages === 0);
+        nextBtn.onclick = function () {
+            if (currentTarifPage < totalPages) {
+                currentTarifPage++;
+                renderTarifsTable();
+            }
+        };
     }
 }
 
 function filterTarifs() {
-    var anneeF = (document.getElementById('tarifAnneeFilter') || {}).value || '';
-    var classeF = (document.getElementById('tarifClasseFilter') || {}).value || '';
+    var anneeF = document.getElementById('tarifAnneeFilter') ? document.getElementById('tarifAnneeFilter').value || '' : '';
+    var classeF = document.getElementById('tarifClasseFilter') ? document.getElementById('tarifClasseFilter').value || '' : '';
     filteredTarifs = tarifsData.filter(function (t) {
-        return (!anneeF || t.ANNEE_ID == anneeF) &&
-            (!classeF || t.CLASSE_ID == classeF);
+        return (!anneeF || t.ANNEE_ID == anneeF) && (!classeF || t.CLASSE_ID == classeF);
     });
     currentTarifPage = 1;
     renderTarifsTable();
@@ -1279,7 +1358,8 @@ function filterTarifs() {
 function resetTarifFilters() {
     var a = document.getElementById('tarifAnneeFilter');
     var c = document.getElementById('tarifClasseFilter');
-    if (a) a.value = ''; if (c) c.value = '';
+    if (a) a.value = '';
+    if (c) c.value = '';
     filteredTarifs = tarifsData.slice();
     currentTarifPage = 1;
     renderTarifsTable();
@@ -1288,7 +1368,10 @@ function resetTarifFilters() {
 function openTarifModal() {
     currentTarifId = null;
     document.getElementById('tarifModalTitle').innerHTML = '<i class="fas fa-plus-circle"></i> Ajouter un tarif';
-    ['tarifEditId', 'tarifMontant', 'tarifDescription'].forEach(function (id) { document.getElementById(id).value = ''; });
+    ['tarifEditId', 'tarifMontant', 'tarifDescription'].forEach(function (id) {
+        var el = document.getElementById(id);
+        if (el) el.value = '';
+    });
     document.getElementById('tarifAnnee').value = '';
     document.getElementById('tarifClasse').value = '';
     document.getElementById('tarifStatut').value = '1';
@@ -1296,14 +1379,20 @@ function openTarifModal() {
 }
 
 async function saveTarif() {
-    var anneeId = (document.getElementById('tarifAnnee') || {}).value;
-    var classeId = (document.getElementById('tarifClasse') || {}).value;
-    var montant = parseFloat((document.getElementById('tarifMontant') || {}).value);
-    var description = (document.getElementById('tarifDescription') || {}).value;
-    var statut = (document.getElementById('tarifStatut') || {}).value === '1';
+    var anneeId = document.getElementById('tarifAnnee') ? document.getElementById('tarifAnnee').value : '';
+    var classeId = document.getElementById('tarifClasse') ? document.getElementById('tarifClasse').value : '';
+    var montant = parseFloat(document.getElementById('tarifMontant') ? document.getElementById('tarifMontant').value : 0);
+    var description = document.getElementById('tarifDescription') ? document.getElementById('tarifDescription').value : '';
+    var statut = document.getElementById('tarifStatut') ? document.getElementById('tarifStatut').value === '1' : true;
 
-    if (!anneeId || !classeId) { Swal.fire('Erreur', 'Veuillez sélectionner une année et une classe', 'warning'); return; }
-    if (!montant || montant <= 0) { Swal.fire('Erreur', 'Le montant doit être supérieur à 0', 'warning'); return; }
+    if (!anneeId || !classeId) {
+        Swal.fire('Erreur', 'Veuillez sélectionner une année et une classe', 'warning');
+        return;
+    }
+    if (!montant || montant <= 0) {
+        Swal.fire('Erreur', 'Le montant doit être supérieur à 0', 'warning');
+        return;
+    }
 
     showSpinner();
     try {
@@ -1311,7 +1400,7 @@ async function saveTarif() {
         var res = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: currentTarifId, anneeId, classeId, montant, description, statut })
+            body: JSON.stringify({ id: currentTarifId, anneeId: anneeId, classeId: classeId, montant: montant, description: description, statut: statut })
         });
         var result = await res.json();
         if (result.success) {
@@ -1355,7 +1444,7 @@ async function deleteTarif(id) {
     try {
         var res = await fetch(API_FRAIS.supprimerTarif, {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id })
+            body: JSON.stringify({ id: id })
         });
         var data = await res.json();
         if (data.success) {
@@ -1379,11 +1468,15 @@ function switchFraisTab(tab) {
     document.querySelectorAll('.frais-tab-content').forEach(function (c) { c.classList.remove('active'); });
 
     if (tab === 'paiements') {
-        document.querySelectorAll('.frais-tab-btn')[0].classList.add('active');
-        document.getElementById('frais-tab-paiements').classList.add('active');
+        var btns = document.querySelectorAll('.frais-tab-btn');
+        if (btns.length > 0) btns[0].classList.add('active');
+        var content = document.getElementById('frais-tab-paiements');
+        if (content) content.classList.add('active');
     } else {
-        document.querySelectorAll('.frais-tab-btn')[1].classList.add('active');
-        document.getElementById('frais-tab-tarifs').classList.add('active');
+        var btns = document.querySelectorAll('.frais-tab-btn');
+        if (btns.length > 1) btns[1].classList.add('active');
+        var content = document.getElementById('frais-tab-tarifs');
+        if (content) content.classList.add('active');
         loadAnnees();
         loadTarifs();
     }
@@ -1393,13 +1486,17 @@ function switchFraisTab(tab) {
 // EXPORT ET IMPRESSION
 // ─────────────────────────────────────────────────────────────────────────────
 function exportFraisToExcel() {
-    if (!filteredFrais.length) { Swal.fire('Info', 'Aucune donnée à exporter', 'info'); return; }
+    if (!filteredFrais.length) {
+        Swal.fire('Info', 'Aucune donnée à exporter', 'info');
+        return;
+    }
 
     var rows = [['Matricule', 'Nom', 'Classe', 'Total (Ar)', 'Payé (Ar)', 'Reste (Ar)', 'Progression (%)', 'Statut']];
     filteredFrais.forEach(function (f) {
         rows.push([f.MATRICULE || '', f.NOM || '', f.CLASSE_NOM || '',
-        f.TOTAL || 0, f.PAYE || 0, f.RESTE || 0,
-        (f.PROGRESSION || 0).toFixed(1), f.STATUT || 'Non payé']);
+            f.TOTAL || 0, f.PAYE || 0, f.RESTE || 0,
+            (f.PROGRESSION || 0).toFixed(1), f.STATUT || 'Non payé'
+        ]);
     });
 
     var csv = rows.map(function (row) {
@@ -1455,12 +1552,11 @@ function init() {
     loadAnnees();
     createFilterControls();
 
-    // Les événements sont maintenant gérés dans createFilterControls()
-    // Supprimer les anciens écouteurs pour éviter les doublons
-
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') {
-            ['paymentModal', 'editHistoriqueModal', 'tarifModal'].forEach(closeModal);
+            closeModal('paymentModal');
+            closeModal('editHistoriqueModal');
+            closeModal('tarifModal');
             if (typeof Swal !== 'undefined' && Swal.isVisible && Swal.isVisible()) Swal.close();
         }
     });
@@ -1470,16 +1566,38 @@ function init() {
 // EXPOSITION GLOBALE
 // ─────────────────────────────────────────────────────────────────────────────
 Object.assign(window, {
-    openAddPaymentModal, openPaymentModalForStudent, closePaymentModal, updatePaymentInfo, savePayment,
-    exportFraisToExcel, printFraisReport, printStudentReceipt,
-    filterFraisTable, resetFilters, sortBy,
-    viewPaymentHistory, openEditHistoriqueModal, closeEditHistoriqueModal, confirmEditHistorique, deleteHistoriquePaiement,
-    switchFraisTab,
-    filterTarifs, resetTarifFilters, openTarifModal, closeTarifModal, saveTarif, editTarif, deleteTarif,
-    recalculerFrais, updateAllFrais,
-    goToPage
+    openAddPaymentModal: openAddPaymentModal,
+    openPaymentModalForStudent: openPaymentModalForStudent,
+    closePaymentModal: closePaymentModal,
+    updatePaymentInfo: updatePaymentInfo,
+    savePayment: savePayment,
+    exportFraisToExcel: exportFraisToExcel,
+    printFraisReport: printFraisReport,
+    printStudentReceipt: printStudentReceipt,
+    filterFraisTable: filterFraisTable,
+    resetFilters: resetFilters,
+    sortBy: sortBy,
+    viewPaymentHistory: viewPaymentHistory,
+    openEditHistoriqueModal: openEditHistoriqueModal,
+    closeEditHistoriqueModal: closeEditHistoriqueModal,
+    confirmEditHistorique: confirmEditHistorique,
+    deleteHistoriquePaiement: deleteHistoriquePaiement,
+    switchFraisTab: switchFraisTab,
+    filterTarifs: filterTarifs,
+    resetTarifFilters: resetTarifFilters,
+    openTarifModal: openTarifModal,
+    closeTarifModal: closeTarifModal,
+    saveTarif: saveTarif,
+    editTarif: editTarif,
+    deleteTarif: deleteTarif,
+    recalculerFrais: recalculerFrais,
+    updateAllFrais: updateAllFrais,
+    goToPage: goToPage
 });
 
+// ─────────────────────────────────────────────────────────────────────────────
+// DÉMARRAGE
+// ─────────────────────────────────────────────────────────────────────────────
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', init);
 } else {

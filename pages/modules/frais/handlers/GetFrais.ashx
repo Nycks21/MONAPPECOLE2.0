@@ -39,6 +39,7 @@ public class GetFrais : IHttpHandler, IRequiresSessionState
             {
                 conn.Open();
                 
+                // ✅ Ajout de la condition : seulement les élèves avec STATUT = 'actif'
                 string query = @"
                     SELECT 
                         f.ID, 
@@ -53,8 +54,10 @@ public class GetFrais : IHttpHandler, IRequiresSessionState
                         CONVERT(VARCHAR(10), f.DERNIER_PAIEMENT, 103) AS DERNIER_PAIEMENT,
                         ISNULL(r.ANNEE, '') AS ANNEE_TEXTE
                     FROM FRAIS f
+                    INNER JOIN ELEVES e ON f.MATRICULE = e.MATRICULE
                     LEFT JOIN CLASSES c ON f.CLASSE = c.ID
                     LEFT JOIN RANNEE r ON f.ANNEE_ID = r.ID
+                    WHERE e.STATUT = 'actif'
                     ORDER BY f.NOM ASC";
                 
                 using (var cmd = new SqlCommand(query, conn))

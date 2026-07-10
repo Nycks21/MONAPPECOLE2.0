@@ -16,8 +16,9 @@ public class AjouterEleve : IHttpHandler, IRequiresSessionState
         ctx.Response.Charset = "utf-8";
         ctx.Response.Cache.SetNoStore();
 
-        JavaScriptSerializer ser = new JavaScriptSerializer();
+        var ser = new JavaScriptSerializer();
 
+        // Vérification d'authentification
         if (ctx.Session["authenticated"] == null || !(bool)ctx.Session["authenticated"])
         {
             ctx.Response.StatusCode = 401;
@@ -27,15 +28,21 @@ public class AjouterEleve : IHttpHandler, IRequiresSessionState
 
         try
         {
+            // Lire le corps de la requête
             string body;
             using (var reader = new StreamReader(ctx.Request.InputStream))
                 body = reader.ReadToEnd();
 
+            // Désérialiser
             var payload = ser.Deserialize<ElevePayload>(body);
-            if (payload == null) throw new ArgumentException("Données invalides.");
+            if (payload == null)
+                throw new ArgumentException("Données invalides.");
 
-            if (string.IsNullOrEmpty(payload.NOM)) throw new ArgumentException("Le nom est obligatoire.");
-            if (string.IsNullOrEmpty(payload.MATRICULE)) throw new ArgumentException("Le matricule est obligatoire.");
+            // ✅ Validations
+            if (string.IsNullOrWhiteSpace(payload.NOM))
+                throw new ArgumentException("Le nom est obligatoire.");
+            if (string.IsNullOrWhiteSpace(payload.MATRICULE))
+                throw new ArgumentException("Le matricule est obligatoire.");
 
             int anneeId;
             if (payload.ANNEE_ID == null || !int.TryParse(payload.ANNEE_ID.ToString(), out anneeId))
@@ -45,43 +52,55 @@ public class AjouterEleve : IHttpHandler, IRequiresSessionState
             if (payload.CLASSE == null || !int.TryParse(payload.CLASSE.ToString(), out classeId))
                 throw new ArgumentException("La classe sélectionnée est invalide.");
 
-            DateTime? dateNaiss = null;
-            if (!string.IsNullOrEmpty(payload.DATE_NAISSANCE))
-            {
-                DateTime d;
-                if (!DateTime.TryParse(payload.DATE_NAISSANCE, out d))
-                    throw new ArgumentException("La date de naissance est invalide.");
-                dateNaiss = d;
-            }
+            // ✅ Date de naissance obligatoire
+            if (string.IsNullOrEmpty(payload.DATE_NAISSANCE))
+                throw new ArgumentException("La date de naissance est obligatoire.");
 
-            string connStr = ConfigurationManager.ConnectionStrings["MaConnexion"].ConnectionString;
+            DateTime dateNaiss;
+            if (!DateTime.TryParse(payload.DATE_NAISSANCE, out dateNaiss))
+                throw new ArgumentException("La date de naissance est invalide.");
+
+            // ✅ Adresse obligatoire
+            if (string.IsNullOrWhiteSpace(payload.ADRESSE))
+                throw new ArgumentException("L'adresse est obligatoire.");
+
+            // ✅ Parent/Tuteur obligatoire
+            if (string.IsNullOrWhiteSpace(payload.PARENT))
+                throw new ArgumentException("Le parent/tuteur est obligatoire.");
+
+            // Récupération de la chaîne de connexion
+            string connStr = "";
+            if (ConfigurationManager.ConnectionStrings["MaConnexion"] != null)
+                connStr = ConfigurationManager.ConnectionStrings["MaConnexion"].ConnectionString;
+            if (string.IsNullOrEmpty(connStr))
+                throw new Exception("Chaîne de connexion non trouvée.");
+
             using (var conn = new SqlConnection(connStr))
             using (var cmd = new SqlCommand(
                 @"INSERT INTO [dbo].[ELEVES] 
                   (ANNEE_ID, MATRICULE, NOM, CLASSE, EMAIL, TELEPHONE, STATUT, GENRE, DATE_NAISSANCE, ADRESSE, PARENT) 
                   VALUES (@anneeId, @matricule, @nom, @classe, @email, @tel, @statut, @genre, @dateNaiss, @adresse, @parent)", conn))
             {
-                cmd.Parameters.Add("@anneeId", System.Data.SqlDbType.Int).Value = anneeId;
-                cmd.Parameters.Add("@matricule", System.Data.SqlDbType.NVarChar, 50).Value = payload.MATRICULE.Trim();
-                cmd.Parameters.Add("@nom", System.Data.SqlDbType.NVarChar, 255).Value = payload.NOM.Trim();
-                cmd.Parameters.Add("@classe", System.Data.SqlDbType.Int).Value = classeId;
-                
-                cmd.Parameters.Add("@email", System.Data.SqlDbType.NVarChar, 255).Value = 
-                    (payload.EMAIL != null) ? (object)payload.EMAIL.Trim() : DBNull.Value;
-                
-                cmd.Parameters.Add("@tel", System.Data.SqlDbType.NVarChar, 50).Value = 
-                    (payload.TELEPHONE != null) ? (object)payload.TELEPHONE.Trim() : DBNull.Value;
+                cmd.Parameters.AddWithValue("@anneeId", anneeId);
+                cmd.Parameters.AddWithValue("@matricule", payload.MATRICULE.Trim());
+                cmd.Parameters.AddWithValue("@nom", payload.NOM.Trim());
+                cmd.Parameters.AddWithValue("@classe", classeId);
 
-                string statut = (string.IsNullOrEmpty(payload.STATUT)) ? "actif" : payload.STATUT.Trim().ToLower();
-                cmd.Parameters.Add("@statut", System.Data.SqlDbType.NVarChar, 20).Value = statut;
+                string email = payload.EMAIL != null ? payload.EMAIL.Trim() : null;
+                cmd.Parameters.AddWithValue("@email", (object)email ?? DBNull.Value);
 
-                string genre = (string.IsNullOrEmpty(payload.GENRE)) ? "M" : payload.GENRE.Trim().ToUpper().Substring(0, 1);
-                cmd.Parameters.Add("@genre", System.Data.SqlDbType.NChar, 1).Value = genre;
+                string telephone = payload.TELEPHONE != null ? payload.TELEPHONE.Trim() : null;
+                cmd.Parameters.AddWithValue("@tel", (object)telephone ?? DBNull.Value);
 
-                cmd.Parameters.Add("@dateNaiss", System.Data.SqlDbType.Date).Value = (dateNaiss.HasValue) ? (object)dateNaiss.Value : DBNull.Value;
-                
-                cmd.Parameters.Add("@adresse", System.Data.SqlDbType.NVarChar, 500).Value = (payload.ADRESSE != null) ? (object)payload.ADRESSE.Trim() : DBNull.Value;
-                cmd.Parameters.Add("@parent", System.Data.SqlDbType.NVarChar, 255).Value = (payload.PARENT != null) ? (object)payload.PARENT.Trim() : DBNull.Value;
+                string statut = string.IsNullOrEmpty(payload.STATUT) ? "actif" : payload.STATUT.Trim().ToLower();
+                cmd.Parameters.AddWithValue("@statut", statut);
+
+                string genre = string.IsNullOrEmpty(payload.GENRE) ? "M" : payload.GENRE.Trim().ToUpper().Substring(0, 1);
+                cmd.Parameters.AddWithValue("@genre", genre);
+
+                cmd.Parameters.AddWithValue("@dateNaiss", dateNaiss);
+                cmd.Parameters.AddWithValue("@adresse", payload.ADRESSE.Trim());
+                cmd.Parameters.AddWithValue("@parent", payload.PARENT.Trim());
 
                 conn.Open();
                 cmd.ExecuteNonQuery();
@@ -89,15 +108,39 @@ public class AjouterEleve : IHttpHandler, IRequiresSessionState
 
             ctx.Response.Write("{\"success\":true,\"message\":\"Élève ajouté avec succès.\"}");
         }
+        catch (ArgumentException argEx)
+        {
+            ctx.Response.StatusCode = 400;
+            ctx.Response.Write("{\"success\":false,\"message\":\"" + argEx.Message + "\"}");
+        }
+        catch (SqlException sqlEx)
+        {
+            ctx.Response.StatusCode = 500;
+            if (sqlEx.Number == 2627)
+            {
+                ctx.Response.Write("{\"success\":false,\"message\":\"Ce matricule existe déjà. Veuillez en choisir un autre.\"}");
+            }
+            else
+            {
+                System.Diagnostics.Debug.WriteLine("❌ Erreur SQL: " + sqlEx.Message);
+                ctx.Response.Write("{\"success\":false,\"message\":\"Erreur lors de l'insertion en base de données.\"}");
+            }
+        }
         catch (Exception ex)
         {
-            ctx.Response.StatusCode = (ex is ArgumentException) ? 400 : 500;
-            ctx.Response.Write("{\"success\":false,\"message\":" + ser.Serialize(ex.Message) + "}");
+            ctx.Response.StatusCode = 500;
+            System.Diagnostics.Debug.WriteLine("❌ Erreur générale: " + ex.Message);
+            ctx.Response.Write("{\"success\":false,\"message\":\"Une erreur interne est survenue. Consultez les logs.\"}");
         }
     }
 
-    public bool IsReusable { get { return false; } }
-    private class ElevePayload {
+    public bool IsReusable
+    {
+        get { return false; }
+    }
+
+    private class ElevePayload
+    {
         public string ANNEE_ID { get; set; }
         public string MATRICULE { get; set; }
         public string NOM { get; set; }

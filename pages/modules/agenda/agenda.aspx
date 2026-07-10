@@ -12,7 +12,7 @@
         <link rel="stylesheet" href="../../_assets/css/global.css?v=<%=AuthHelper.Version %>">
 
         <!-- FullCalendar CSS -->
-        <link rel="stylesheet" href="css/main.min.css?v=<%=AuthHelper.Version %>">
+        <link rel="stylesheet" href="css/main.css?v=<%=AuthHelper.Version %>">
         <link rel="stylesheet" href="css/agenda.css?v=<%=AuthHelper.Version %>">
     </head>
 
@@ -113,16 +113,13 @@
                                                     <h3 class="card-title"><i class="fas fa-calendar-alt"></i>
                                                         Calendrier</h3>
                                                     <div class="btn-group">
-                                                        <buton type="button" class="btn btn-success btn-sm" id="btnAddEvent">
+                                                        <buton type="button" class="btn btn-success btn-sm"
+                                                            id="btnAddEvent">
                                                             <i class="fas fa-plus"></i> Ajouter
                                                         </buton type="button">
-                                                        <buton type="button" class="btn btn-outline-light btn-sm" id="btnRefresh">
-                                                            <i class="fas fa-sync-alt"></i>
-                                                        </buton type="button">
-                                                        <!-- ✅ NOUVEAU : Vue rapide -->
-                                                        <buton type="button" class="btn btn-info btn-sm" id="btnToday"
-                                                            onclick="calendar.gotoDate(new Date()); calendar.changeView('dayGridMonth');">
-                                                            <i class="fas fa-calendar-day"></i> Aujourd'hui
+                                                        <buton type="button" class="btn btn-secondary btn-sm"
+                                                            id="btnRefresh">
+                                                            <i class="fas fa-sync-alt"></i> Rafraîchir
                                                         </buton type="button">
                                                     </div>
                                                 </div>
@@ -148,7 +145,8 @@
                 <div class="modal-container modal-lg">
                     <div class="modal-header">
                         <h3 id="eventModalTitle">Ajouter un événement</h3>
-                        <buton type="button" class="modal-close" onclick="closeEventModal()">&times;</buton type="button">
+                        <buton type="button" class="modal-close" onclick="closeEventModal()">&times;</buton
+                            type="button">
                     </div>
                     <div class="modal-body">
                         <form id="eventForm">
@@ -220,7 +218,8 @@
                         </form>
                     </div>
                     <div class="modal-footer">
-                        <buton type="button" class="btn btn-secondary" onclick="closeEventModal()">Annuler</buton type="button">
+                        <buton type="button" class="btn btn-secondary" onclick="closeEventModal()">Annuler</buton
+                            type="button">
                         <buton type="button" class="btn btn-danger" id="btnDeleteEvent" style="display:none;"
                             onclick="deleteEvent()">
                             <i class="fas fa-trash"></i> Supprimer
@@ -237,11 +236,13 @@
                 <div class="modal-container">
                     <div class="modal-header">
                         <h3 id="detailTitle">Détails de l'événement</h3>
-                        <buton type="button" class="modal-close" onclick="closeDetailModal()">&times;</buton type="button">
+                        <buton type="button" class="modal-close" onclick="closeDetailModal()">&times;</buton
+                            type="button">
                     </div>
                     <div class="modal-body" id="detailBody"></div>
                     <div class="modal-footer">
-                        <buton type="button" class="btn btn-secondary" onclick="closeDetailModal()">Fermer</buton type="button">
+                        <buton type="button" class="btn btn-secondary" onclick="closeDetailModal()">Fermer</buton
+                            type="button">
                         <buton type="button" class="btn btn-primary" id="btnEditDetail" onclick="editDetail()">
                             <i class="fas fa-edit"></i> Modifier
                         </buton type="button">
@@ -256,8 +257,9 @@
                         <h3 style="color:#dc3545; margin:0; display:flex; align-items:center; gap:10px;">
                             <i class="fas fa-exclamation-triangle"></i> Confirmation
                         </h3>
-                        <buton  type="button"" class="modal-close" onclick="closeConfirmDeleteModal()"
-                            style="background:none; border:none; font-size:28px; cursor:pointer; color:#adb5bd;">&times;</buton type="button">
+                        <buton type="button"" class=" modal-close" onclick="closeConfirmDeleteModal()"
+                            style="background:none; border:none; font-size:28px; cursor:pointer; color:#adb5bd;">&times;
+                        </buton type="button">
                     </div>
                     <div class="modal-body">
                         <p id="confirmDeleteMessage" style="margin:0; font-size:15px; line-height:1.6; color:#495057;">
@@ -265,9 +267,10 @@
                         </p>
                     </div>
                     <div class="modal-footer">
-                        <buton type="button" class="btn btn-secondary"
-                            onclick="closeConfirmDeleteModal()">Annuler</buton type="button">
-                        <buton type="button" class="btn btn-danger" id="confirmDeleteBtn">Supprimer</buton type="button">
+                        <buton type="button" class="btn btn-secondary" onclick="closeConfirmDeleteModal()">Annuler
+                        </buton type="button">
+                        <buton type="button" class="btn btn-danger" id="confirmDeleteBtn">Supprimer</buton
+                            type="button">
                     </div>
                 </div>
             </div>
@@ -280,11 +283,20 @@
             <script src="../../_assets/js/jquery.min.js?v=<%=AuthHelper.Version %>"></script>
             <script src="../../_assets/js/bootstrap.bundle.min.js?v=<%=AuthHelper.Version %>"></script>
             <script src="../../_assets/js/jquery-ui.min.js?v=<%=AuthHelper.Version %>"></script>
-            <script src="js/main.min.js?v=<%=AuthHelper.Version %>"></script>
-            <script src="js/locales/fr.js?v=<%=AuthHelper.Version %>"></script>
-            <script src="js/agenda.js?v=<%=AuthHelper.Version %>"></script>
             <script src="../../_assets/js/sweetalert2.all.min.js?v=<%=AuthHelper.Version %>"></script>
             <script src="../../_assets/js/global.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="js/main.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="js/locales/fr.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="js/config.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="js/state.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="js/utils.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="js/ui.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="js/calendar.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="js/loaders.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="js/crud.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="js/templates.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="js/init.js?v=<%=AuthHelper.Version %>"></script>
+            
         </form>
     </body>
 

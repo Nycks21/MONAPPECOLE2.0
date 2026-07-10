@@ -3,7 +3,6 @@ using System;
 using System.Configuration;
 using System.Data.SqlClient;
 using System.Web;
-using System.Web.Script.Serialization;
 using System.Web.SessionState;
 
 public class RecalculerFrais : IHttpHandler, IRequiresSessionState
@@ -15,6 +14,7 @@ public class RecalculerFrais : IHttpHandler, IRequiresSessionState
 
         try
         {
+            // Vérification de l'authentification
             if (ctx.Session == null || ctx.Session["authenticated"] == null || !(bool)ctx.Session["authenticated"])
             {
                 ctx.Response.StatusCode = 401;
@@ -22,8 +22,11 @@ public class RecalculerFrais : IHttpHandler, IRequiresSessionState
                 return;
             }
 
-            var connSetting = ConfigurationManager.ConnectionStrings["MaConnexion"];
-            string connStr = connSetting != null ? connSetting.ConnectionString : "";
+            string connStr = "";
+            if (ConfigurationManager.ConnectionStrings["MaConnexion"] != null)
+            {
+                connStr = ConfigurationManager.ConnectionStrings["MaConnexion"].ConnectionString;
+            }
             
             if (string.IsNullOrEmpty(connStr))
             {
@@ -31,57 +34,122 @@ public class RecalculerFrais : IHttpHandler, IRequiresSessionState
                 return;
             }
 
-            int updatedCount = 0;
-            int classeCount = 0;
-            int anneeId = 1;
+            int classesMisesAJour = 0;
+            int montantsRecalculés = 0;
+            int nouveauxEleves = 0;
+            int anneeId = 0;
 
-            using (var conn = new SqlConnection(connStr))
+            using (SqlConnection conn = new SqlConnection(connStr))
             {
                 conn.Open();
                 
-                // Récupérer l'année active
+                // 1. Récupérer l'année active (non clôturée)
                 string getAnneeSql = "SELECT TOP 1 ID FROM RANNEE WHERE CLOTURE = 0 ORDER BY DATE_DEBUT DESC";
-                using (var cmd = new SqlCommand(getAnneeSql, conn))
+                using (SqlCommand cmd = new SqlCommand(getAnneeSql, conn))
                 {
-                    var result = cmd.ExecuteScalar();
-                    if (result != null) anneeId = Convert.ToInt32(result);
+                    object result = cmd.ExecuteScalar();
+                    if (result != null)
+                    {
+                        anneeId = Convert.ToInt32(result);
+                    }
                 }
-                
-                // Compter les classes avec tarifs
-                string countClasseSql = "SELECT COUNT(*) FROM TARIFS_ECOLAGE WHERE ANNEE_ID = @anneeId AND STATUT = 1";
-                using (var cmd = new SqlCommand(countClasseSql, conn))
+
+                if (anneeId == 0)
                 {
-                    cmd.Parameters.AddWithValue("@anneeId", anneeId);
-                    classeCount = (int)cmd.ExecuteScalar();
-                }
-                
-                if (classeCount == 0)
-                {
-                    ctx.Response.Write("{\"success\":false,\"message\":\"Aucun tarif defini pour l'annee en cours. Veuillez d'abord creer les tarifs par classe.\"}");
+                    ctx.Response.Write("{\"success\":false,\"message\":\"Aucune année active trouvée\"}");
                     return;
                 }
                 
-                // Mettre à jour UNIQUEMENT TOTAL (RESTE, PROGRESSION, STATUT se calculent automatiquement)
-                string updateSql = @"
-                    UPDATE f 
-                    SET 
-                        f.TOTAL = t.MONTANT,
+                // 2. Vérifier qu'il existe des tarifs pour cette année
+                int tarifCount = 0;
+                string checkTarifSql = "SELECT COUNT(*) FROM TARIFS_ECOLAGE WHERE ANNEE_ID = @anneeId AND STATUT = 1";
+                using (SqlCommand cmd = new SqlCommand(checkTarifSql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@anneeId", anneeId);
+                    tarifCount = (int)cmd.ExecuteScalar();
+                }
+
+                if (tarifCount == 0)
+                {
+                    ctx.Response.Write("{\"success\":false,\"message\":\"Aucun tarif actif trouvé pour l'année en cours. Veuillez d'abord créer les tarifs par classe.\"}");
+                    return;
+                }
+
+                // 3. Ajouter les nouveaux élèves (ceux qui ne sont pas encore dans FRAIS)
+                string insertSql = @"
+                    INSERT INTO FRAIS (ID, ANNEE_ID, MATRICULE, NOM, CLASSE, TOTAL, PAYE, TARIF_ID, CREATED_AT, UPDATED_AT)
+                    SELECT
+                        NEWID(), 
+                        @anneeId, 
+                        e.MATRICULE, 
+                        e.NOM, 
+                        e.CLASSE,
+                        ISNULL(t.MONTANT, 0), 
+                        0, 
+                        t.ID, 
+                        GETDATE(),
+                        GETDATE()
+                    FROM ELEVES e
+                    LEFT JOIN TARIFS_ECOLAGE t ON t.CLASSE_ID = e.CLASSE AND t.ANNEE_ID = @anneeId AND t.STATUT = 1
+                    WHERE e.STATUT = 'actif'
+                    AND NOT EXISTS (
+                        SELECT 1 FROM FRAIS f WHERE f.MATRICULE = e.MATRICULE AND f.ANNEE_ID = @anneeId
+                    )
+                ";
+                using (SqlCommand cmd = new SqlCommand(insertSql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@anneeId", anneeId);
+                    nouveauxEleves = cmd.ExecuteNonQuery();
+                }
+
+                // 4. Mettre à jour les classes dans FRAIS (synchronisation)
+                string updateClasseSql = @"
+                    UPDATE f
+                    SET f.CLASSE = e.CLASSE,
+                        f.NOM = e.NOM,
+                        f.UPDATED_AT = GETDATE()
+                    FROM FRAIS f
+                    INNER JOIN ELEVES e ON f.MATRICULE = e.MATRICULE
+                    WHERE e.STATUT = 'actif'
+                    AND f.ANNEE_ID = @anneeId
+                    AND (f.CLASSE <> e.CLASSE OR f.NOM <> e.NOM)
+                ";
+                using (SqlCommand cmd = new SqlCommand(updateClasseSql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@anneeId", anneeId);
+                    classesMisesAJour = cmd.ExecuteNonQuery();
+                }
+
+                // 5. Recalculer les montants pour tous les élèves
+                string recalculSql = @"
+                    UPDATE f
+                    SET f.TOTAL = t.MONTANT,
                         f.TARIF_ID = t.ID,
                         f.UPDATED_AT = GETDATE()
                     FROM FRAIS f
                     INNER JOIN ELEVES e ON f.MATRICULE = e.MATRICULE
                     INNER JOIN TARIFS_ECOLAGE t ON t.CLASSE_ID = e.CLASSE AND t.ANNEE_ID = @anneeId AND t.STATUT = 1
-                    WHERE f.ANNEE_ID = @anneeId";
-                
-                using (var cmd = new SqlCommand(updateSql, conn))
+                    WHERE e.STATUT = 'actif'
+                    AND f.ANNEE_ID = @anneeId
+                ";
+                using (SqlCommand cmd = new SqlCommand(recalculSql, conn))
                 {
                     cmd.Parameters.AddWithValue("@anneeId", anneeId);
-                    updatedCount = cmd.ExecuteNonQuery();
+                    montantsRecalculés = cmd.ExecuteNonQuery();
                 }
             }
             
-            string message = updatedCount + " eleves mis a jour avec les nouveaux tarifs (" + classeCount + " classes configurees)";
-            ctx.Response.Write("{\"success\":true,\"message\":\"" + message + "\"}");
+            // Construction du résultat pour .NET 4.0
+            string jsonResult = "{";
+            jsonResult += "\"success\":true,";
+            jsonResult += "\"message\":\"Recalcul des frais terminé avec succès\",";
+            jsonResult += "\"anneeActiveId\":" + anneeId + ",";
+            jsonResult += "\"classesMisesAJour\":" + classesMisesAJour + ",";
+            jsonResult += "\"nouveauxEleves\":" + nouveauxEleves + ",";
+            jsonResult += "\"montantsRecalculés\":" + montantsRecalculés;
+            jsonResult += "}";
+
+            ctx.Response.Write(jsonResult);
         }
         catch (Exception ex)
         {
@@ -91,5 +159,8 @@ public class RecalculerFrais : IHttpHandler, IRequiresSessionState
         }
     }
 
-    public bool IsReusable { get { return false; } }
+    public bool IsReusable
+    {
+        get { return false; }
+    }
 }

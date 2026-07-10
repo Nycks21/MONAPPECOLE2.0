@@ -20,101 +20,110 @@
                 <!-- ═══ TOPBAR ═══ -->
                 <%= AuthHelper.RenderTopBarHTML() %>
 
-                <!-- ═══ SIDEBAR ═══ -->
-                <aside class="main-sidebar" id="sidebar">
-                    <a href="#" class="brand-link" onclick="loadDashboard()">
-                        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='33' height='33' viewBox='0 0 33 33'%3E%3Ccircle cx='16.5' cy='16.5' r='16.5' fill='%23007bff'/%3E%3Ctext x='16.5' y='22' font-size='16' font-weight='bold' text-anchor='middle' fill='white'%3EGS%3C/text%3E%3C/svg%3E"
-                            alt="Logo" class="brand-image">
-                        <span class="brand-text">Gestion Scolaire</span>
-                    </a>
+                    <!-- ═══ SIDEBAR ═══ -->
+                    <aside class="main-sidebar" id="sidebar">
+                        <a href="#" class="brand-link" onclick="loadDashboard()">
+                            <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='33' height='33' viewBox='0 0 33 33'%3E%3Ccircle cx='16.5' cy='16.5' r='16.5' fill='%23007bff'/%3E%3Ctext x='16.5' y='22' font-size='16' font-weight='bold' text-anchor='middle' fill='white'%3EGS%3C/text%3E%3C/svg%3E"
+                                alt="Logo" class="brand-image">
+                            <span class="brand-text">Gestion Scolaire</span>
+                        </a>
 
-                    <div class="sidebar">
-                        <!-- GÉNÉRATION AUTOMATIQUE DES MENUS -->
-                        <%= AuthHelper.RenderMenuHTML() %>
-                    </div>
-                </aside>
+                        <div class="sidebar">
+                            <!-- GÉNÉRATION AUTOMATIQUE DES MENUS -->
+                            <%= AuthHelper.RenderMenuHTML() %>
+                        </div>
+                    </aside>
 
-                <!-- ═══ CONTROL SIDEBAR ═══ -->
-                <%= AuthHelper.RenderControlSidebarHTML() %>
+                    <!-- ═══ CONTROL SIDEBAR ═══ -->
+                    <%= AuthHelper.RenderControlSidebarHTML() %>
 
-                <!-- ═══ CONTENT WRAPPER ═══ -->
-                <div class="content-wrapper" id="contentWrapper">
+                        <!-- ═══ CONTENT WRAPPER ═══ -->
+                        <div class="content-wrapper" id="contentWrapper">
 
-                    <!-- En-tête dynamique -->
-                    <div class="content-header">
-                        <div class="container-fluid">
-                            <div class="row">
-                                <div class="col-lg-6">
-                                    <h1 id="dynPageTitle">Eleves</h1>
-                                </div>
-                                <div class="col-lg-6">
-                                    <ol class="breadcrumb" style="float: right;">
-                                        <li class="breadcrumb-item">Application</li>
-                                        <li class="breadcrumb-item active" id="dynBreadcrumb">Eleves</li>
-                                    </ol>
+                            <!-- En-tête dynamique -->
+                            <div class="content-header">
+                                <div class="container-fluid">
+                                    <div class="row">
+                                        <div class="col-lg-6">
+                                            <h1 id="dynPageTitle">Eleves</h1>
+                                        </div>
+                                        <div class="col-lg-6">
+                                            <ol class="breadcrumb" style="float: right;">
+                                                <li class="breadcrumb-item">Application</li>
+                                                <li class="breadcrumb-item active" id="dynBreadcrumb">Eleves</li>
+                                            </ol>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </div>
 
-                    <!-- ═══════════════════════════════════════════════════════════
+                            <!-- ═══════════════════════════════════════════════════════════
                 pages/eleves.html  —  Section Liste des élèves
                 ═══════════════════════════════════════════════════════════ -->
-                    <section class="content" id="section-eleves">
+                            <section class="content" id="section-eleves">
 
-                        <div class="dash-card">
-                            <div class="dash-card-head">
-                                <span class="dash-card-title"><i class="fas fa-users-cog"></i> Gestion des
-                                    élèves</span>
-                                <div class="action-buttons">
-                                    <button type="button" class="btn btn-info" onclick="showInitialFilterModal()">
-                                        <i class="fas fa-search"></i> Rechercher
-                                    </button>
-                                    <button class="btn btn-success btn-sm" onclick="openAddEleveModal(event)"
-                                        data-i18n="common.ajouter">
-                                        <i class="fas fa-plus"></i> Ajouter
-                                    </button>
-                                    <button class="btn btn-primary btn-sm" onclick="exportEleves()">
-                                        <i class="fas fa-download"></i> Imprimer
-                                    </button>
-                                    <button class="btn btn-outline-success btn-sm" onclick="exportElevesToExcelOnly()">
-                                        <i class="fas fa-file-excel"></i> Excel
-                                    </button>
-                                </div>
-                            </div>
+                                <div class="dash-card">
+                                    <div class="dash-card-head">
+                                        <span class="dash-card-title"><i class="fas fa-users-cog"></i> Gestion des
+                                            élèves</span>
+                                        <div class="action-buttons">
+                                            <button type="button" class="btn btn-info"
+                                                onclick="showInitialFilterModal()">
+                                                <i class="fas fa-search"></i> Rechercher
+                                            </button>
+                                            <button class="btn btn-success btn-sm" onclick="openAddEleveModal(event)"
+                                                data-i18n="common.ajouter">
+                                                <i class="fas fa-plus"></i> Ajouter
+                                            </button>
+                                            <button class="btn btn-primary btn-sm" onclick="exportEleves()">
+                                                <i class="fas fa-download"></i> Imprimer
+                                            </button>
+                                            <button class="btn btn-outline-success btn-sm"
+                                                onclick="exportElevesToExcelOnly()">
+                                                <i class="fas fa-file-excel"></i> Excel
+                                            </button>
+                                        </div>
+                                    </div>
 
-                            <div class="dash-card-body">
-                                <!-- Tableau -->
-                                <div
-                                    style="overflow-x: auto; width: 100%; border: 1px solid #dee2e6; border-radius: 8px;">
-                                    <table class="dash-table"
-                                        style="table-layout: fixed; width: 1200px; min-width: 100%; border-collapse: collapse;">
-                                        <thead>
-                                            <tr style="background-color: #f8f9fa; text-align: center;">
-                                                <th onclick="sortData('MATRICULE')" style="cursor:pointer; width: 100px;">MATRICULE <i
-                                                        class="fas fa-sort ml-1"></i></th>
-                                                <th onclick="sortData('ANNEE_TEXTE')" style="cursor:pointer; width: 80px;">ANNÉE <i
-                                                        class="fas fa-sort ml-1"></i></th>
-                                                <th onclick="sortData('NOM')" style="cursor:pointer; width: 150px;">NOM <i
-                                                        class="fas fa-sort ml-1"></i></th>
-                                                <th onclick="sortData('CLASSE_NOM')" style="cursor:pointer; width: 120px;">CLASSE <i
-                                                        class="fas fa-sort ml-1"></i></th>
-                                                <th onclick="sortData('EMAIL')" style="cursor:pointer; width: 150px;">EMAIL <i
-                                                        class="fas fa-sort ml-1"></i></th>
-                                                <th onclick="sortData('TELEPHONE')" style="cursor:pointer; width: 100px;">TÉLÉPHONE <i
-                                                        class="fas fa-sort ml-1"></i></th>
-                                                <th onclick="sortData('STATUT')" style="cursor:pointer; width: 80px;">STATUT <i
-                                                        class="fas fa-sort ml-1"></i></th>
-                                                <th style="width: 120px;">ACTIONS</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody id="elevesTableBody"></tbody>
-                                    </table>
+                                    <div class="dash-card-body">
+                                        <!-- Tableau -->
+                                        <div
+                                            style="overflow-x: auto; width: 100%; border: 1px solid #dee2e6; border-radius: 8px;">
+                                            <table class="dash-table"
+                                                style="table-layout: fixed; width: 1200px; min-width: 100%; border-collapse: collapse;">
+                                                <thead>
+                                                    <tr style="background-color: #f8f9fa; text-align: center;">
+                                                        <th onclick="sortData('MATRICULE')"
+                                                            style="cursor:pointer; width: 100px;">MATRICULE <i
+                                                                class="fas fa-sort ml-1"></i></th>
+                                                        <th onclick="sortData('ANNEE_TEXTE')"
+                                                            style="cursor:pointer; width: 80px;">ANNÉE <i
+                                                                class="fas fa-sort ml-1"></i></th>
+                                                        <th onclick="sortData('NOM')"
+                                                            style="cursor:pointer; width: 150px;">NOM <i
+                                                                class="fas fa-sort ml-1"></i></th>
+                                                        <th onclick="sortData('CLASSE_NOM')"
+                                                            style="cursor:pointer; width: 120px;">CLASSE <i
+                                                                class="fas fa-sort ml-1"></i></th>
+                                                        <th onclick="sortData('EMAIL')"
+                                                            style="cursor:pointer; width: 150px;">EMAIL <i
+                                                                class="fas fa-sort ml-1"></i></th>
+                                                        <th onclick="sortData('TELEPHONE')"
+                                                            style="cursor:pointer; width: 100px;">TÉLÉPHONE <i
+                                                                class="fas fa-sort ml-1"></i></th>
+                                                        <th onclick="sortData('STATUT')"
+                                                            style="cursor:pointer; width: 80px;">STATUT <i
+                                                                class="fas fa-sort ml-1"></i></th>
+                                                        <th style="width: 120px;">ACTIONS</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="elevesTableBody"></tbody>
+                                            </table>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
+                            </section>
                         </div>
-                    </section>
-                </div>
             </div>
 
             <!-- MODAL AJOUT / MODIFICATION ÉLÈVE -->
@@ -340,7 +349,14 @@
                 <script src="../../_assets/js/xlsx.full.min.js?v=<%=AuthHelper.Version %>"></script>
                 <script src="../../_assets/js/vfs_fonts.js?v=<%=AuthHelper.Version %>"></script>
                 <script src="../../_assets/js/global.js?v=<%=AuthHelper.Version %>"></script>
-                <script src="js/eleves.js?v=<%=AuthHelper.Version %>"></script>
+                <script src="js/config.js?v=<%=AuthHelper.Version %>"></script>
+                <script src="js/state.js?v=<%=AuthHelper.Version %>"></script>
+                <script src="js/utils.js?v=<%=AuthHelper.Version %>"></script>
+                <script src="js/ui.js?v=<%=AuthHelper.Version %>"></script>
+                <script src="js/loaders.js?v=<%=AuthHelper.Version %>"></script>
+                <script src="js/crud.js?v=<%=AuthHelper.Version %>"></script>
+                <script src="js/export.js?v=<%=AuthHelper.Version %>"></script>
+                <script src="js/init.js?v=<%=AuthHelper.Version %>"></script>
                 <div id="toastContainer"></div>
         </form>
     </body>

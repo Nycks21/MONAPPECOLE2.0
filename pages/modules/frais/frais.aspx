@@ -460,6 +460,7 @@
                                                     onclick="recalculerFrais()"><i class="fas fa-sync-alt"></i>
                                                     Recalculer
                                                     frais</button>
+
                                                 <button type="button" class="btn btn-primary btn-sm"
                                                     onclick="exportFraisToExcel()"><i class="fas fa-download"></i>
                                                     Exporter</button>
@@ -727,7 +728,7 @@
                             <div class="col-md-6">
                                 <div class="form-group">
                                     <label>Ecolage mois de <span style="color: red;">*</span></label>
-                                    <select id="editPaymentMonth" class="form-control">
+                                    <select id="editPaymentMonth" class="form-control" required>
                                         <option value="">-- Sélectionner le mois --</option>
                                         <option value="Janvier">Janvier</option>
                                         <option value="Février">Février</option>
@@ -834,7 +835,18 @@
             <script src="../../_assets/js/jquery-3.6.0.min.js?v=<%=AuthHelper.Version %>"></script>
             <script src="../../_assets/js/sweetalert2@11.js?v=<%=AuthHelper.Version %>"></script>
             <script src="../../_assets/js/global.js?v=<%=AuthHelper.Version %>"></script>
-            <script src="js/frais.js?v=<%=AuthHelper.Version %>"></script>
+            <!-- Inclure les scripts dans l'ordre -->
+            <script src="js/config.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="js/state.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="js/utils.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="js/ui.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="js/loaders.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="js/payments.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="js/history.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="js/recalcul.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="js/tarifs.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="js/export.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="js/init.js?v=<%=AuthHelper.Version %>"></script>
         </form>
     </body>
 

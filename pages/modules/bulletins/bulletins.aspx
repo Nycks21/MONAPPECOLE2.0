@@ -45,8 +45,10 @@
                             <div class="content-header">
                                 <div class="container-fluid">
                                     <div class="row">
-                                        <div class="col-lg-6">      
-                                            <h1 id="dynPageTitle"><i class="fas fa-folder" style="margin-right: 10px; color: blue;"></i> Saisie de Bulletin des Élèves</h1>
+                                        <div class="col-lg-6">
+                                            <h1 id="dynPageTitle"><i class="fas fa-folder"
+                                                    style="margin-right: 10px; color: blue;"></i> Saisie de Bulletin des
+                                                Élèves</h1>
                                         </div>
                                         <div class="col-lg-6">
                                             <ol class="breadcrumb" style="float: right;">
@@ -220,8 +222,16 @@
                 style="position:fixed; bottom:24px; right:24px; display:flex; flex-direction:column; gap:10px; z-index:9999;">
             </div>
 
-            <script src="js/bulletins.js?v=<%=AuthHelper.Version %>"></script>
             <script src="../../_assets/js/global.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="js/config.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="js/state.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="js/utils.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="js/ui.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="js/calculations.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="js/loaders.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="js/crud.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="js/events.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="js/init.js?v=<%=AuthHelper.Version %>"></script>
 
         </form>
     </body>

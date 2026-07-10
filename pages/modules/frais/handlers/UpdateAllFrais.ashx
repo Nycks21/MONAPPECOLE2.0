@@ -3,7 +3,6 @@ using System;
 using System.Configuration;
 using System.Data.SqlClient;
 using System.Web;
-using System.Web.Script.Serialization;
 using System.Web.SessionState;
 
 public class UpdateAllFrais : IHttpHandler, IRequiresSessionState
@@ -15,6 +14,7 @@ public class UpdateAllFrais : IHttpHandler, IRequiresSessionState
 
         try
         {
+            // Vérification de l'authentification
             if (ctx.Session == null || ctx.Session["authenticated"] == null || !(bool)ctx.Session["authenticated"])
             {
                 ctx.Response.StatusCode = 401;
@@ -22,34 +22,55 @@ public class UpdateAllFrais : IHttpHandler, IRequiresSessionState
                 return;
             }
 
-            var connSetting = ConfigurationManager.ConnectionStrings["MaConnexion"];
-            string connStr = connSetting != null ? connSetting.ConnectionString : "";
+            string connStr = "";
+            if (ConfigurationManager.ConnectionStrings["MaConnexion"] != null)
+            {
+                connStr = ConfigurationManager.ConnectionStrings["MaConnexion"].ConnectionString;
+            }
+            
             if (string.IsNullOrEmpty(connStr))
             {
                 ctx.Response.Write("{\"success\":false,\"message\":\"Chaîne de connexion non trouvée\"}");
                 return;
             }
 
-            int updatedCount = 0;
-            int insertedCount = 0;
-            int anneeId = 1;
+            int elevesTraites = 0;
+            int nouveauxEleves = 0;
+            int nomsMisAJour = 0;
+            int anneeId = 0;
 
-            using (var conn = new SqlConnection(connStr))
+            using (SqlConnection conn = new SqlConnection(connStr))
             {
                 conn.Open();
 
-                // 1. Récupérer l'année active
+                // 1. Récupérer l'année active (non clôturée)
                 string getAnneeSql = "SELECT TOP 1 ID FROM RANNEE WHERE CLOTURE = 0 ORDER BY DATE_DEBUT DESC";
-                using (var cmd = new SqlCommand(getAnneeSql, conn))
+                using (SqlCommand cmd = new SqlCommand(getAnneeSql, conn))
                 {
-                    var result = cmd.ExecuteScalar();
-                    if (result != null) anneeId = Convert.ToInt32(result);
+                    object result = cmd.ExecuteScalar();
+                    if (result != null)
+                    {
+                        anneeId = Convert.ToInt32(result);
+                    }
                 }
 
-                // 2. Vérifier qu'il existe des tarifs pour cette année
+                if (anneeId == 0)
+                {
+                    ctx.Response.Write("{\"success\":false,\"message\":\"Aucune année active trouvée\"}");
+                    return;
+                }
+
+                // 2. Compter le nombre total d'élèves actifs
+                string countSql = "SELECT COUNT(*) FROM ELEVES WHERE STATUT = 'actif'";
+                using (SqlCommand cmd = new SqlCommand(countSql, conn))
+                {
+                    elevesTraites = (int)cmd.ExecuteScalar();
+                }
+
+                // 3. Vérifier qu'il existe des tarifs pour cette année
                 int tarifCount = 0;
-                using (var cmd = new SqlCommand(
-                    "SELECT COUNT(*) FROM TARIFS_ECOLAGE WHERE ANNEE_ID = @anneeId AND STATUT = 1", conn))
+                string checkTarifSql = "SELECT COUNT(*) FROM TARIFS_ECOLAGE WHERE ANNEE_ID = @anneeId AND STATUT = 1";
+                using (SqlCommand cmd = new SqlCommand(checkTarifSql, conn))
                 {
                     cmd.Parameters.AddWithValue("@anneeId", anneeId);
                     tarifCount = (int)cmd.ExecuteScalar();
@@ -61,49 +82,63 @@ public class UpdateAllFrais : IHttpHandler, IRequiresSessionState
                     return;
                 }
 
-                // 3. Mettre à jour le TOTAL des frais existants
-                // NE PAS toucher à RESTE, PROGRESSION, STATUT (colonnes calculées)
-                string updateSql = @"
+                // 4. Ajouter TOUS les élèves actifs qui n'existent pas encore dans FRAIS
+                string insertSql = @"
+                    INSERT INTO FRAIS (ID, ANNEE_ID, MATRICULE, NOM, CLASSE, TOTAL, PAYE, TARIF_ID, CREATED_AT, UPDATED_AT)
+                    SELECT
+                        NEWID(), 
+                        @anneeId, 
+                        e.MATRICULE, 
+                        e.NOM, 
+                        e.CLASSE,
+                        ISNULL(t.MONTANT, 0), 
+                        0, 
+                        t.ID, 
+                        GETDATE(),
+                        GETDATE()
+                    FROM ELEVES e
+                    LEFT JOIN TARIFS_ECOLAGE t ON t.CLASSE_ID = e.CLASSE AND t.ANNEE_ID = @anneeId AND t.STATUT = 1
+                    WHERE e.STATUT = 'actif'
+                    AND NOT EXISTS (
+                        SELECT 1 FROM FRAIS f WHERE f.MATRICULE = e.MATRICULE AND f.ANNEE_ID = @anneeId
+                    )
+                ";
+                using (SqlCommand cmd = new SqlCommand(insertSql, conn))
+                {
+                    cmd.Parameters.AddWithValue("@anneeId", anneeId);
+                    nouveauxEleves = cmd.ExecuteNonQuery();
+                }
+
+                // 5. Mettre à jour les noms et classes des élèves existants
+                string updateNomSql = @"
                     UPDATE f
-                    SET f.TOTAL = t.MONTANT,
-                        f.TARIF_ID = t.ID,
+                    SET f.NOM = e.NOM,
+                        f.CLASSE = e.CLASSE,
                         f.UPDATED_AT = GETDATE()
                     FROM FRAIS f
                     INNER JOIN ELEVES e ON f.MATRICULE = e.MATRICULE
-                    INNER JOIN TARIFS_ECOLAGE t ON t.CLASSE_ID = e.CLASSE AND t.ANNEE_ID = @anneeId AND t.STATUT = 1
-                    WHERE f.ANNEE_ID = @anneeId";
-
-                using (var cmd = new SqlCommand(updateSql, conn))
+                    WHERE e.STATUT = 'actif'
+                    AND f.ANNEE_ID = @anneeId
+                    AND (f.NOM <> e.NOM OR f.CLASSE <> e.CLASSE)
+                ";
+                using (SqlCommand cmd = new SqlCommand(updateNomSql, conn))
                 {
                     cmd.Parameters.AddWithValue("@anneeId", anneeId);
-                    updatedCount = cmd.ExecuteNonQuery();
-                }
-
-                // 4. Insérer les nouveaux élèves (pas encore dans FRAIS)
-                string insertSql = @"
-                    INSERT INTO FRAIS (ID, ANNEE_ID, MATRICULE, NOM, CLASSE, TOTAL, PAYE, TARIF_ID, CREATED_AT)
-                    SELECT
-                        NEWID(), @anneeId, e.MATRICULE, e.NOM, e.CLASSE,
-                        t.MONTANT, 0, t.ID, GETDATE()
-                    FROM ELEVES e
-                    INNER JOIN TARIFS_ECOLAGE t ON t.CLASSE_ID = e.CLASSE AND t.ANNEE_ID = @anneeId AND t.STATUT = 1
-                    WHERE NOT EXISTS (
-                        SELECT 1 FROM FRAIS f WHERE f.MATRICULE = e.MATRICULE AND f.ANNEE_ID = @anneeId
-                    )";
-
-                using (var cmd = new SqlCommand(insertSql, conn))
-                {
-                    cmd.Parameters.AddWithValue("@anneeId", anneeId);
-                    insertedCount = cmd.ExecuteNonQuery();
+                    nomsMisAJour = cmd.ExecuteNonQuery();
                 }
             }
 
-            string message = updatedCount + " élève(s) mis à jour";
-            if (insertedCount > 0)
-                message += ", " + insertedCount + " nouvel(aux) élève(s) ajouté(s)";
-            message += ".";
+            // Construction du résultat pour .NET 4.0
+            string jsonResult = "{";
+            jsonResult += "\"success\":true,";
+            jsonResult += "\"message\":\"Mise à jour des frais terminée avec succès\",";
+            jsonResult += "\"anneeActiveId\":" + anneeId + ",";
+            jsonResult += "\"elevesTraites\":" + elevesTraites + ",";
+            jsonResult += "\"nouveauxEleves\":" + nouveauxEleves + ",";
+            jsonResult += "\"nomsMisAJour\":" + nomsMisAJour;
+            jsonResult += "}";
 
-            ctx.Response.Write("{\"success\":true,\"message\":\"" + message + "\"}");
+            ctx.Response.Write(jsonResult);
         }
         catch (Exception ex)
         {
@@ -113,5 +148,8 @@ public class UpdateAllFrais : IHttpHandler, IRequiresSessionState
         }
     }
 
-    public bool IsReusable { get { return false; } }
+    public bool IsReusable
+    {
+        get { return false; }
+    }
 }
