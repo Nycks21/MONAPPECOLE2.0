@@ -130,23 +130,28 @@ async function loadAbsencesFrequentes() {
             var html = '';
             for (var i = 0; i < data.data.length; i++) {
                 var item = data.data[i];
-                var badgeClass = item.statut === 'Critique' ? 'badge-danger' : 'badge-warning';
+                var badgeClass = item.statut === 'Critique' ? 'badge-danger' : 
+                                 item.statut === 'Surveiller' ? 'badge-warning' : 'badge-success';
+                // Afficher 0 si absent
+                var absences = item.nb || 0;
+                var retards = item.retards || 0;
                 html += '<tr style="cursor:pointer;" onclick="showStudentDetail(\'' + escapeHtml(item.nom) + '\')">'
                     + '<td><strong>' + escapeHtml(item.nom) + '</strong></td>'
                     + '<td>' + escapeHtml(item.classe) + '</td>'
-                    + '<td>' + item.nb + '</td>'
+                    + '<td>' + absences + '</td>'
+                    + '<td>' + retards + '</td>'
                     + '<td><span class="badge ' + badgeClass + '">' + escapeHtml(item.statut) + '</span></td>'
                     + '</tr>';
             }
             tbody.innerHTML = html;
         } else {
-            tbody.innerHTML = '<tr><td colspan="4" class="text-center" style="padding:30px;">Aucune absence ce mois</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center" style="padding:30px;">Aucune absence ni retard ce mois</td></tr>';
         }
     } catch (error) {
         console.error('Erreur Absences:', error);
         var tbody = document.getElementById('tbodyAbsences');
         if (tbody) {
-            tbody.innerHTML = '<tr><td colspan="4" class="text-center" style="padding:30px;">Erreur chargement</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="5" class="text-center" style="padding:30px;">Erreur chargement</td></tr>';
         }
     }
 }

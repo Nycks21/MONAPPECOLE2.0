@@ -94,13 +94,27 @@
                                         style="table-layout: fixed; width: 1200px; min-width: 100%; border-collapse: collapse;">
                                         <thead>
                                             <tr style="background-color: #f8f9fa; text-align: left;">
-                                                <th style="width: 100px;">Nom d'utilisateur</th>
-                                                <th style="width: 180px;">Nom complet</th>
-                                                <th style="width: 180px;">Email</th>
-                                                <th style="width: 100px;">Rôle</th>
-                                                <th style="width: 80px;">Téléphone</th>
-                                                <th style="width: 80px;">Date de création</th>
-                                                <th style="width: 80px;">Statut</th>
+                                                <th onclick="sortData('USERNAME')"
+                                                            style="cursor:pointer; width: 100px;">Nom d'utilisateur <i
+                                                                class="fas fa-sort ml-1"></i></th>
+                                                <th onclick="sortData('NOM')"
+                                                            style="cursor:pointer; width: 180px;">Nom complet <i
+                                                                class="fas fa-sort ml-1"></i></th>
+                                                <th onclick="sortData('EMAIL')"
+                                                            style="cursor:pointer; width: 180px;">Email <i
+                                                                class="fas fa-sort ml-1"></i></th>
+                                                <th onclick="sortData('ROLEID')"
+                                                            style="cursor:pointer; width: 100px;">Rôle <i
+                                                                class="fas fa-sort ml-1"></i></th>
+                                                <th onclick="sortData('TELEPHONE')"
+                                                            style="cursor:pointer; width: 80px;">Téléphone <i
+                                                                class="fas fa-sort ml-1"></i></th>
+                                                <th onclick="sortData('DATECREATION')"
+                                                            style="cursor:pointer; width: 80px;">Date de création <i
+                                                                class="fas fa-sort ml-1"></i></th>
+                                                <th onclick="sortData('STATUT')"
+                                                            style="cursor:pointer; width: 80px;">Statut <i
+                                                                class="fas fa-sort ml-1"></i></th>
                                                 <th style="width: 80px;">Actions</th>
                                             </tr>
                                         </thead>

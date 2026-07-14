@@ -8,6 +8,7 @@ let usersData = [];
 let filteredUsers = [];
 let currentPage = 1;
 let rowsPerPage = 10;
+let sortDirection = 1;
 
 let isLicenceLimitReached = false;
 let maxUsersAllowed = 0;
@@ -427,6 +428,17 @@ function updateCounter() {
 // ============================================================================
 // CHARGEMENT DES UTILISATEURS
 // ============================================================================
+
+function sortData(column) {
+    sortDirection *= -1;   // ✅ Pas de déclaration, juste utilisation
+    filteredUsers.sort(function (a, b) {
+        var va = (a[column] || '').toString().toLowerCase();
+        var vb = (b[column] || '').toString().toLowerCase();
+        return va < vb ? -sortDirection : va > vb ? sortDirection : 0;
+    });
+    currentPage = 1;
+    renderSimpleTable();
+}
 
 function loadUsers() {
     showSpinner();
@@ -2091,4 +2103,5 @@ window.openSidebar = openSidebar;
 window.closeSidebar = closeSidebar;
 window.openRestoreModal = openRestoreModal;
 window.handleRestoreFileSelect = handleRestoreFileSelect;
+window.sortData = sortData;
 window.executeRestore = executeRestore;

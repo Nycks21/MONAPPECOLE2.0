@@ -177,27 +177,31 @@
                                                         </div>
                                                         <div class="dash-card-body3">
                                                             <% if (AuthHelper.HasPermission("frais")) { %>
-                                                            <div class="gauge-row" id="gaugeContainer"></div>
-                                                            <div class="divider-line mt-3 mb-3"></div>
-                                                            <% } %>
-                                                            <div class="prog-item">
-                                                                <div class="prog-head"><span
-                                                                        class="prog-name">Garçons</span><span
-                                                                        class="prog-pct" id="pctGarcons">—%</span></div>
-                                                                <div class="prog-track">
-                                                                    <div class="prog-fill" id="fillGarcons"
-                                                                        style="background: rgb(56, 150, 238)"></div>
-                                                                </div>
-                                                            </div>
-                                                            <div class="prog-item">
-                                                                <div class="prog-head"><span
-                                                                        class="prog-name">Filles</span><span
-                                                                        class="prog-pct" id="pctFilles">—%</span></div>
-                                                                <div class="prog-track">
-                                                                    <div class="prog-fill" id="fillFilles"
-                                                                        style="background: rgb(253, 127, 148)"></div>
-                                                                </div>
-                                                            </div>
+                                                                <div class="gauge-row" id="gaugeContainer"></div>
+                                                                <div class="divider-line mt-3 mb-3"></div>
+                                                                <% } %>
+                                                                    <div class="prog-item">
+                                                                        <div class="prog-head"><span
+                                                                                class="prog-name">Garçons</span><span
+                                                                                class="prog-pct"
+                                                                                id="pctGarcons">—%</span></div>
+                                                                        <div class="prog-track">
+                                                                            <div class="prog-fill" id="fillGarcons"
+                                                                                style="background: rgb(56, 150, 238)">
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="prog-item">
+                                                                        <div class="prog-head"><span
+                                                                                class="prog-name">Filles</span><span
+                                                                                class="prog-pct"
+                                                                                id="pctFilles">—%</span></div>
+                                                                        <div class="prog-track">
+                                                                            <div class="prog-fill" id="fillFilles"
+                                                                                style="background: rgb(253, 127, 148)">
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -212,22 +216,27 @@
                                                         — absences fréquentes</span>
                                                     <span class="dash-card-meta">Ce mois</span>
                                                 </div>
+
                                                 <div
                                                     style="overflow-y: auto; max-height: 250px; border: 1px solid #dee2e6;">
                                                     <table class="dash-table"
-                                                        style="table-layout: fixed; max-width: 200px; min-width: 100%; border-collapse: collapse;">
+                                                        style="table-layout: fixed; max-width: 200px; min-width: 100%; border-collapse: collapse; ">
+
                                                         <thead>
                                                             <tr
-                                                                style="background-color: #f8f9fa; text-align: center; position: sticky; top: 0; z-index: 10;">
+                                                                style="background-color: #f8f9fa; text-align: center; position: sticky; top: 0; z-index: 10; padding-bottom: 10px;">
                                                                 <th>Élève</th>
                                                                 <th>Classe</th>
-                                                                <th>Retards & Absences</th>
+                                                                <th>Absences</th>
+                                                                <th>Retards</th>
                                                                 <th>Statut</th>
                                                             </tr>
                                                         </thead>
                                                         <tbody id="tbodyAbsences"></tbody>
+
                                                     </table>
                                                 </div>
+
                                             </div>
                                         </div>
 
