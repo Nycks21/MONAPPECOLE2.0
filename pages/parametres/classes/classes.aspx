@@ -47,7 +47,7 @@
                         <div class="container-fluid">
                             <div class="row">
                                 <div class="col-lg-6">
-                                    <h1 id="dynPageTitle">Liste classes</h1>
+                                    <h1 id="dynPageTitle"><i class="fas fa-folder" style="color:#007bff;"></i> Liste classes</h1>
                                 </div>
                                 <div class="col-lg-6">
                                     <ol class="breadcrumb" style="float: right;">

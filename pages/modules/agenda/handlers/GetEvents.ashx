@@ -73,7 +73,6 @@ public class GetEvents : IHttpHandler, IRequiresSessionState
                         URL,
                         CREATED_AT
                     FROM CALENDAREVENTS
-                    WHERE (IDUSER = @userId OR IDUSER IS NULL)
                     ORDER BY DATE_DEBUT ASC";
 
                 using (var cmd = new SqlCommand(sql, conn))

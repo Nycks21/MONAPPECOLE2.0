@@ -23,6 +23,13 @@ public class GetEventDetail : IHttpHandler, IRequiresSessionState
                 return;
             }
 
+            // ✅ Vérifier la permission agenda
+            if (!AuthHelper.HasPermission("agenda"))
+            {
+                ctx.Response.Write("{\"success\":false,\"message\":\"Accès non autorisé\"}");
+                return;
+            }
+
             string connStr = "";
             var connSetting = ConfigurationManager.ConnectionStrings["MaConnexion"];
             if (connSetting != null)
@@ -43,13 +50,13 @@ public class GetEventDetail : IHttpHandler, IRequiresSessionState
                 return;
             }
 
-            int userId = Convert.ToInt32(ctx.Session["IDUSER"]);
             Dictionary<string, object> eventDetail = null;
 
             using (var conn = new SqlConnection(connStr))
             {
                 conn.Open();
 
+                // ✅ Requête corrigée : filtre uniquement sur l'ID (sans restriction IDUSER)
                 string sql = @"
                     SELECT 
                         ID,
@@ -68,12 +75,11 @@ public class GetEventDetail : IHttpHandler, IRequiresSessionState
                         URL,
                         CREATED_AT
                     FROM CALENDAREVENTS
-                    WHERE ID = @id AND (IDUSER = @userId OR IDUSER IS NULL)";
+                    WHERE ID = @id";
 
                 using (var cmd = new SqlCommand(sql, conn))
                 {
                     cmd.Parameters.AddWithValue("@id", id);
-                    cmd.Parameters.AddWithValue("@userId", userId);
                     using (var rdr = cmd.ExecuteReader())
                     {
                         if (rdr.Read())

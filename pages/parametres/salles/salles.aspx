@@ -42,7 +42,7 @@
                         <div class="container-fluid">
                             <div class="row">
                                 <div class="col-lg-6">
-                                    <h1>Salles de classe</h1>
+                                    <h1><i class="fas fa-door-open" style="color:#007bff;"></i> Salles de classe</h1>
                                 </div>
                                 <div class="col-lg-6">
                                     <ol class="breadcrumb" style="float:right;">

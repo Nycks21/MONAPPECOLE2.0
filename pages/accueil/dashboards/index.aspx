@@ -1,11 +1,13 @@
-﻿﻿<%@ Page Language="C#" AutoEventWireup="true" CodeFile="index.cs" Inherits="index" UICulture="Auto" Culture="Auto"%>
+﻿﻿<%@ Page Language="C#" AutoEventWireup="true" CodeFile="index.cs" Inherits="index" UICulture="Auto" Culture="Auto" %>
     <!DOCTYPE html>
     <html lang="fr">
 
     <head>
         <meta charset="UTF-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title><%= LocalizationHelper.GetString("Dashboard") %> — Gestion Scolaire</title>
+        <title>
+            <%= LocalizationHelper.GetString("Dashboard") %> — Gestion Scolaire
+        </title>
 
         <link rel="stylesheet" href="../../_assets/css/all.min.css?v=<%=AuthHelper.Version %>">
         <link rel="stylesheet" href="../../_assets/css/fontawesome.css?v=<%=AuthHelper.Version %>">
@@ -109,13 +111,8 @@
                                                             class="dot-terra"></span>Présences — 7 derniers jours</span>
                                                     <span class="dash-card-meta" id="lblMoisPresence2"></span>
                                                 </div>
-                                                <div class="dash-card-body1">
-                                                    <div class="chart-legend mb-2">
-                                                        <span class="leg-item"><span class="leg-sq"
-                                                                style="background:var(--forest)"></span>Présents</span>
-                                                        <span class="leg-item"><span class="leg-sq"
-                                                                style="background:var(--terra)"></span>Absents</span>
-                                                    </div>
+                                                <div class="dash-card-body3">
+
                                                     <div style="position:relative;height:200px;"><canvas
                                                             id="chartPresence"></canvas></div>
                                                 </div>
@@ -125,7 +122,7 @@
                                             <div class="dash-card">
                                                 <div class="dash-card-head"><span class="dash-card-title"><span
                                                             class="dot-terra"></span>Répartition par niveau</span></div>
-                                                <div class="dash-card-body1">
+                                                <div class="dash-card-body3">
                                                     <div
                                                         style="overflow-y: auto; max-height: 250px; display: flex; justify-content: center; width: 100%;">
                                                         <div class="donut-wrap"
@@ -149,7 +146,11 @@
                                                             class="dot-terra"></span>Taux de réussite par classe</span>
                                                 </div>
                                                 <div style="overflow-y: auto; max-height: 250px;">
-                                                    <div class="dash-card-body1" id="reussiteContainer"></div>
+                                                    <div class="dash-card-body3" id="reussiteContainer">
+                                                        <div style="position:relative;height:250px;">
+                                                            <canvas id="chartReussite"></canvas>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
@@ -162,12 +163,6 @@
                                                                 class="dot-terra"></span>Frais scolaires mensuels</span>
                                                     </div>
                                                     <div class="dash-card-body1">
-                                                        <div class="chart-legend mb-2">
-                                                            <span class="leg-item"><span class="leg-sq"
-                                                                    style="background:var(--forest-light)"></span>Payé</span>
-                                                            <span class="leg-item"><span class="leg-sq"
-                                                                    style="background:#f0d4c8"></span>Impayé</span>
-                                                        </div>
                                                         <div style="position:relative;height:180px;"><canvas
                                                                 id="chartFrais"></canvas></div>
                                                     </div>
@@ -180,9 +175,11 @@
                                                         <div class="dash-card-head"><span class="dash-card-title"><span
                                                                     class="dot-terra"></span>Indicateurs clés</span>
                                                         </div>
-                                                        <div class="dash-card-body1">
+                                                        <div class="dash-card-body3">
+                                                            <% if (AuthHelper.HasPermission("frais")) { %>
                                                             <div class="gauge-row" id="gaugeContainer"></div>
                                                             <div class="divider-line mt-3 mb-3"></div>
+                                                            <% } %>
                                                             <div class="prog-item">
                                                                 <div class="prog-head"><span
                                                                         class="prog-name">Garçons</span><span
@@ -263,17 +260,20 @@
                                                     <div style="flex:0 0 280px;max-width:280px;">
                                                         <!-- CONTROLES DE NAVIGATION AU-DESSUS DU CALENDRIER -->
                                                         <div class="cal-legend">
-                                                            <button type="button" class="btn btn-sm btn-outline-secondary"
+                                                            <button type="button"
+                                                                class="btn btn-sm btn-outline-secondary"
                                                                 onclick="prevMonth()" title="Mois précédent">
                                                                 <i class="fas fa-chevron-left"></i>
                                                             </button>
                                                             <span id="calendarMonthTitle"
                                                                 class="calendar-month-title">Janvier 2026</span>
-                                                            <button type="button" class="btn btn-sm btn-outline-secondary"
+                                                            <button type="button"
+                                                                class="btn btn-sm btn-outline-secondary"
                                                                 onclick="nextMonth()" title="Mois suivant">
                                                                 <i class="fas fa-chevron-right"></i>
                                                             </button>
-                                                            <button type="button" class="btn btn-sm btn-outline-secondary"
+                                                            <button type="button"
+                                                                class="btn btn-sm btn-outline-secondary"
                                                                 onclick="todayMonth()" title="Aujourd'hui">
                                                                 <i class="fas fa-calendar-day"></i>
                                                             </button>
@@ -398,9 +398,17 @@
                 }
             </script>
             <script src="../../_assets/js/chart.umd.min.js?v=<%=AuthHelper.Version %>"></script>
-            <script src="js/dashboard.js?v=<%=AuthHelper.Version %>"></script>
             <script src="../../_assets/js/global.js?v=<%=AuthHelper.Version %>"></script>
             <script src="../../_assets/js/sweetalert2.all.min.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="js/config.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="js/state.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="js/utils.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="js/ui.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="js/charts.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="js/kpi.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="js/calendar.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="js/loaders.js?v=<%=AuthHelper.Version %>"></script>
+            <script src="js/init.js?v=<%=AuthHelper.Version %>"></script>
         </form>
     </body>
 

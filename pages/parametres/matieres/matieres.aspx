@@ -46,7 +46,7 @@
                         <div class="container-fluid">
                             <div class="row">
                                 <div class="col-lg-6">
-                                    <h1 id="dynPageTitle">Matières</h1>
+                                    <h1 id="dynPageTitle"><i class="fas fa-book" style="color:#007bff;"></i> Matières</h1>
                                 </div>
                                 <div class="col-lg-6">
                                     <ol class="breadcrumb" style="float:right;">

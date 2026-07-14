@@ -43,7 +43,7 @@ const CHECKBOX_ID_MAP = {
 const DEFAULT_ROLE_PERMISSIONS = {
     'Administrateur': ['dashboard', 'eleves', 'absences', 'bulletins', 'agenda', 'emplois', 'frais', 'niveaux', 'salles', 'classes', 'matieres', 'importation', 'annees', 'utilisateurs'],
     'SuperAdmin': ['dashboard', 'eleves', 'absences', 'bulletins', 'agenda', 'emplois', 'frais', 'niveaux', 'salles', 'classes', 'matieres', 'importation', 'annees', 'utilisateurs', 'requetes'],
-    'Professeur': ['dashboard', 'eleves', 'bulletins', 'emplois', 'absences'],
+    'Professeur': ['dashboard', 'eleves', 'bulletins', 'emplois'],
     'Secrétaire': ['dashboard', 'eleves', 'absences', 'agenda', 'emplois'],
     'Comptable': ['dashboard', 'frais'],
     'CPE': ['dashboard', 'eleves', 'absences'],

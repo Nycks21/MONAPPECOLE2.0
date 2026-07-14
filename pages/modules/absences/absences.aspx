@@ -313,7 +313,7 @@
                                 <div class="container-fluid">
                                     <div class="row">
                                         <div class="col-lg-6">
-                                            <h1 id="dynPageTitle">Absences & Retards</h1>
+                                            <h1 id="dynPageTitle"><i class="fas fa-user-times" style="color:#007bff;"></i> Absences & Retards</h1>
                                         </div>
                                         <div class="col-lg-6">
                                             <ol class="breadcrumb" style="float: right;">

@@ -23,11 +23,42 @@ public class GetReussite : IHttpHandler
                 var data = new List<object>();
 
                 string sql = @"
+                    WITH Coeffs AS (
+                        SELECT 
+                            MATIERE_ID, 
+                            CLASSE_ID, 
+                            PERIODE,
+                            ISNULL(COEFF1, 1) AS COEFF1,
+                            ISNULL(COEFF2, 1) AS COEFF2,
+                            ISNULL(COEFF_PROJET, 1) AS COEFF_PROJET
+                        FROM BULLETINS_COEFFS
+                    )
                     SELECT 
                         ISNULL(c.NOM, 'Non définie') AS CLASSE,
-                        ISNULL(AVG(CASE WHEN b.NOTE >= 10 THEN 1 ELSE 0 END) * 100, 0) AS TAUX
+                        COUNT(b.ID) AS TOTAL,
+                        SUM(CASE 
+                            WHEN (ISNULL(b.NOTE1, 0) * ISNULL(co.COEFF1, 1) 
+                                + ISNULL(b.NOTE2, 0) * ISNULL(co.COEFF2, 1) 
+                                + ISNULL(b.NOTE_PROJET, 0) * ISNULL(co.COEFF_PROJET, 1)) 
+                                / (ISNULL(co.COEFF1, 1) + ISNULL(co.COEFF2, 1) + ISNULL(co.COEFF_PROJET, 1)) >= 10 
+                            THEN 1 ELSE 0 END) AS REUSSIS,
+                        CASE 
+                            WHEN COUNT(b.ID) > 0 THEN 
+                                ROUND(CAST(SUM(CASE 
+                                    WHEN (ISNULL(b.NOTE1, 0) * ISNULL(co.COEFF1, 1) 
+                                        + ISNULL(b.NOTE2, 0) * ISNULL(co.COEFF2, 1) 
+                                        + ISNULL(b.NOTE_PROJET, 0) * ISNULL(co.COEFF_PROJET, 1)) 
+                                        / (ISNULL(co.COEFF1, 1) + ISNULL(co.COEFF2, 1) + ISNULL(co.COEFF_PROJET, 1)) >= 10 
+                                    THEN 1 ELSE 0 END) AS FLOAT) / COUNT(b.ID) * 100, 1)
+                            ELSE 0 
+                        END AS TAUX
                     FROM BULLETINS b
-                    LEFT JOIN CLASSES c ON b.CLASSE = c.ID
+                    INNER JOIN ELEVES e ON b.ELEVE_MATRICULE = e.MATRICULE
+                    LEFT JOIN CLASSES c ON e.CLASSE = c.ID
+                    LEFT JOIN Coeffs co ON b.MATIERE_ID = co.MATIERE_ID 
+                                       AND c.ID = co.CLASSE_ID 
+                                       AND b.PERIODE = co.PERIODE
+                    WHERE b.STATUT IN ('Enregistré', 'Validé')
                     GROUP BY c.NOM
                     ORDER BY TAUX DESC";
 
@@ -37,23 +68,18 @@ public class GetReussite : IHttpHandler
                     while (reader.Read())
                     {
                         string classe = reader["CLASSE"] != DBNull.Value ? reader["CLASSE"].ToString() : "Non définie";
+                        int total = Convert.ToInt32(reader["TOTAL"]);
+                        int reussis = Convert.ToInt32(reader["REUSSIS"]);
                         double taux = reader["TAUX"] != DBNull.Value ? Math.Round(Convert.ToDouble(reader["TAUX"]), 1) : 0;
-                        
+
                         data.Add(new
                         {
                             classe = classe,
+                            total = total,
+                            reussis = reussis,
                             taux = taux
                         });
                     }
-                }
-
-                if (data.Count == 0)
-                {
-                    data.Add(new { classe = "6ème A", taux = 88.5 });
-                    data.Add(new { classe = "6ème B", taux = 82.0 });
-                    data.Add(new { classe = "5ème A", taux = 75.5 });
-                    data.Add(new { classe = "4ème A", taux = 69.0 });
-                    data.Add(new { classe = "3ème A", taux = 58.5 });
                 }
 
                 var result = new { success = true, data = data };
@@ -62,15 +88,7 @@ public class GetReussite : IHttpHandler
         }
         catch (Exception ex)
         {
-            var result = new 
-            { 
-                success = false, 
-                message = ex.Message, 
-                data = new[] { 
-                    new { classe = "6ème A", taux = 88.5 }, 
-                    new { classe = "5ème A", taux = 82.0 } 
-                } 
-            };
+            var result = new { success = false, message = ex.Message, data = new List<object>() };
             context.Response.Write(new JavaScriptSerializer().Serialize(result));
         }
     }

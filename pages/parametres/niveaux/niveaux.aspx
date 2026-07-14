@@ -42,7 +42,7 @@
                         <div class="container-fluid">
                             <div class="row">
                                 <div class="col-lg-6">
-                                    <h1>Niveaux</h1>
+                                    <h1><i class="fas fa-layer-group" style="color:#007bff;"></i> Niveaux</h1>
                                 </div>
                                 <div class="col-lg-6">
                                     <ol class="breadcrumb" style="float:right;">

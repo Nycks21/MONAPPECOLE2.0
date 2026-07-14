@@ -26,19 +26,24 @@ public class AjouterEleve : IHttpHandler, IRequiresSessionState
             return;
         }
 
+        // Récupérer l'ID de l'utilisateur connecté
+        int userId = 0;
+        if (ctx.Session["IDUSER"] != null)
+        {
+            userId = Convert.ToInt32(ctx.Session["IDUSER"]);
+        }
+
         try
         {
-            // Lire le corps de la requête
             string body;
             using (var reader = new StreamReader(ctx.Request.InputStream))
                 body = reader.ReadToEnd();
 
-            // Désérialiser
             var payload = ser.Deserialize<ElevePayload>(body);
             if (payload == null)
                 throw new ArgumentException("Données invalides.");
 
-            // ✅ Validations
+            // Validations
             if (string.IsNullOrWhiteSpace(payload.NOM))
                 throw new ArgumentException("Le nom est obligatoire.");
             if (string.IsNullOrWhiteSpace(payload.MATRICULE))
@@ -52,7 +57,7 @@ public class AjouterEleve : IHttpHandler, IRequiresSessionState
             if (payload.CLASSE == null || !int.TryParse(payload.CLASSE.ToString(), out classeId))
                 throw new ArgumentException("La classe sélectionnée est invalide.");
 
-            // ✅ Date de naissance obligatoire
+            // Date de naissance obligatoire
             if (string.IsNullOrEmpty(payload.DATE_NAISSANCE))
                 throw new ArgumentException("La date de naissance est obligatoire.");
 
@@ -60,15 +65,14 @@ public class AjouterEleve : IHttpHandler, IRequiresSessionState
             if (!DateTime.TryParse(payload.DATE_NAISSANCE, out dateNaiss))
                 throw new ArgumentException("La date de naissance est invalide.");
 
-            // ✅ Adresse obligatoire
+            // Adresse obligatoire
             if (string.IsNullOrWhiteSpace(payload.ADRESSE))
                 throw new ArgumentException("L'adresse est obligatoire.");
 
-            // ✅ Parent/Tuteur obligatoire
+            // Parent obligatoire
             if (string.IsNullOrWhiteSpace(payload.PARENT))
                 throw new ArgumentException("Le parent/tuteur est obligatoire.");
 
-            // Récupération de la chaîne de connexion
             string connStr = "";
             if (ConfigurationManager.ConnectionStrings["MaConnexion"] != null)
                 connStr = ConfigurationManager.ConnectionStrings["MaConnexion"].ConnectionString;
@@ -78,8 +82,8 @@ public class AjouterEleve : IHttpHandler, IRequiresSessionState
             using (var conn = new SqlConnection(connStr))
             using (var cmd = new SqlCommand(
                 @"INSERT INTO [dbo].[ELEVES] 
-                  (ANNEE_ID, MATRICULE, NOM, CLASSE, EMAIL, TELEPHONE, STATUT, GENRE, DATE_NAISSANCE, ADRESSE, PARENT) 
-                  VALUES (@anneeId, @matricule, @nom, @classe, @email, @tel, @statut, @genre, @dateNaiss, @adresse, @parent)", conn))
+                  (ANNEE_ID, MATRICULE, NOM, CLASSE, EMAIL, TELEPHONE, STATUT, GENRE, DATE_NAISSANCE, ADRESSE, PARENT, CREATED_AT, CREATED_BY, UPDATED_AT, UPDATED_BY) 
+                  VALUES (@anneeId, @matricule, @nom, @classe, @email, @tel, @statut, @genre, @dateNaiss, @adresse, @parent, GETDATE(), @createdBy, NULL, NULL)", conn))
             {
                 cmd.Parameters.AddWithValue("@anneeId", anneeId);
                 cmd.Parameters.AddWithValue("@matricule", payload.MATRICULE.Trim());
@@ -101,6 +105,10 @@ public class AjouterEleve : IHttpHandler, IRequiresSessionState
                 cmd.Parameters.AddWithValue("@dateNaiss", dateNaiss);
                 cmd.Parameters.AddWithValue("@adresse", payload.ADRESSE.Trim());
                 cmd.Parameters.AddWithValue("@parent", payload.PARENT.Trim());
+
+                // Traçabilité
+                cmd.Parameters.AddWithValue("@createdBy", userId);
+                // CREATED_AT = GETDATE() est dans la requête, UPDATED_AT et UPDATED_BY sont NULL
 
                 conn.Open();
                 cmd.ExecuteNonQuery();

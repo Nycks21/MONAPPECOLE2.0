@@ -184,8 +184,8 @@ function renderAbsencesTable() {
                 '<td>' + escapeHtml(a.MOTIF || '-') + '</td>' +
                 '<td style="text-align:center;">' +
                 '<button type="button" class="btn btn-sm btn-primary" style="margin:0 2px;" onclick="editAbsence(\'' + a.ID + '\')"><i class="fas fa-edit"></i></button>' +
-                (!a.JUSTIFIE ? '<button type="button" class="btn btn-sm btn-success" style="margin:0 2px;" onclick="justifyAbsence(\'' + a.ID + '\')" title="Justifier"><i class="fas fa-check"></i></button>' : '') +
                 '<button type="button" class="btn btn-sm btn-danger" style="margin:0 2px;" onclick="deleteAbsence(\'' + a.ID + '\')"><i class="fas fa-trash"></i></button>' +
+                (!a.JUSTIFIE ? '<button type="button" class="btn btn-sm btn-success" style="margin:0 2px;" onclick="justifyAbsence(\'' + a.ID + '\')" title="Justifier"><i class="fas fa-check"></i></button>' : '') +
                 '</td>';
         }
     }
@@ -220,8 +220,8 @@ function renderRetardsTable() {
                 '<td>' + escapeHtml(r.MOTIF || '-') + '</td>' +
                 '<td style="text-align:center;">' +
                 '<button type="button" class="btn btn-sm btn-primary" style="margin:0 2px;" onclick="editRetard(\'' + r.ID + '\')"><i class="fas fa-edit"></i></button>' +
-                (!r.JUSTIFIE ? '<button type="button" class="btn btn-sm btn-success" style="margin:0 2px;" onclick="justifyRetard(\'' + r.ID + '\')" title="Justifier"><i class="fas fa-check"></i></button>' : '') +
                 '<button type="button" class="btn btn-sm btn-danger" style="margin:0 2px;" onclick="deleteRetard(\'' + r.ID + '\')"><i class="fas fa-trash"></i></button>' +
+                (!r.JUSTIFIE ? '<button type="button" class="btn btn-sm btn-success" style="margin:0 2px;" onclick="justifyRetard(\'' + r.ID + '\')" title="Justifier"><i class="fas fa-check"></i></button>' : '') +
                 '</td>';
         }
     }

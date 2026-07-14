@@ -52,92 +52,11 @@ BEGIN
         LAST_LOGIN DATETIME DEFAULT GETDATE(),
         LAST_PC NVARCHAR(100),
         MENU_PERMISSIONS NVARCHAR(MAX) NULL,
-        BLOCKED_UNTIL DATETIME NULL;
+        BLOCKED_UNTIL DATETIME NULL,
         -- Nouvelle colonne pour les permissions
 
         CONSTRAINT FK_USER_ROLE FOREIGN KEY (ROLEID) REFERENCES USERROLE(ROLEID)
     );
-END
-GO
-
--- =====================================================
--- TABLE MENUS
--- =====================================================
-IF NOT EXISTS (SELECT *
-FROM sys.tables
-WHERE name = 'MENUS')
-BEGIN
-    CREATE TABLE MENUS
-    (
-        ID INT IDENTITY(1,1) PRIMARY KEY,
-        CODE NVARCHAR(50) NOT NULL UNIQUE,
-        NOM NVARCHAR(100) NOT NULL,
-        PARENT_ID INT NULL,
-        ICONE NVARCHAR(50) NULL,
-        URL NVARCHAR(200) NULL,
-        ORDRE INT DEFAULT 0,
-        ACTIF BIT DEFAULT 1,
-        CREATED_AT DATETIME DEFAULT GETDATE(),
-
-        CONSTRAINT FK_MENUS_PARENT FOREIGN KEY (PARENT_ID) REFERENCES MENUS(ID)
-    );
-END
-GO
-
--- Insertion des menus par défaut
-IF NOT EXISTS (SELECT 1
-FROM MENUS)
-BEGIN
-    INSERT INTO MENUS
-        (CODE, NOM, URL, ICONE, ORDRE, PARENT_ID)
-    VALUES
-        -- Menu principal
-        ('dashboard', 'Dashboard', '/pages/accueil/dashboards/index.aspx', 'fas fa-chalkboard', 1, NULL),
-
-        -- Modules
-        ('modules', 'Modules', NULL, 'fas fa-cubes', 2, NULL),
-        ('eleves', 'Liste des élèves', '/pages/modules/eleves/eleves.aspx', 'fas fa-users', 1, (SELECT ID
-            FROM MENUS
-            WHERE CODE = 'modules')),
-        ('absences', 'Retards & Absences', '/pages/modules/absences/absences.aspx', 'fas fa-calendar-times', 2, (SELECT ID
-            FROM MENUS
-            WHERE CODE = 'modules')),
-        ('frais', 'Frais scolaires', '/pages/modules/frais/frais.aspx', 'fas fa-money-bill-wave', 3, (SELECT ID
-            FROM MENUS
-            WHERE CODE = 'modules')),
-        ('bulletins', 'Bulletins', '/pages/modules/bulletins/bulletins.aspx', 'fas fa-file-alt', 4, (SELECT ID
-            FROM MENUS
-            WHERE CODE = 'modules')),
-
-        -- Paramètres
-        ('parametres', 'Paramètres', NULL, 'fas fa-sliders-h', 3, NULL),
-        ('niveaux', 'Niveaux', '/pages/parametres/niveaux/niveaux.aspx', 'fas fa-layer-group', 1, (SELECT ID
-            FROM MENUS
-            WHERE CODE = 'parametres')),
-        ('salles', 'Salles', '/pages/parametres/salles/salles.aspx', 'fas fa-door-open', 2, (SELECT ID
-            FROM MENUS
-            WHERE CODE = 'parametres')),
-        ('classes', 'Classes', '/pages/parametres/classes/classes.aspx', 'fas fa-folder', 3, (SELECT ID
-            FROM MENUS
-            WHERE CODE = 'parametres')),
-        ('matieres', 'Matières', '/pages/parametres/matieres/matieres.aspx', 'fas fa-book', 4, (SELECT ID
-            FROM MENUS
-            WHERE CODE = 'parametres')),
-
-        -- Administrations
-        ('administrations', 'Administrations', NULL, 'fas fa-university', 4, NULL),
-        ('utilitaires', 'Utilitaires', '/pages/administrations/utilitaires/utilitaires.aspx', 'fas fa-cogs', 1, (SELECT ID
-            FROM MENUS
-            WHERE CODE = 'administrations')),
-        ('annee', 'Années', '/pages/administrations/annee/annee.aspx', 'fas fa-calendar-alt', 2, (SELECT ID
-            FROM MENUS
-            WHERE CODE = 'administrations')),
-        ('utilisateur', 'Utilisateurs', '/pages/administrations/utilisateur/utilisateur.aspx', 'fas fa-user-shield', 3, (SELECT ID
-            FROM MENUS
-            WHERE CODE = 'administrations')),
-        ('requetes', 'Requêtes SQL', '/pages/administrations/requete/requetes.aspx', 'fas fa-database', 4, (SELECT ID
-            FROM MENUS
-            WHERE CODE = 'administrations'));
 END
 GO
 
@@ -356,18 +275,16 @@ BEGIN
         GENRE NCHAR(1) DEFAULT 'M' CHECK (GENRE IN ('M','F')),
         ADRESSE NVARCHAR(MAX),
         PARENT NVARCHAR(100),
-
         DATE_INSCRIPTION DATE DEFAULT GETDATE(),
         CREATED_AT DATETIME DEFAULT GETDATE(),
         UPDATED_AT DATETIME DEFAULT GETDATE(),
+        CREATED_BY INT NULL,
+        UPDATED_BY INT NULL,
 
-        -- Clé étrangère vers la table CLASSES
-        CONSTRAINT FK_ELEVES_CLASSES FOREIGN KEY (CLASSE) 
-            REFERENCES CLASSES(ID),
-
-        -- CORRECTION ICI : Le nom de la colonne doit correspondre (ANNEE_ID)
-        CONSTRAINT FK_ELEVES_RANNEE FOREIGN KEY (ANNEE_ID) 
-            REFERENCES RANNEE(ID)
+        CONSTRAINT FK_ELEVES_CLASSES FOREIGN KEY (CLASSE) REFERENCES CLASSES(ID),
+        CONSTRAINT FK_ELEVES_RANNEE FOREIGN KEY (ANNEE_ID) REFERENCES RANNEE(ID),
+        CONSTRAINT FK_ELEVES_CREATED_BY FOREIGN KEY (CREATED_BY) REFERENCES USERS(IDUSER),
+        CONSTRAINT FK_ELEVES_UPDATED_BY FOREIGN KEY (UPDATED_BY) REFERENCES USERS(IDUSER)
     );
 END
 GO

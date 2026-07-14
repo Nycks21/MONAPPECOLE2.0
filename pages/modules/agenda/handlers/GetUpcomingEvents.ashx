@@ -36,7 +36,6 @@ public class GetUpcomingEvents : IHttpHandler, IRequiresSessionState
                 return;
             }
 
-            int userId = Convert.ToInt32(ctx.Session["IDUSER"]);
             var events = new List<Dictionary<string, object>>();
 
             using (var conn = new SqlConnection(connStr))
@@ -55,6 +54,7 @@ public class GetUpcomingEvents : IHttpHandler, IRequiresSessionState
                     }
                 }
 
+                // ✅ Suppression du filtre IDUSER et ajout de TOP 10 + DATE_DEBUT >= GETDATE()
                 string sql = @"
                     SELECT TOP 10
                         ce.ID,
@@ -78,35 +78,31 @@ public class GetUpcomingEvents : IHttpHandler, IRequiresSessionState
                         END AS TEMPLATE_NOM
                     FROM CALENDAREVENTS ce
                     WHERE ce.DATE_DEBUT >= GETDATE()
-                      AND (ce.IDUSER = @userId OR ce.IDUSER IS NULL)
                     ORDER BY ce.DATE_DEBUT ASC, ce.HEURE_DEBUT ASC";
 
                 using (var cmd = new SqlCommand(sql, conn))
+                using (var rdr = cmd.ExecuteReader())
                 {
-                    cmd.Parameters.AddWithValue("@userId", userId);
-                    using (var rdr = cmd.ExecuteReader())
+                    while (rdr.Read())
                     {
-                        while (rdr.Read())
-                        {
-                            var e = new Dictionary<string, object>();
-                            e["ID"] = rdr["ID"].ToString();
-                            e["TEMPLATE_ID"] = rdr["TEMPLATE_ID"] != DBNull.Value ? Convert.ToInt32(rdr["TEMPLATE_ID"]) : (int?)null;
-                            e["IDUSER"] = rdr["IDUSER"] != DBNull.Value ? Convert.ToInt32(rdr["IDUSER"]) : (int?)null;
-                            e["TITRE"] = rdr["TITRE"] != DBNull.Value ? rdr["TITRE"].ToString() : "Sans titre";
-                            e["DATE_DEBUT"] = rdr["DATE_DEBUT"] != DBNull.Value ? ((DateTime)rdr["DATE_DEBUT"]).ToString("yyyy-MM-dd") : "";
-                            e["DATE_FIN"] = rdr["DATE_FIN"] != DBNull.Value ? ((DateTime)rdr["DATE_FIN"]).ToString("yyyy-MM-dd") : "";
-                            e["COULEUR"] = rdr["COULEUR"] != DBNull.Value ? rdr["COULEUR"].ToString() : "#007bff";
-                            e["HEURE_DEBUT"] = rdr["HEURE_DEBUT"] != DBNull.Value ? rdr["HEURE_DEBUT"].ToString() : "";
-                            e["HEURE_FIN"] = rdr["HEURE_FIN"] != DBNull.Value ? rdr["HEURE_FIN"].ToString() : "";
-                            e["DESCRIPTION"] = rdr["DESCRIPTION"] != DBNull.Value ? rdr["DESCRIPTION"].ToString() : "";
-                            e["TYPE"] = rdr["TYPE"] != DBNull.Value ? rdr["TYPE"].ToString() : "autre";
-                            e["LIEU"] = rdr["LIEU"] != DBNull.Value ? rdr["LIEU"].ToString() : "";
-                            e["PUBLIQUE"] = rdr["PUBLIQUE"] != DBNull.Value ? rdr["PUBLIQUE"].ToString() : "all";
-                            e["URL"] = rdr["URL"] != DBNull.Value ? rdr["URL"].ToString() : "";
-                            e["TEMPLATE_NOM"] = rdr["TEMPLATE_NOM"] != DBNull.Value ? rdr["TEMPLATE_NOM"].ToString() : "Événement";
-                            e["CREATED_AT"] = rdr["CREATED_AT"] != DBNull.Value ? ((DateTime)rdr["CREATED_AT"]).ToString("yyyy-MM-dd HH:mm") : "";
-                            events.Add(e);
-                        }
+                        var e = new Dictionary<string, object>();
+                        e["ID"] = rdr["ID"].ToString();
+                        e["TEMPLATE_ID"] = rdr["TEMPLATE_ID"] != DBNull.Value ? Convert.ToInt32(rdr["TEMPLATE_ID"]) : (int?)null;
+                        e["IDUSER"] = rdr["IDUSER"] != DBNull.Value ? Convert.ToInt32(rdr["IDUSER"]) : (int?)null;
+                        e["TITRE"] = rdr["TITRE"] != DBNull.Value ? rdr["TITRE"].ToString() : "Sans titre";
+                        e["DATE_DEBUT"] = rdr["DATE_DEBUT"] != DBNull.Value ? ((DateTime)rdr["DATE_DEBUT"]).ToString("yyyy-MM-dd") : "";
+                        e["DATE_FIN"] = rdr["DATE_FIN"] != DBNull.Value ? ((DateTime)rdr["DATE_FIN"]).ToString("yyyy-MM-dd") : "";
+                        e["COULEUR"] = rdr["COULEUR"] != DBNull.Value ? rdr["COULEUR"].ToString() : "#007bff";
+                        e["HEURE_DEBUT"] = rdr["HEURE_DEBUT"] != DBNull.Value ? rdr["HEURE_DEBUT"].ToString() : "";
+                        e["HEURE_FIN"] = rdr["HEURE_FIN"] != DBNull.Value ? rdr["HEURE_FIN"].ToString() : "";
+                        e["DESCRIPTION"] = rdr["DESCRIPTION"] != DBNull.Value ? rdr["DESCRIPTION"].ToString() : "";
+                        e["TYPE"] = rdr["TYPE"] != DBNull.Value ? rdr["TYPE"].ToString() : "autre";
+                        e["LIEU"] = rdr["LIEU"] != DBNull.Value ? rdr["LIEU"].ToString() : "";
+                        e["PUBLIQUE"] = rdr["PUBLIQUE"] != DBNull.Value ? rdr["PUBLIQUE"].ToString() : "all";
+                        e["URL"] = rdr["URL"] != DBNull.Value ? rdr["URL"].ToString() : "";
+                        e["TEMPLATE_NOM"] = rdr["TEMPLATE_NOM"] != DBNull.Value ? rdr["TEMPLATE_NOM"].ToString() : "Événement";
+                        e["CREATED_AT"] = rdr["CREATED_AT"] != DBNull.Value ? ((DateTime)rdr["CREATED_AT"]).ToString("yyyy-MM-dd HH:mm") : "";
+                        events.Add(e);
                     }
                 }
             }

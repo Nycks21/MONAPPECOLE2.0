@@ -3,10 +3,11 @@ using System;
 using System.Configuration;
 using System.Data.SqlClient;
 using System.Web;
+using System.Web.SessionState;
 using System.Web.Script.Serialization;
 using System.Collections.Generic;
 
-public class GetPresences : IHttpHandler
+public class GetPresences : IHttpHandler, IRequiresSessionState
 {
     private static readonly string connStr = ConfigurationManager.ConnectionStrings["MaConnexion"].ConnectionString;
 
@@ -16,6 +17,14 @@ public class GetPresences : IHttpHandler
 
         try
         {
+            // Vérifier l'authentification
+            if (context.Session == null || context.Session["authenticated"] == null || !(bool)context.Session["authenticated"])
+            {
+                context.Response.StatusCode = 401;
+                context.Response.Write("{\"success\":false,\"message\":\"Non authentifié\"}");
+                return;
+            }
+
             using (SqlConnection conn = new SqlConnection(connStr))
             {
                 conn.Open();
@@ -24,16 +33,45 @@ public class GetPresences : IHttpHandler
                 var presents = new List<int>();
                 var absents = new List<int>();
 
+                // 1. Récupérer le nombre total d'élèves actifs
+                int totalEleves = 0;
+                string countSql = "SELECT COUNT(*) FROM ELEVES WHERE STATUT = 'actif'";
+                using (var cmd = new SqlCommand(countSql, conn))
+                {
+                    totalEleves = (int)cmd.ExecuteScalar();
+                }
+                if (totalEleves == 0) totalEleves = 50;
+
+                // 2. Récupérer les absences des 7 derniers jours ouvrés (exclure dimanche)
                 string sql = @"
+                    SET DATEFIRST 1;  -- 1 = Lundi
+
+                    WITH Dates AS (
+                        SELECT TOP 10 
+                            DATEADD(day, -n, CAST(GETDATE() AS DATE)) AS JOUR
+                        FROM (VALUES (0),(1),(2),(3),(4),(5),(6),(7),(8),(9)) AS T(n)
+                        WHERE DATEPART(weekday, DATEADD(day, -n, CAST(GETDATE() AS DATE))) != 7
+                    ),
+                    Dates_7 AS (
+                        SELECT TOP 7 JOUR
+                        FROM Dates
+                        ORDER BY JOUR ASC
+                    ),
+                    AbsencesParJour AS (
+                        SELECT 
+                            CAST(DATE_DEBUT AS DATE) AS DATE_ABS,
+                            COUNT(DISTINCT MATRICULE) AS NB_ABSENTS
+                        FROM ABSENCES
+                        WHERE DATE_DEBUT >= DATEADD(day, -12, GETDATE())  -- pour couvrir
+                          AND (JUSTIFIE = 0 OR JUSTIFIE IS NULL)
+                        GROUP BY CAST(DATE_DEBUT AS DATE)
+                    )
                     SELECT 
-                        FORMAT(DATE_DEBUT, 'dd/MM') AS JOUR,
-                        COUNT(*) AS TOTAL,
-                        SUM(CASE WHEN JUSTIF = 1 THEN 1 ELSE 0 END) AS PRESENTS,
-                        SUM(CASE WHEN JUSTIF = 0 THEN 1 ELSE 0 END) AS ABSENTS
-                    FROM ABSENCES
-                    WHERE DATE_DEBUT >= DATEADD(day, -7, GETDATE())
-                    GROUP BY FORMAT(DATE_DEBUT, 'dd/MM')
-                    ORDER BY MIN(DATE_DEBUT)";
+                        FORMAT(d.JOUR, 'dd/MM') AS JOUR,
+                        ISNULL(a.NB_ABSENTS, 0) AS ABSENTS
+                    FROM Dates_7 d
+                    LEFT JOIN AbsencesParJour a ON d.JOUR = a.DATE_ABS
+                    ORDER BY d.JOUR ASC";
 
                 using (SqlCommand cmd = new SqlCommand(sql, conn))
                 using (var reader = cmd.ExecuteReader())
@@ -41,12 +79,15 @@ public class GetPresences : IHttpHandler
                     while (reader.Read())
                     {
                         labels.Add(reader["JOUR"].ToString());
-                        presents.Add(Convert.ToInt32(reader["PRESENTS"]));
-                        absents.Add(Convert.ToInt32(reader["ABSENTS"]));
+                        int absentsCount = Convert.ToInt32(reader["ABSENTS"]);
+                        int presentsCount = totalEleves - absentsCount;
+                        if (presentsCount < 0) presentsCount = 0;
+                        absents.Add(absentsCount);
+                        presents.Add(presentsCount);
                     }
                 }
 
-                // Si pas de données, générer des données de démonstration
+                // Si aucune donnée d'absence n'existe, utiliser des données de démonstration
                 if (labels.Count == 0)
                 {
                     var demo = GetDemoData();
@@ -71,7 +112,7 @@ public class GetPresences : IHttpHandler
         {
             labels = new[] { "Lun", "Mar", "Mer", "Jeu", "Ven", "Sam" },
             presents = new[] { 42, 38, 45, 40, 36, 30 },
-            absents = new[] { 5, 8, 3, 6, 9, 12 }
+            absents = new[] { 8, 12, 5, 10, 14, 20 }
         };
     }
 

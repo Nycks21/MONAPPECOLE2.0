@@ -104,6 +104,13 @@
     max-height: 300px;
 }
 
+.dash-card-body3 {
+    padding: 0px 10px;
+    max-height: 250px;
+    min-height: 250px;
+    gap: 10px;
+}
+
 .dash-card-meta {
     font-size: 12px;
     color: #6c757d;

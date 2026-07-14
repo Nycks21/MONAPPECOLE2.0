@@ -46,8 +46,7 @@
                                 <div class="container-fluid">
                                     <div class="row">
                                         <div class="col-lg-6">
-                                            <h1 id="dynPageTitle"><i class="fas fa-folder"
-                                                    style="margin-right: 10px; color: blue;"></i> Saisie de Bulletin des
+                                            <h1 id="dynPageTitle"><i class="fas fa-folder" style="color:#007bff;"></i> Saisie de Bulletin des
                                                 Élèves</h1>
                                         </div>
                                         <div class="col-lg-6">

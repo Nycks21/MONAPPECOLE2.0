@@ -48,7 +48,7 @@
                         <div class="container-fluid">
                             <div class="row">
                                 <div class="col-lg-6">
-                                    <h1 id="dynPageTitle">Liste des utilisateurs</h1>
+                                    <h1 id="dynPageTitle"><i class="fas fa-users" style="color:#007bff;"></i> Liste des utilisateurs</h1>
                                 </div>
                                 <div class="col-lg-6">
                                     <ol class="breadcrumb" style="float: right;">
