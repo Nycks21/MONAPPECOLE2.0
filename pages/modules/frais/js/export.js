@@ -9,23 +9,72 @@ function exportFraisToExcel() {
         return;
     }
 
-    var rows = [['Matricule', 'Nom', 'Classe', 'Total (Ar)', 'Payé (Ar)', 'Reste (Ar)', 'Progression (%)', 'Statut']];
+    // Génération du tableau HTML pour Excel
+    var date = new Date().toLocaleDateString('fr-FR');
+    var rows = [
+        ['Matricule', 'Nom', 'Classe', 'Total (Ar)', 'Payé (Ar)', 'Reste (Ar)', 'Progression (%)', 'Statut']
+    ];
     filteredFrais.forEach(function (f) {
-        rows.push([f.MATRICULE || '', f.NOM || '', f.CLASSE_NOM || '',
-            f.TOTAL || 0, f.PAYE || 0, f.RESTE || 0,
-            (f.PROGRESSION || 0).toFixed(1), f.STATUT || 'Non payé'
+        // Progression avec virgule comme séparateur décimal
+        var progression = (f.PROGRESSION || 0).toFixed(1).replace('.', ',');
+        rows.push([
+            f.MATRICULE || '',
+            f.NOM || '',
+            f.CLASSE_NOM || '',
+            f.TOTAL || 0,
+            f.PAYE || 0,
+            f.RESTE || 0,
+            progression,
+            f.STATUT || 'Non payé'
         ]);
     });
 
-    var csv = rows.map(function (row) {
-        return row.map(function (cell) { return '"' + String(cell).replace(/"/g, '""') + '"'; }).join(',');
-    }).join('\n');
+    // Construction du HTML
+    var tableHtml = '<html xmlns:o="urn:schemas-microsoft-com:office:office" ' +
+        'xmlns:x="urn:schemas-microsoft-com:office:excel" ' +
+        'xmlns="http://www.w3.org/TR/REC-html40">' +
+        '<head><meta charset="UTF-8">' +
+        '<!--[if gte mso 9]><xml><x:ExcelWorkbook><x:ExcelWorksheets><x:ExcelWorksheet>' +
+        '<x:Name>Frais</x:Name><x:WorksheetOptions><x:DisplayGridlines/></x:WorksheetOptions>' +
+        '</x:ExcelWorksheet></x:ExcelWorksheets></x:ExcelWorkbook></xml><![endif]-->' +
+        '<style>table{border-collapse:collapse;font-family:Calibri,Arial,sans-serif;font-size:11pt;}' +
+        'th{background:#007bff;color:white;font-weight:bold;border:1px solid #000;padding:5px;}' +
+        'td{border:1px solid #ccc;padding:5px;}</style></head><body>' +
+        '<h2>Rapport des Frais Scolaires</h2>' +
+        '<p>Date : ' + date + ' | ' + filteredFrais.length + ' enregistrement(s)</p>' +
+        '<table>';
 
-    var blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    // En-tête
+    tableHtml += '<thead><tr>';
+    rows[0].forEach(function (header) {
+        tableHtml += '<th>' + header + '</th>';
+    });
+    tableHtml += '</tr></thead><tbody>';
+
+    // Données
+    for (var i = 1; i < rows.length; i++) {
+        tableHtml += '<tr>';
+        rows[i].forEach(function (cell) {
+            tableHtml += '<td>' + cell + '</td>';
+        });
+        tableHtml += '</tr>';
+    }
+
+    tableHtml += '</tbody></table></body></html>';
+
+    // Création du blob et téléchargement
+    var blob = new Blob(['\uFEFF' + tableHtml], {
+        type: 'application/vnd.ms-excel;charset=utf-8'
+    });
     var link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = 'Frais_' + new Date().toISOString().slice(0, 10) + '.csv';
+    // Nom de fichier avec date et heure (secondes incluses)
+    var now = new Date();
+    var dateStr = now.toISOString().replace(/[:]/g, '-').replace('T', '_').slice(0, 19);
+    link.download = 'Frais_' + dateStr + '.xls';
+    document.body.appendChild(link);
     link.click();
+    document.body.removeChild(link);
     URL.revokeObjectURL(link.href);
 }
 
@@ -41,6 +90,7 @@ function printFraisReport() {
         + '<th>Total (Ar)</th><th>Payé (Ar)</th><th>Reste (Ar)</th><th>Progression</th><th>Statut</th></tr></thead><tbody>';
 
     filteredFrais.forEach(function (f) {
+        var progression = (f.PROGRESSION || 0).toFixed(1).replace('.', ',');
         html += '<tr>'
             + '<td>' + escapeHtml(f.MATRICULE || '') + '</td>'
             + '<td>' + escapeHtml(f.NOM || '') + '</td>'
@@ -48,7 +98,7 @@ function printFraisReport() {
             + '<td>' + (f.TOTAL || 0) + '</td>'
             + '<td>' + (f.PAYE || 0) + '</td>'
             + '<td>' + (f.RESTE || 0) + '</td>'
-            + '<td>' + (f.PROGRESSION || 0).toFixed(1) + '%</td>'
+            + '<td>' + progression + '%</td>'
             + '<td>' + (f.STATUT || 'Non payé') + '</td>'
             + '</tr>';
     });
@@ -184,4 +234,60 @@ async function printStudentReceipt(matricule, nom, classe, total, paye, reste, s
     } finally {
         hideSpinner();
     }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// REÇU POUR UN PAIEMENT SPÉCIFIQUE (appelé depuis l'historique)
+// ─────────────────────────────────────────────────────────────────────────────
+function printSinglePaymentReceipt(
+    matricule, nom, id, montant, datePaiement, modePaiement,
+    reference, commentaire, mois, annee
+) {
+    // Construction d'un reçu simple pour ce paiement
+    var html = `<!DOCTYPE html>
+    <html>
+    <head><meta charset="UTF-8"><title>Reçu paiement</title>
+    <style>body{font-family:Arial;margin:30px}
+    .receipt{max-width:600px;margin:auto;border:1px solid #ddd;padding:20px;border-radius:8px}
+    .header{text-align:center;border-bottom:2px solid #007bff;padding-bottom:10px}
+    .details{margin:20px 0}
+    .detail-item{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #eee}
+    .label{font-weight:600;color:#555}
+    .value{font-weight:500}
+    .total{font-size:18px;color:#28a745;text-align:center;margin-top:15px}
+    .footer{text-align:center;color:#999;font-size:12px;margin-top:20px}
+    .print-btn{display:block;width:200px;margin:20px auto;padding:10px;background:#007bff;color:white;border:none;border-radius:5px;cursor:pointer}
+    @media print{.print-btn{display:none}}
+    </style>
+    </head>
+    <body>
+    <div class="receipt">
+        <div class="header">
+            <h2>🏫 Reçu de paiement</h2>
+            <p>N° ${id}</p>
+        </div>
+        <div class="details">
+            <div class="detail-item"><span class="label">Élève :</span><span class="value">${escapeHtml(nom)}</span></div>
+            <div class="detail-item"><span class="label">Matricule :</span><span class="value">${escapeHtml(matricule)}</span></div>
+            <div class="detail-item"><span class="label">Mois :</span><span class="value">${escapeHtml(mois)} ${escapeHtml(annee)}</span></div>
+            <div class="detail-item"><span class="label">Date paiement :</span><span class="value">${formatDateTime(datePaiement)}</span></div>
+            <div class="detail-item"><span class="label">Mode :</span><span class="value">${escapeHtml(modePaiement)}</span></div>
+            <div class="detail-item"><span class="label">Référence :</span><span class="value">${escapeHtml(reference || '-')}</span></div>
+            <div class="detail-item"><span class="label">Commentaire :</span><span class="value">${escapeHtml(commentaire || '-')}</span></div>
+        </div>
+        <div class="total">
+            <strong>Montant : ${formatMoney(montant)}</strong>
+        </div>
+        <div class="footer">
+            Document généré automatiquement<br>
+            ${new Date().toLocaleString('fr-FR')}
+        </div>
+        <button class="print-btn" onclick="window.print()">🖨️ Imprimer</button>
+    </div>
+    </body>
+    </html>`;
+
+    var w = window.open('', '_blank');
+    w.document.write(html);
+    w.document.close();
 }

@@ -183,6 +183,15 @@ function renderTable() {
     var tbody = document.getElementById('fraisTableBody');
     if (!tbody) return;
 
+    // Ajouter la classe 'table-responsive' au conteneur parent du tableau
+    var table = tbody.closest('table');
+    if (table) {
+        var wrapper = table.parentNode;
+        if (wrapper && !wrapper.classList.contains('table-responsive')) {
+            wrapper.classList.add('table-responsive');
+        }
+    }
+
     if (!filteredFrais.length) {
         tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:50px;">'
             + '<i class="fas fa-search" style="font-size:40px;color:#ccc;display:block;margin-bottom:12px;"></i>'
@@ -202,20 +211,20 @@ function renderTable() {
         var pw = Math.min(100, prog);
         var row = tbody.insertRow();
         row.innerHTML =
-            '<td><span style="background:#f1f3f5;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:700;">'
+            '<td data-label="Matricule"><span style="background:#f1f3f5;padding:3px 10px;border-radius:6px;font-size:12px;font-weight:700;">'
             + escapeHtml(f.MATRICULE || '-') + '</span></td>'
-            + '<td><strong>' + escapeHtml(f.NOM || '-') + '</strong></td>'
-            + '<td><span style="background:#fff;color:#007bff;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;border:1px solid #007bff;">'
+            + '<td data-label="Nom"><strong>' + escapeHtml(f.NOM || '-') + '</strong></td>'
+            + '<td data-label="Classe"><span style="background:#fff;color:#007bff;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;border:1px solid #007bff;">'
             + '<i class="fas fa-folder"></i> ' + escapeHtml(f.CLASSE_NOM || '-') + '</span></td>'
-            + '<td class="text-right"><strong>' + formatMoney(f.TOTAL) + '</strong></td>'
-            + '<td class="text-right" style="color:#28a745">' + formatMoney(f.PAYE) + '</td>'
-            + '<td class="text-right" style="color:#dc3545">' + formatMoney(f.RESTE) + '</td>'
-            + '<td class="text-center"><div style="display:flex;align-items:center;gap:8px;">'
+            + '<td data-label="Total" class="text-right"><strong>' + formatMoney(f.TOTAL) + '</strong></td>'
+            + '<td data-label="Payé" class="text-right" style="color:#28a745">' + formatMoney(f.PAYE) + '</td>'
+            + '<td data-label="Reste" class="text-right" style="color:#dc3545">' + formatMoney(f.RESTE) + '</td>'
+            + '<td data-label="Progression" class="text-center"><div style="display:flex;align-items:center;gap:8px;">'
             + '<div style="flex:1;background:#e9ecef;border-radius:10px;overflow:hidden;">'
             + '<div style="width:' + pw + '%;background:' + (prog >= 100 ? '#28a745' : '#007bff') + ';height:6px;"></div></div>'
             + '<span style="font-size:12px;min-width:40px;">' + prog.toFixed(0) + '%</span></div></td>'
-            + '<td>' + getStatusBadge(f.STATUT || 'Non payé') + '</td>'
-            + '<td class="text-center">'
+            + '<td data-label="Statut">' + getStatusBadge(f.STATUT || 'Non payé') + '</td>'
+            + '<td data-label="Actions" class="text-center">'
             + '<button type="button" class="btn btn-sm btn-success" onclick="openPaymentModalForStudent(\''
             + escapeHtml(f.MATRICULE) + '\',\'' + escapeHtml(f.NOM) + '\')" title="Enregistrer paiement" style="margin:0 2px;">'
             + '<i class="fas fa-money-bill-wave"></i></button>'
