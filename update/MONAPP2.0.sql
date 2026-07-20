@@ -557,6 +557,34 @@ BEGIN
 END
 GO
 
+-- =====================================================
+-- Table pour EMPLOIS DU TEMPS
+-- =====================================================
+IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'EMPLOI_TEMPS')
+BEGIN
+    -- Création de la table avec toutes les colonnes
+CREATE TABLE EMPLOI_TEMPS (
+    ID UNIQUEIDENTIFIER PRIMARY KEY DEFAULT NEWID(),
+    CLASSE_ID INT NOT NULL,
+    JOUR INT NOT NULL,  -- 1=Lundi, ..., 6=Samedi
+    HEURE_DEBUT NVARCHAR(5) NOT NULL,  -- format HH:mm
+    HEURE_FIN NVARCHAR(5) NULL,        -- format HH:mm, peut être NULL (au cas où)
+    MATIERE_ID UNIQUEIDENTIFIER NOT NULL,
+    PROFESSEUR NVARCHAR(100) NULL,
+    SALLE NVARCHAR(50) NULL,
+    COULEUR NVARCHAR(20) NULL DEFAULT '#007bff',   -- code hexadécimal
+    TYPE NVARCHAR(30) NULL DEFAULT 'cours',        -- cours, td, tp, examen, autre
+    URL NVARCHAR(500) NULL,
+    DESCRIPTION NVARCHAR(MAX) NULL,
+    CREATED_AT DATETIME DEFAULT GETDATE(),
+    UPDATED_AT DATETIME NULL,                      -- pour suivi des modifications
+    -- Contraintes de clé étrangère
+    CONSTRAINT FK_EMPLOI_TEMPS_CLASSES FOREIGN KEY (CLASSE_ID) REFERENCES CLASSES(ID),
+    CONSTRAINT FK_EMPLOI_TEMPS_MATIERES FOREIGN KEY (MATIERE_ID) REFERENCES MATIERES(ID)
+);
+END
+GO
+
 -- ─────────────────────────────────────────────────────────────────
 --  1. TABLE DES MODÈLES (panneau gauche)
 -- ─────────────────────────────────────────────────────────────────
